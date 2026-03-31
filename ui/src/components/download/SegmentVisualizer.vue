@@ -17,55 +17,72 @@ const draw = () => {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
+  // High-DPI scaling logic
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  
+  if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+  }
+
   const { width, height } = canvas;
-  ctx.clearRect(0, 0, width, height);
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  
+  const logicalWidth = width / dpr;
+  const logicalHeight = height / dpr;
 
-  // Background track
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-  ctx.fillRect(0, 0, width, height);
+  ctx.clearRect(0, 0, logicalWidth, logicalHeight);
 
-  const time = Date.now() / 1000;
+  // 1. Foundation: Unassigned/Pending area (IDM WHITE)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
-  props.segments.forEach((seg, idx) => {
-    const startX = (seg.start / props.total) * width;
-    const endX = (seg.end / props.total) * width;
-    const segWidth = Math.max(1, endX - startX);
+  props.segments.forEach((seg) => {
+    const startX = (seg.start / props.total) * logicalWidth;
+    const endX = (seg.end / props.total) * logicalWidth;
+    const segWidth = Math.max(0.5, endX - startX);
 
-    // 1. Draw segment background (pending area = PINK)
-    ctx.fillStyle = 'rgba(255, 105, 180, 0.3)'; // semi-transparent pink
-    ctx.fillRect(startX, 0, segWidth, height);
-
-    // 2. Draw downloaded progress (BLUE)
+    // 2. Completed Data (IDM BLUE)
+    // We draw the progress from starting position up to current downloaded position.
     const segmentRange = (seg.end - seg.start + 1);
-    const progressWidth = (seg.downloaded / segmentRange) * segWidth;
-    
-    if (seg.state === 'Completed') {
-      ctx.fillStyle = '#2ecc71'; // Success Green
-    } else {
-      ctx.fillStyle = '#3498db'; // IDM Blue
-    }
-    ctx.fillRect(startX, 0, progressWidth, height);
+    const downloadedPercent = (seg.downloaded / segmentRange);
+    const progressWidth = downloadedPercent * segWidth;
 
-    // 3. Active pulse effect
-    // We check if segment is Active (state enum)
+    if (seg.downloaded > 0) {
+      if (seg.state === 'Completed') {
+        ctx.fillStyle = '#0ea5e9'; // Static HD Blue
+      } else {
+        ctx.fillStyle = '#3b82f6';
+      }
+      ctx.fillRect(startX, 0, Math.ceil(progressWidth), logicalHeight);
+    }
+
+    // 3. Active Thread Head (IDM PINK LINE)
     if (seg.state === 'Active' && seg.downloaded < segmentRange) {
-      const shimmerX = (time * 150) % (progressWidth + 40) - 20;
-      const shimmerGrad = ctx.createLinearGradient(startX + shimmerX, 0, startX + shimmerX + 20, 0);
-      shimmerGrad.addColorStop(0, 'rgba(255,255,255,0)');
-      shimmerGrad.addColorStop(0.5, 'rgba(255,255,255,0.4)');
-      shimmerGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      const headX = startX + progressWidth;
       
-      ctx.fillStyle = shimmerGrad;
-      ctx.fillRect(startX, 0, progressWidth, height);
+      const headGrad = ctx.createLinearGradient(headX - 4, 0, headX + 4, 0);
+      headGrad.addColorStop(0, 'rgba(236, 72, 153, 0)');
+      headGrad.addColorStop(0.5, 'rgba(236, 72, 153, 0.8)');
+      headGrad.addColorStop(1, 'rgba(236, 72, 153, 0)');
+      
+      ctx.fillStyle = headGrad;
+      ctx.fillRect(headX - 4, 0, 8, logicalHeight);
+      
+      ctx.fillStyle = '#ec4899'; // Neon Pink
+      ctx.fillRect(headX - 1, 0, 2, logicalHeight);
     }
 
-    // 4. Draw separator between segments
-    if (idx < props.segments.length - 1) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-      ctx.fillRect(endX, 0, 1, height);
+    // 4. Segment Divider (Grid)
+    if (segWidth > 5) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      ctx.fillRect(startX, 0, 1, logicalHeight);
     }
   });
 
+  ctx.restore();
   animationId = requestAnimationFrame(draw);
 };
 

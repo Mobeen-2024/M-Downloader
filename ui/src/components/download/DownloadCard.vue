@@ -247,7 +247,13 @@ const progressPercent = computed(() => {
 .progress-info {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+}
+
+.main-visualizer {
+  height: 16px !important;
+  border-radius: 4px;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
 }
 
 .progress-labels {
