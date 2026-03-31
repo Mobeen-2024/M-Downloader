@@ -7,7 +7,7 @@ use tokio::sync::Mutex as AsyncMutex;
 /// Manages persistent data usage tracking to enforce user quotas.
 /// Uses SQLite to store a historical log of downloaded bytes.
 pub struct UsageTracker {
-    db_path: PathBuf,
+    _db_path: PathBuf,
     // Use an async mutex for DB operations to avoid blocking workers.
     conn: Arc<AsyncMutex<Connection>>,
 }
@@ -33,7 +33,7 @@ impl UsageTracker {
         ).map_err(|e| format!("Failed to create index: {}", e))?;
 
         Ok(Self {
-            db_path,
+            _db_path: db_path,
             conn: Arc::new(AsyncMutex::new(conn)),
         })
     }

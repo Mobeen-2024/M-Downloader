@@ -1,4 +1,4 @@
-use tauri::{State, Window, Manager};
+use tauri::State;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 use crate::engine::state::{AppState, DownloadHandle};
@@ -16,7 +16,7 @@ pub async fn start_download(
     window: tauri::WebviewWindow,
     state: State<'_, Arc<AppState>>,
 ) -> Result<String, String> {
-    start_download_internal(url, window, &state).await
+    start_download_internal(url, window, state.inner().clone()).await
 }
 
 /// Internal shared logic for starting a download.
@@ -24,7 +24,7 @@ pub async fn start_download(
 pub async fn start_download_internal(
     url: String,
     window: tauri::WebviewWindow,
-    state: &AppState,
+    app_state: Arc<AppState>,
 ) -> Result<String, String> {
     let id = uuid::Uuid::new_v4().to_string();
 
@@ -37,7 +37,7 @@ pub async fn start_download_internal(
         .map_err(|e| e.to_string())?;
 
     // ── Step 1: Server capability negotiation ─────────────────────────────
-    let res = state
+    let res = app_state
         .client
         .head(&url)
         .send()
@@ -79,12 +79,12 @@ pub async fn start_download_internal(
 
     // ── Step 3: Start workers ─────────────────────────────────────────────
     let cancel_token = CancellationToken::new();
-    let mut manager = DownloadManager::new(
+    let manager = DownloadManager::new(
         id.clone(),
         url.clone(),
         file_path.clone(),
         total_size,
-        state.client.clone(),
+        app_state.client.clone(),
         cancel_token.clone(),
         num_workers,
     );
@@ -98,7 +98,7 @@ pub async fn start_download_internal(
 
     // Register the download handle in shared state.
     {
-        let mut d_map = state.downloads.lock().await;
+        let mut d_map = app_state.downloads.lock().await;
         d_map.insert(
             id.clone(),
             DownloadHandle {
@@ -113,7 +113,7 @@ pub async fn start_download_internal(
     }
 
     // Spawn the download orchestration in a background task.
-    let app_state_arc = state.0.clone();
+    let app_state_arc = app_state.clone();
     tokio::spawn(async move {
         let _ = manager.start(Some(window), app_state_arc).await;
     });
@@ -164,8 +164,8 @@ pub async fn resume_download(
     state: State<'_, Arc<AppState>>,
 ) -> Result<(), String> {
     let (url, file_path, max_workers) = {
-        let mut d_map = state.downloads.lock().await;
-        let handle = d_map.get_mut(&id).ok_or("Download not found")?;
+        let d_map = state.downloads.lock().await;
+        let handle = d_map.get(&id).ok_or("Download not found")?;
         if handle.status != DownloadStatus::Paused && handle.status != DownloadStatus::Error {
             return Err("Download is not in a resumable state".to_string());
         }
@@ -245,7 +245,7 @@ pub async fn resume_download(
         }
     }
 
-    let app_state_arc = state.0.clone();
+    let app_state_arc = state.inner().clone();
     tokio::spawn(async move {
         let _ = manager.start(Some(window), app_state_arc).await;
     });

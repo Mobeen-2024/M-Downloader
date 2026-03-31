@@ -5,7 +5,7 @@ use crate::engine::persistence;
 use crate::types::{DownloadProgressEvent, DownloadStatus};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tauri::{Emitter, Window};
+use tauri::Emitter;
 use tokio_util::sync::CancellationToken;
 use reqwest::Client;
 
@@ -91,6 +91,7 @@ impl DownloadManager {
         let mut workers = Vec::new();
 
         for _worker_id in 0..self.max_workers {
+            let app_state = app_state.clone();
             let url = self.url.clone();
             let file_path = self.file_path.clone();
             let client = self.client.clone();
@@ -107,7 +108,7 @@ impl DownloadManager {
                     }
 
                     // Two-phase segment acquisition: fast path first, slow path second.
-                    let (segment_idx, is_split, total_size) = {
+                    let (segment_idx, _is_split, total_size) = {
                         let mut s = state.lock().await;
                         let ts = s.total_size;
                         if let Some(idx) = s.claim_next_segment() {

@@ -30,8 +30,8 @@ impl SimulationEngine {
 
         // 2. Packet Loss Simulation
         if cond.packet_loss_rate > 0.0 {
-            let mut rng = rand::thread_rng();
-            if rng.gen_bool(cond.packet_loss_rate) {
+            let triggered = rand::thread_rng().gen_bool(cond.packet_loss_rate);
+            if triggered {
                 // In a real implementation, we'd return a ConnectionReset error here.
                 // For simplicity in this demo, we just add more latency to simulate retries.
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;

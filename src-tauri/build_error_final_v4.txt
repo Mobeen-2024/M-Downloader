@@ -1,0 +1,73 @@
+   Compiling mdownloader v0.2.0 (D:\WorkStation\IDM\src-tauri)
+warning: unused import: `Window`
+ --> src\engine\manager.rs:8:22
+  |
+8 | use tauri::{Emitter, Window};
+  |                      ^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Window`
+ --> src\commands\download.rs:1:20
+  |
+1 | use tauri::{State, Window, Manager};
+  |                    ^^^^^^
+
+warning: unused import: `crate::engine::persistence`
+ --> src\commands\reliability.rs:4:5
+  |
+4 | use crate::engine::persistence;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+  --> src\commands\download.rs:85:9
+   |
+85 |     let mut manager = DownloadManager::new(
+   |         ----^^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+error[E0308]: mismatched types
+   --> src\engine\bridge.rs:106:76
+    |
+106 | ...                   match start_download_internal(req.url, window, state.inner()).await {
+    |                             -----------------------                  ^^^^^^^^^^^^^ expected `Arc<AppState>`, found `&AppState`
+    |                             |
+    |                             arguments to this function are incorrect
+    |
+    = note: expected struct `Arc<AppState>`
+            found reference `&AppState`
+note: function defined here
+   --> src\commands\download.rs:24:14
+    |
+ 24 | pub async fn start_download_internal(
+    |              ^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 27 |     app_state: Arc<AppState>,
+    |     ------------------------
+
+warning: unused import: `Manager`
+ --> src\commands\download.rs:1:28
+  |
+1 | use tauri::{State, Window, Manager};
+  |                            ^^^^^^^
+
+warning: unused variable: `client`
+  --> src\commands\download.rs:76:9
+   |
+76 |     let client = app_state.client.clone();
+   |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_client`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `app_state`
+  --> src\commands\reliability.rs:10:5
+   |
+10 |     app_state: State<'_, Arc<AppState>>,
+   |     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_app_state`
+
+For more information about this error, try `rustc --explain E0308`.
+warning: `mdownloader` (lib) generated 7 warnings
+error: could not compile `mdownloader` (lib) due to 1 previous error; 7 warnings emitted

@@ -1,13 +1,13 @@
 use crate::engine::state::AppState;
 use tauri::State;
 use std::sync::Arc;
-use crate::engine::persistence;
+// use crate::engine::persistence;
 
 #[tauri::command]
 pub async fn update_download_url(
     id: String,
     new_url: String,
-    app_state: State<'_, Arc<AppState>>,
+    _app_state: State<'_, Arc<AppState>>,
 ) -> Result<(), String> {
     // 1. Find the download in the active pool or state store.
     // For now, we'll assume the DownloadManager for this ID is either in AppState or its .mdown file is on disk.

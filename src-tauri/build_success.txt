@@ -1,0 +1,62 @@
+   Compiling mdownloader v0.2.0 (D:\WorkStation\IDM\src-tauri)
+warning: unused imports: `Emitter` and `Window`
+ --> src\commands\download.rs:1:20
+  |
+1 | use tauri::{State, Window, Emitter};
+  |                    ^^^^^^  ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `crate::engine::persistence`
+ --> src\commands\reliability.rs:4:5
+  |
+4 | use crate::engine::persistence;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `app_state`
+  --> src\commands\reliability.rs:10:5
+   |
+10 |     app_state: State<'_, Arc<AppState>>,
+   |     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_app_state`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `db_path` is never read
+  --> src\engine\quota.rs:10:5
+   |
+ 9 | pub struct UsageTracker {
+   |            ------------ field in this struct
+10 |     db_path: PathBuf,
+   |     ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `mdownloader` (lib) generated 4 warnings (run `cargo fix --lib -p mdownloader` to apply 3 suggestions)
+warning: unused import: `std::sync::Arc`
+ --> src\bin\stress_test.rs:6:5
+  |
+6 | use std::sync::Arc;
+  |     ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0061]: this method takes 2 arguments but 1 argument was supplied
+  --> src\bin\stress_test.rs:77:17
+   |
+77 |         manager.start(None).await;
+   |                 ^^^^^------ argument #2 of type `Arc<AppState>` is missing
+   |
+note: method defined here
+  --> src\engine\manager.rs:76:18
+   |
+76 |     pub async fn start(&self, window: Option<tauri::WebviewWindow>, app_state: Arc<crate::engine::state::AppState>) {
+   |                  ^^^^^
+help: provide the argument
+   |
+77 |         manager.start(None, /* Arc<AppState> */).await;
+   |                           +++++++++++++++++++++
+
+For more information about this error, try `rustc --explain E0061`.
+warning: `mdownloader` (bin "stress_test") generated 1 warning
+error: could not compile `mdownloader` (bin "stress_test") due to 1 previous error; 1 warning emitted
+warning: build failed, waiting for other jobs to finish...

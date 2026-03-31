@@ -100,7 +100,7 @@ impl MediaStream {
             for as_set in &period.adaptations {
                 if let Some(rep) = as_set.representations.first() {
                     // Extract segment URLs (logic varies by DASH profile, this is basic SegmentList/Template)
-                    if let Some(st) = &rep.segment_template {
+                    if let Some(st) = &rep.SegmentTemplate {
                         if let Some(media_tmpl) = &st.media {
                             // Example: segment_$Number$.m4s
                             // In a real app, we'd iterate through SegmentTimeline or startNumber.
