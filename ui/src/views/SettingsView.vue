@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useSettingsStore } from '../stores/settings.store';
-import { Settings, Cpu, Folder, Palette } from 'lucide-vue-next';
+import { Settings, Cpu, Folder, Palette, Activity } from 'lucide-vue-next';
 import GlassPanel from '../components/ui/GlassPanel.vue';
+import { ref, onMounted } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
 
 const settings = useSettingsStore();
 
@@ -10,6 +12,27 @@ const themes = [
   { name: 'Purple', value: 'purple', color: '#8b5cf6' },
   { name: 'Green', value: 'green', color: '#10b981' },
 ];
+
+const snifferActive = ref(false);
+const snifferError = ref<string | null>(null);
+
+const toggleSniffer = async () => {
+  try {
+    snifferError.value = null;
+    snifferActive.value = await invoke('toggle_system_sniffing', { enabled: !snifferActive.value });
+  } catch (e: any) {
+    snifferError.value = e.toString();
+    console.error('Sniffer Error:', e);
+  }
+};
+
+onMounted(async () => {
+  try {
+    snifferActive.value = await invoke('get_sniffer_status');
+  } catch (e) {
+    console.error('Failed to get sniffer status:', e);
+  }
+});
 </script>
 
 <template>
@@ -80,6 +103,29 @@ const themes = [
           </div>
         </div>
       </GlassPanel>
+
+      <GlassPanel class="settings-card">
+        <div class="card-title">
+          <Activity :size="20" class="text-accent" />
+          <h4>Advanced Networking</h4>
+        </div>
+        <div class="setting-item">
+          <div class="setting-row">
+            <label>System-Wide Sniffing (WFP)</label>
+            <button 
+              class="toggle-btn"
+              :class="{ active: snifferActive }"
+              @click="toggleSniffer"
+            >
+              <div class="toggle-slider"></div>
+            </button>
+          </div>
+          <p class="helper-text">Enable kernel-mode sniffing to intercept media from non-browser applications. Requires Driver Installation.</p>
+          <div v-if="snifferError" class="status-error mt-2">
+            {{ snifferError }}
+          </div>
+        </div>
+      </GlassPanel>
     </div>
   </div>
 </template>
@@ -146,6 +192,12 @@ const themes = [
   gap: 12px;
 }
 
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .setting-item label {
   font-size: 0.9rem;
   font-weight: 600;
@@ -156,6 +208,7 @@ const themes = [
   font-size: 0.75rem;
   color: var(--text-secondary);
   font-style: italic;
+  line-height: 1.4;
 }
 
 .range-input {
@@ -169,7 +222,7 @@ const themes = [
   padding: 4px 12px;
   border-radius: 8px;
   font-weight: 700;
-  font-family: var(--font-mono);
+  font-family: var(--font-mono, monospace);
   min-width: 40px;
   text-align: center;
 }
@@ -186,6 +239,45 @@ const themes = [
   padding: 10px 16px;
   border-radius: 8px;
   outline: none;
+}
+
+/* Toggle Styles */
+.toggle-btn {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color);
+  padding: 2px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  position: relative;
+}
+
+.toggle-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.toggle-slider {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle-btn.active .toggle-slider {
+  transform: translateX(20px);
+}
+
+.status-error {
+  font-size: 0.8rem;
+  color: var(--color-error);
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-left: 3px solid var(--color-error);
+  border-radius: 4px;
 }
 
 .theme-picker {

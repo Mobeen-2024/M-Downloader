@@ -31,6 +31,8 @@ pub fn run() {
             crate::commands::reliability::set_ignore_ssl,
             crate::commands::reliability::set_network_condition,
             crate::commands::system::check_dependencies,
+            crate::commands::system::toggle_system_sniffing,
+            crate::commands::system::get_sniffer_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

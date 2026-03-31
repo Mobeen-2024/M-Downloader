@@ -10,4 +10,5 @@ pub mod quota;
 pub mod media;
 pub mod deobfuscator;
 pub mod provisioner;
+pub mod sniffing;
 pub mod test_utils;
