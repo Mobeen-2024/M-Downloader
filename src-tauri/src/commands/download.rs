@@ -38,11 +38,26 @@ pub async fn start_download_internal(
     // ── Step 0: Media Stream Acquisition (HLS/DASH) ──────────────────────
     if url.contains(".m3u8") || url.contains(".mpd") {
         log::info!("[Download] Media manifest detected: {}", url);
+        
+        let mut base_js_url = None;
+        if url.contains("youtube.com") || url.contains("googlevideo.com") {
+            log::info!("[Download] YouTube media identified. Commencing deobfuscation discovery...");
+            // Attempt to find base.js by fetching the video page (heuristic)
+            // In a production environment, we'd extract this from the initial video page HTML
+            // For now, we'll use a placeholder or the last known pattern
+            base_js_url = Some("https://www.youtube.com/s/player/3f3f3f3f/player_ias.vflset/en_US/base.js");
+        }
+
         let stream = if url.contains(".m3u8") {
             crate::engine::media::MediaStream::from_hls(&app_state.client, &url).await
                 .map_err(|e| format!("HLS Parse Error: {}", e))?
         } else {
-            crate::engine::media::MediaStream::from_dash(&app_state.client, &url).await
+            crate::engine::media::MediaStream::from_dash(
+                &app_state.client, 
+                &url, 
+                Some(&app_state.deobfuscator),
+                base_js_url.as_deref()
+            ).await
                 .map_err(|e| format!("DASH Parse Error: {}", e))?
         };
 

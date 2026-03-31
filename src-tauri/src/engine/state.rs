@@ -23,6 +23,7 @@ pub struct AppState {
     pub downloads: Arc<Mutex<HashMap<String, DownloadHandle>>>,
     pub quota_tracker: Arc<UsageTracker>,
     pub simulation_engine: crate::engine::test_utils::SimulationEngine,
+    pub deobfuscator: Arc<crate::engine::deobfuscator::YouTubeDeobfuscator>,
 }
 
 impl AppState {
@@ -38,11 +39,14 @@ impl AppState {
 
         let quota_tracker = UsageTracker::new(app_dir).expect("Failed to initialize usage tracker");
 
+        let deobfuscator = Arc::new(crate::engine::deobfuscator::YouTubeDeobfuscator::new().expect("Failed to initialize YouTube Deobfuscator"));
+
         Self {
             client,
             downloads: Arc::new(Mutex::new(HashMap::new())),
             quota_tracker: Arc::new(quota_tracker),
             simulation_engine: crate::engine::test_utils::SimulationEngine::new(),
+            deobfuscator,
         }
     }
 }

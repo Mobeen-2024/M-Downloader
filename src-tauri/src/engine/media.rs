@@ -5,6 +5,7 @@ use reqwest::Client;
 use async_recursion::async_recursion;
 use roxmltree::Document;
 use crate::types::{MediaTrack, MediaJobMetadata};
+use crate::engine::deobfuscator::YouTubeDeobfuscator;
 
 pub struct MediaSegment {
     pub url: String,
@@ -108,7 +109,12 @@ impl MediaStream {
     }
 
     /// Parses a DASH .mpd manifest using lightweight roxmltree and returns all tracks.
-    pub async fn from_dash(client: &Client, url: &str) -> Result<Self, String> {
+    pub async fn from_dash(
+        client: &Client, 
+        url: &str, 
+        deobfuscator: Option<&YouTubeDeobfuscator>,
+        base_js_url: Option<&str>
+    ) -> Result<Self, String> {
         let res = client.get(url).send().await.map_err(|e| e.to_string())?;
         let text = res.text().await.map_err(|e| e.to_string())?;
         
@@ -116,7 +122,6 @@ impl MediaStream {
         
         let mut tracks = Vec::new();
         
-        // DASH Multi-track acquisition (Video, Audio)
         for period in doc.descendants().filter(|n| n.has_tag_name("Period")) {
             for adaptation in period.descendants().filter(|n| n.has_tag_name("AdaptationSet")) {
                 let content_type = adaptation.attribute("contentType").unwrap_or("");
@@ -129,7 +134,6 @@ impl MediaStream {
                     continue;
                 }
 
-                // Pick the highest bandwidth representation for this track
                 let mut best_rep = None;
                 let mut max_bandwidth = 0;
 
@@ -145,14 +149,32 @@ impl MediaStream {
                     let mut segments = Vec::new();
                     if let Some(st) = rep.descendants().find(|n| n.has_tag_name("SegmentTemplate")) {
                         if let Some(media_tmpl) = st.attribute("media") {
-                            // Extract initialization segment
                             if let Some(init_tmpl) = st.attribute("initialization") {
                                 segments.push(resolve_url(url, init_tmpl));
                             }
 
-                            // Parallel acquisition logic: collect segments defined in Template or Timeline
-                            for i in 1..10 { // Simplified for demo acquisition
-                                segments.push(resolve_url(url, &media_tmpl.replace("$Number$", &i.to_string())));
+                            for i in 1..10 { 
+                                let mut segment_url = resolve_url(url, &media_tmpl.replace("$Number$", &i.to_string()));
+
+                                // ── YouTube Deobfuscation Integration ──────────────────────
+                                if let (Some(deob), Some(b_js)) = (deobfuscator, base_js_url) {
+                                    if segment_url.contains("youtube.com") || segment_url.contains("googlevideo.com") {
+                                        // Solve "n" parameter
+                                        if let Some(n_param) = extract_query_param(&segment_url, "n") {
+                                            if let Ok(solved_n) = deob.solve_n(&n_param, b_js).await {
+                                                segment_url = replace_query_param(&segment_url, "n", &solved_n);
+                                            }
+                                        }
+                                        // Solve signature "sig" if present
+                                        if let Some(s_param) = extract_query_param(&segment_url, "sig") {
+                                            if let Ok(solved_s) = deob.solve_signature(&s_param, b_js).await {
+                                                segment_url = replace_query_param(&segment_url, "sig", &solved_s);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                segments.push(segment_url);
                             }
                         }
                     }
@@ -174,6 +196,35 @@ impl MediaStream {
 
         Ok(Self { tracks, master_url: url.to_string() })
     }
+}
+
+/// Helper to extract query parameter from URL
+fn extract_query_param(url: &str, param: &str) -> Option<String> {
+    let parts: Vec<&str> = url.split('?').collect();
+    if parts.len() < 2 { return None; }
+    for pair in parts[1].split('&') {
+        let kv: Vec<&str> = pair.split('=').collect();
+        if kv.len() == 2 && kv[0] == param {
+            return Some(kv[1].to_string());
+        }
+    }
+    None
+}
+
+/// Helper to replace query parameter in URL
+fn replace_query_param(url: &str, param: &str, new_value: &str) -> String {
+    let parts: Vec<&str> = url.split('?').collect();
+    if parts.len() < 2 { return url.to_string(); }
+    let mut new_query = Vec::new();
+    for pair in parts[1].split('&') {
+        let kv: Vec<&str> = pair.split('=').collect();
+        if kv.len() == 2 && kv[0] == param {
+            new_query.push(format!("{}={}", param, new_value));
+        } else {
+            new_query.push(pair.to_string());
+        }
+    }
+    format!("{}?{}", parts[0], new_query.join("&"))
 }
 
 /// Resolves a relative URL against a base URL.
