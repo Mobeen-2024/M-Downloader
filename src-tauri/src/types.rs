@@ -20,8 +20,15 @@ pub enum JobType {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct MediaJobMetadata {
+pub struct MediaTrack {
+    pub name: String,
     pub segments: Vec<String>,
+    pub mime_type: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MediaJobMetadata {
+    pub tracks: Vec<MediaTrack>,
     pub master_url: String,
 }
 

@@ -42,21 +42,27 @@ impl DownloadState {
     }
 
     pub fn new_stream(id: String, url: String, file_path: String, metadata: MediaJobMetadata) -> Self {
-        // Multi-segment jobs have N segments initialized as Pending.
-        let segments = metadata.segments.iter().map(|_| SegmentInfo {
-            start: 0, // Not used primarily for stream segments
-            end: 0,
-            downloaded: 0,
-            state: SegmentState::Pending,
-            retry_count: 0,
-        }).collect();
+        let mut segments = Vec::new();
+        
+        // Flatten all tracks into a single segment list for the worker pool
+        for track in &metadata.tracks {
+            for _ in &track.segments {
+                segments.push(SegmentInfo {
+                    start: 0, 
+                    end: 0,
+                    downloaded: 0,
+                    state: SegmentState::Pending,
+                    retry_count: 0,
+                });
+            }
+        }
 
         Self {
             id,
             job_type: JobType::Stream,
             url,
             file_path,
-            total_size: 0, // Calculated dynamically during merge
+            total_size: 0, // Mapped after muxing
             segments,
             stream_metadata: Some(metadata),
             is_fallback: false,
