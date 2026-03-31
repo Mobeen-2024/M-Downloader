@@ -1,16 +1,29 @@
 {
   "manifest_version": 3,
   "name": "Mdownloader Companion",
-  "version": "1.0",
-  "description": "High-performance link capturing for Mdownloader",
-  "permissions": ["nativeMessaging", "downloads"],
+  "version": "1.1.0",
+  "description": "Seamless link capture for Mdownloader — intercepts downloads and sends them to the high-performance native engine.",
+  "permissions": [
+    "nativeMessaging",
+    "downloads",
+    "cookies",
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_title": "Mdownloader Companion"
   },
   "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
     "128": "icon128.png"
   }
 }

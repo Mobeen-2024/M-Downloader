@@ -28,6 +28,8 @@ pub async fn download_segment(
     state: Arc<Mutex<DownloadState>>,
     cancel_token: CancellationToken,
     total_size: u64,
+    shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
+    quota_tracker: Arc<crate::engine::quota::UsageTracker>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut retry_count = 0;
     const MAX_RETRIES: u32 = 5;
@@ -41,6 +43,8 @@ pub async fn download_segment(
             state.clone(),
             cancel_token.clone(),
             total_size,
+            shaper.clone(),
+            quota_tracker.clone(),
         )
         .await
         {
@@ -64,6 +68,8 @@ async fn download_segment_attempt(
     state: Arc<Mutex<DownloadState>>,
     cancel_token: CancellationToken,
     total_size: u64,
+    shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
+    quota_tracker: Arc<crate::engine::quota::UsageTracker>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Capture the initial byte range for the HTTP request.
     let (start, initial_end) = {
@@ -152,26 +158,15 @@ async fn download_segment_attempt(
         writer.write_all(&data[..bytes_to_write]).await?;
         write_pos += bytes_to_write as u64;
 
-        // ── Bandwidth Governance: Throttling ────────────────────────────────
-        // Check the speed limit from the shared state and sleep if necessary.
-        let limit = {
-            let s = state.lock().await;
-            s.speed_limit_bps
-        };
-
-        if let Some(limit_bps) = limit {
-            // Share the global limit across all workers by dividing it.
-            // Simplified: if each worker takes a slice, the total will be approx close.
-            // More accurately, we track a global token bucket, but this is a good start.
-            let worker_limit = limit_bps / 8; // Assuming 8 workers
-            if worker_limit > 0 {
-                let bytes_written = bytes_to_write as f64;
-                // Calculate how much time this amount of data *should* have taken.
-                let required_time_secs = bytes_written / worker_limit as f64;
-                let sleep_duration = std::time::Duration::from_secs_f64(required_time_secs);
-                tokio::time::sleep(sleep_duration).await;
+        // ── Bandwidth Governance: Traffic Shaping ───────────────────────────
+        if let Some(ref bucket) = shaper {
+            if let Some(delay) = bucket.consume(bytes_to_write as i64) {
+                tokio::time::sleep(delay).await;
             }
         }
+
+        // ── Persistent Usage Tracking ───────────────────────────────────────
+        quota_tracker.log_bytes(bytes_to_write as u64).await;
 
         // Update the segment's downloaded counter in shared state.
         {

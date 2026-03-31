@@ -1,0 +1,9 @@
+{
+  "name": "com.mdownloader.host",
+  "description": "Mdownloader Native Messaging Bridge — relays captured downloads to the desktop engine.",
+  "path": "PLACEHOLDER_SET_BY_INSTALLER",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://EXTENSION_ID_PLACEHOLDER/"
+  ]
+}

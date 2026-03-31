@@ -16,6 +16,7 @@ pub struct DownloadManager {
     pub state: Arc<Mutex<DownloadState>>,
     pub cancel_token: CancellationToken,
     pub max_workers: usize,
+    pub shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
 }
 
 impl DownloadManager {
@@ -37,6 +38,7 @@ impl DownloadManager {
             state: Arc::new(Mutex::new(state)),
             cancel_token,
             max_workers,
+            shaper: None, // No limit by default
         }
     }
 
@@ -47,6 +49,7 @@ impl DownloadManager {
         cancel_token: CancellationToken,
         max_workers: usize,
     ) -> Self {
+        let limit = state.speed_limit_bps;
         Self {
             url: state.url.clone(),
             file_path: state.file_path.clone(),
@@ -54,6 +57,7 @@ impl DownloadManager {
             state: Arc::new(Mutex::new(state)),
             cancel_token,
             max_workers,
+            shaper: limit.map(|bps| Arc::new(crate::engine::shaper::TokenBucket::new(bps))),
         }
     }
 
@@ -69,7 +73,15 @@ impl DownloadManager {
     /// Because the initial state has one Pending segment, all `max_workers` workers
     /// immediately get work on their first iteration: worker 0 claims the Pending segment,
     /// workers 1-N each call split_and_claim() to steal increasingly smaller tails.
-    pub async fn start(&self, window: Option<tauri::WebviewWindow>) {
+    pub async fn start(&self, window: Option<tauri::WebviewWindow>, app_state: Arc<crate::engine::state::AppState>) {
+        // ── Pre-flight Quota Check ──────────────────────────────────────────
+        // Check if the user has exceeded their rolling 24-hour quota (1GB default).
+        let current_usage_mb = app_state.quota_tracker.get_usage_mb(24).await;
+        if current_usage_mb > 1024.0 { // 1GB quota hardcoded for demo, usually configurable
+            log::warn!("Daily quota exceeded ({} MB). Download paused.", current_usage_mb);
+            return;
+        }
+
         let start_time = std::time::Instant::now();
         let downloaded_at_start = {
             let s = self.state.lock().await;
@@ -85,6 +97,8 @@ impl DownloadManager {
             let state = self.state.clone();
             let cancel_token = self.cancel_token.clone();
             let window_clone = window.clone();
+            let shaper = self.shaper.clone();
+            let quota_tracker = app_state.quota_tracker.clone();
 
             let worker = tokio::spawn(async move {
                 loop {
@@ -117,6 +131,8 @@ impl DownloadManager {
                                 state.clone(),
                                 cancel_token.clone(),
                                 total_size,
+                                shaper.clone(),
+                                quota_tracker.clone(),
                             ).await;
 
                             // On error, mark the segment for retry.

@@ -3,9 +3,9 @@ use std::os::windows::io::AsRawHandle;
 use std::path::Path;
 
 #[cfg(windows)]
-use windows_sys::Win32::Storage::FileSystem::{
-    SetFileValidData, FSCTL_SET_SPARSE,
-};
+use windows_sys::Win32::Storage::FileSystem::SetFileValidData;
+#[cfg(windows)]
+use windows_sys::Win32::System::Ioctl::FSCTL_SET_SPARSE;
 #[cfg(windows)]
 use windows_sys::Win32::System::IO::DeviceIoControl;
 

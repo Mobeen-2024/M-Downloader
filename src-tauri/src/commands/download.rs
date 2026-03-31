@@ -112,8 +112,9 @@ pub async fn start_download_internal(
     }
 
     // Spawn the download orchestration in a background task.
+    let app_state_arc = state.inner().clone();
     tokio::spawn(async move {
-        let _ = manager.start(Some(window)).await;
+        let _ = manager.start(Some(window), app_state_arc).await;
     });
 
     Ok(id)
@@ -243,8 +244,9 @@ pub async fn resume_download(
         }
     }
 
+    let app_state_arc = state.inner().clone();
     tokio::spawn(async move {
-        let _ = manager.start(Some(window)).await;
+        let _ = manager.start(Some(window), app_state_arc).await;
     });
 
     Ok(())

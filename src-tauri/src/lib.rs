@@ -9,8 +9,13 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::default().build())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .manage(AppState::new())
         .setup(|app| {
+            let app_data_dir = app.path().app_data_dir().expect("Failed to get app data dir");
+            std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data dir");
+            
+            let app_state = AppState::new(app_data_dir);
+            app.manage(app_state);
+
             crate::engine::bridge::setup_ipc_bridge(app.handle().clone());
             Ok(())
         })
