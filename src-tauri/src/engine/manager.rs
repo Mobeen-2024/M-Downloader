@@ -17,6 +17,8 @@ pub struct DownloadManager {
     pub cancel_token: CancellationToken,
     pub max_workers: usize,
     pub shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
+    pub cookies: Option<String>,
+    pub referer: Option<String>,
 }
 
 impl DownloadManager {
@@ -32,13 +34,15 @@ impl DownloadManager {
     ) -> Self {
         let state = DownloadState::new(id, url.clone(), file_path.clone(), total_size);
         Self {
-            url,
-            file_path,
+            url: url.clone(),
+            file_path: file_path.clone(),
             client,
             state: Arc::new(Mutex::new(state)),
             cancel_token,
             max_workers,
             shaper: None, // No limit by default
+            cookies: None, // Will be set post-init or via options
+            referer: None,
         }
     }
 
@@ -58,6 +62,8 @@ impl DownloadManager {
             cancel_token,
             max_workers,
             shaper: limit.map(|bps| Arc::new(crate::engine::shaper::TokenBucket::new(bps))),
+            cookies: None, // Metadata is usually transient and not persisted in sidecars
+            referer: None,
         }
     }
 
@@ -101,6 +107,9 @@ impl DownloadManager {
             let shaper = self.shaper.clone();
             let quota_tracker = app_state.quota_tracker.clone();
 
+            let cookies = self.cookies.clone();
+            let referer = self.referer.clone();
+
             let worker = tokio::spawn(async move {
                 loop {
                     if cancel_token.is_cancelled() {
@@ -135,6 +144,8 @@ impl DownloadManager {
                                 shaper.clone(),
                                 quota_tracker.clone(),
                                 Some(Arc::new(app_state.simulation_engine.clone())),
+                                cookies.clone(),
+                                referer.clone(),
                             ).await;
 
                             // On error, mark the segment for retry.

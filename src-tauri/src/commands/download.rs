@@ -15,8 +15,10 @@ pub async fn start_download(
     url: String,
     window: tauri::WebviewWindow,
     state: State<'_, Arc<AppState>>,
+    cookies: Option<String>,
+    referer: Option<String>,
 ) -> Result<String, String> {
-    start_download_internal(url, window, state.inner().clone()).await
+    start_download_internal(url, window, state.inner().clone(), cookies, referer).await
 }
 
 /// Internal shared logic for starting a download.
@@ -25,6 +27,8 @@ pub async fn start_download_internal(
     url: String,
     window: tauri::WebviewWindow,
     app_state: Arc<AppState>,
+    cookies: Option<String>,
+    referer: Option<String>,
 ) -> Result<String, String> {
     let id = uuid::Uuid::new_v4().to_string();
 
@@ -37,10 +41,11 @@ pub async fn start_download_internal(
         .map_err(|e| e.to_string())?;
 
     // ── Step 1: Server capability negotiation ─────────────────────────────
-    let res = app_state
-        .client
-        .head(&url)
-        .send()
+    let mut rb = app_state.client.head(&url);
+    if let Some(ref c) = cookies { rb = rb.header(reqwest::header::COOKIE, c); }
+    if let Some(ref r) = referer { rb = rb.header(reqwest::header::REFERER, r); }
+    
+    let res = rb.send()
         .await
         .map_err(|e| e.to_string())?;
 
@@ -79,7 +84,7 @@ pub async fn start_download_internal(
 
     // ── Step 3: Start workers ─────────────────────────────────────────────
     let cancel_token = CancellationToken::new();
-    let manager = DownloadManager::new(
+    let mut manager = DownloadManager::new(
         id.clone(),
         url.clone(),
         file_path.clone(),
@@ -88,6 +93,8 @@ pub async fn start_download_internal(
         cancel_token.clone(),
         num_workers,
     );
+    manager.cookies = cookies;
+    manager.referer = referer;
 
     // Save integrity tokens
     {

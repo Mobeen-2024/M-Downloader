@@ -103,7 +103,13 @@ pub fn setup_ipc_bridge(app: AppHandle) {
                                 // Future: invoke MediaManager::from_hls
                             }
 
-                            match start_download_internal(req.url, window, state.inner().clone()).await {
+                            match start_download_internal(
+                                req.url,
+                                window,
+                                state.inner().clone(),
+                                req.cookies,
+                                req.referrer,
+                            ).await {
                                 Ok(download_id) => {
                                     log::info!(
                                         "[Bridge] Download started successfully: id={}",

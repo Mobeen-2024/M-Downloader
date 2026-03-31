@@ -1,4 +1,4 @@
-use reqwest::header::{RANGE, USER_AGENT};
+use reqwest::header::{RANGE, USER_AGENT, COOKIE, REFERER, IF_RANGE};
 use log;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt, BufWriter};
 use tokio::fs::OpenOptions;
@@ -31,6 +31,8 @@ pub async fn download_segment(
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     quota_tracker: Arc<crate::engine::quota::UsageTracker>,
     simulation: Option<Arc<crate::engine::test_utils::SimulationEngine>>,
+    cookies: Option<String>,
+    referer: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut retry_count = 0;
     const MAX_RETRIES: u32 = 5;
@@ -47,6 +49,8 @@ pub async fn download_segment(
             shaper.clone(),
             quota_tracker.clone(),
             simulation.clone(),
+            cookies.clone(),
+            referer.clone(),
         )
         .await
         {
@@ -73,25 +77,37 @@ async fn download_segment_attempt(
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     quota_tracker: Arc<crate::engine::quota::UsageTracker>,
     simulation: Option<Arc<crate::engine::test_utils::SimulationEngine>>,
+    cookies: Option<String>,
+    referer: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Capture the initial byte range for the HTTP request.
-    let (start, initial_end) = {
+    let (start, initial_end, etag, last_modified) = {
         let s = state.lock().await;
         let seg = &s.segments[segment_idx];
-        (seg.start + seg.downloaded, seg.end)
+        (seg.start + seg.downloaded, seg.end, s.etag.clone(), s.last_modified.clone())
     };
 
     if start > initial_end {
         return Ok(());
     }
 
-    // Open an HTTP range request for the remaining range.
-    let response = client
-        .get(&url)
+    // Open an HTTP range request for original or remaining range.
+    let mut rb = client.get(&url)
         .header(RANGE, format!("bytes={}-{}", start, initial_end))
-        .header(USER_AGENT, "Mdownloader/2.0")
-        .send()
-        .await?;
+        .header(USER_AGENT, "Mdownloader/2.0");
+
+    // ── Session & Integrity Headers ──────────────────────────────────────────
+    if let Some(c) = cookies { rb = rb.header(COOKIE, c); }
+    if let Some(r) = referer { rb = rb.header(REFERER, r); }
+    
+    // Inject If-Range using ETag (recommended) or Last-Modified timestamp.
+    if let Some(e) = etag { 
+        rb = rb.header(IF_RANGE, e); 
+    } else if let Some(lm) = last_modified {
+        rb = rb.header(IF_RANGE, lm);
+    }
+
+    let response = rb.send().await?;
 
     if !response.status().is_success() {
         let status = response.status();
