@@ -8,6 +8,21 @@ pub enum DownloadStatus {
     Error,
     Queued,
     RefreshNeeded,
+    Converting,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub enum JobType {
+    /// Standard single-file download via HTTP Range requests.
+    Monolithic,
+    /// Multi-segment media stream (HLS/DASH) with individual fetch tasks.
+    Stream,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MediaJobMetadata {
+    pub segments: Vec<String>,
+    pub master_url: String,
 }
 
 /// Fine-grained state for each byte-range segment.

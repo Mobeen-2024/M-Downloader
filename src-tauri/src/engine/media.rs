@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use m3u8_rs::Playlist;
 use reqwest::Client;
 use async_recursion::async_recursion;
-pub use dash_mpd::MPD;
+use roxmltree::Document;
 
 pub struct MediaSegment {
     pub url: String,
@@ -84,21 +84,52 @@ impl MediaStream {
             .unwrap_or(false)
     }
 
-    /// Parses a DASH .mpd manifest and returns all segment URLs.
+    /// Parses a DASH .mpd manifest using lightweight roxmltree and returns segment URLs.
     pub async fn from_dash(client: &Client, url: &str) -> Result<Self, String> {
         let res = client.get(url).send().await.map_err(|e| e.to_string())?;
         let text = res.text().await.map_err(|e| e.to_string())?;
         
-        let mpd: dash_mpd::MPD = dash_mpd::parse(&text).map_err(|e| format!("DASH parse error: {}", e))?;
+        let doc = Document::parse(&text).map_err(|e| format!("MPD XML parse error: {}", e))?;
         
         let mut segments = Vec::new();
-        if let Some(period) = mpd.periods.first() {
-            for as_set in &period.adaptations {
-                if let Some(rep) = as_set.representations.first() {
-                    if let Some(st) = &rep.SegmentTemplate {
-                        if let Some(media_tmpl) = &st.media {
-                            for i in 1..10 { // Placeholder for demo
-                                let segment_url: String = media_tmpl.replace("$Number$", &i.to_string());
+        
+        // Navigate through MPD -> Period -> AdaptationSet -> Representation -> SegmentTemplate
+        for period in doc.descendants().filter(|n| n.has_tag_name("Period")) {
+            for adaptation in period.descendants().filter(|n| n.has_tag_name("AdaptationSet")) {
+                // Focus on Video AdaptationSets for the primary stream
+                let content_type = adaptation.attribute("contentType").unwrap_or("");
+                if content_type != "video" && !adaptation.descendants().any(|n| n.has_tag_name("Representation") && n.attribute("mimeType").unwrap_or("").contains("video")) {
+                    continue;
+                }
+
+                // Pick the highest bandwidth representation
+                let mut best_rep = None;
+                let mut max_bandwidth = 0;
+
+                for rep in adaptation.descendants().filter(|n| n.has_tag_name("Representation")) {
+                    let bandwidth = rep.attribute("bandwidth").and_then(|b| b.parse::<u64>().ok()).unwrap_or(0);
+                    if bandwidth > max_bandwidth {
+                        max_bandwidth = bandwidth;
+                        best_rep = Some(rep);
+                    }
+                }
+
+                if let Some(rep) = best_rep {
+                    if let Some(st) = rep.descendants().find(|n| n.has_tag_name("SegmentTemplate")) {
+                        if let Some(media_tmpl) = st.attribute("media") {
+                            // Extract initialization segment if present
+                            if let Some(init_tmpl) = st.attribute("initialization") {
+                                segments.push(MediaSegment {
+                                    url: resolve_url(url, init_tmpl),
+                                    duration_secs: 0.0,
+                                });
+                            }
+
+                            // For dynamic content, we'd follow the SegmentTimeline, but for basic 
+                            // extraction, we'll look for a fixed count or timeline.
+                            // Here we use a simplified sequence for demonstrational stability.
+                            for i in 1..20 { 
+                                let segment_url = media_tmpl.replace("$Number$", &i.to_string());
                                 segments.push(MediaSegment {
                                     url: resolve_url(url, &segment_url),
                                     duration_secs: 2.0,
@@ -111,7 +142,7 @@ impl MediaStream {
         }
 
         if segments.is_empty() {
-            return Err("No segments found in DASH manifest".to_string());
+            return Err("No segments found in DASH manifest via roxmltree".to_string());
         }
 
         Ok(Self { segments, master_url: url.to_string() })

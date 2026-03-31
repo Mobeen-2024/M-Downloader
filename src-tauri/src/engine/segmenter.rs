@@ -1,13 +1,14 @@
-use serde::{Serialize, Deserialize};
-use crate::types::{SegmentInfo, SegmentState};
+use crate::types::{SegmentInfo, SegmentState, JobType, MediaJobMetadata};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DownloadState {
     pub id: String,
+    pub job_type: JobType,
     pub url: String,
     pub file_path: String,
     pub total_size: u64,
     pub segments: Vec<SegmentInfo>,
+    pub stream_metadata: Option<MediaJobMetadata>,
     pub is_fallback: bool,
     pub speed_limit_bps: Option<u64>,
     pub etag: Option<String>,
@@ -16,8 +17,7 @@ pub struct DownloadState {
 
 impl DownloadState {
     pub fn new(id: String, url: String, file_path: String, total_size: u64) -> Self {
-        // Initial state has 1 segment covering the entire file.
-        // Workers will call split_and_claim() to acquire their own parts.
+        // Initial state has 1 segment covering the entire file for monolithic jobs.
         let seed_segment = SegmentInfo {
             start: 0,
             end: total_size.saturating_sub(1),
@@ -28,10 +28,37 @@ impl DownloadState {
 
         Self {
             id,
+            job_type: JobType::Monolithic,
             url,
             file_path,
             total_size,
             segments: vec![seed_segment],
+            stream_metadata: None,
+            is_fallback: false,
+            speed_limit_bps: None,
+            etag: None,
+            last_modified: None,
+        }
+    }
+
+    pub fn new_stream(id: String, url: String, file_path: String, metadata: MediaJobMetadata) -> Self {
+        // Multi-segment jobs have N segments initialized as Pending.
+        let segments = metadata.segments.iter().map(|_| SegmentInfo {
+            start: 0, // Not used primarily for stream segments
+            end: 0,
+            downloaded: 0,
+            state: SegmentState::Pending,
+            retry_count: 0,
+        }).collect();
+
+        Self {
+            id,
+            job_type: JobType::Stream,
+            url,
+            file_path,
+            total_size: 0, // Calculated dynamically during merge
+            segments,
+            stream_metadata: Some(metadata),
             is_fallback: false,
             speed_limit_bps: None,
             etag: None,

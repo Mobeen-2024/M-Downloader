@@ -34,6 +34,32 @@ pub async fn start_download_internal(
 
     let filename = url.split('/').last().unwrap_or("download.bin");
     let file_path = format!("downloads/{}", filename);
+ 
+    // ── Step 0: Media Stream Acquisition (HLS/DASH) ──────────────────────
+    if url.contains(".m3u8") || url.contains(".mpd") {
+        log::info!("[Download] Media manifest detected: {}", url);
+        let stream = if url.contains(".m3u8") {
+            crate::engine::media::MediaStream::from_hls(&app_state.client, &url).await
+                .map_err(|e| format!("HLS Parse Error: {}", e))?
+        } else {
+            crate::engine::media::MediaStream::from_dash(&app_state.client, &url).await
+                .map_err(|e| format!("DASH Parse Error: {}", e))?
+        };
+
+        let metadata = crate::types::MediaJobMetadata {
+            segments: stream.segments.into_iter().map(|s| s.url).collect(),
+            master_url: url.clone(),
+        };
+
+        let cancel_token = CancellationToken::new();
+        let manager = DownloadManager::new_stream(
+            id.clone(),
+            url.clone(),
+            file_path.clone(),
+            metadata,
+        );
+        return start_manager_orchestration(id, window, app_state, manager, cancel_token).await;
+    }
 
     // Ensure the downloads directory exists.
     tokio::fs::create_dir_all("downloads")
@@ -78,7 +104,6 @@ pub async fn start_download_internal(
     let num_workers = if supports_ranges { DEFAULT_WORKERS } else { 1 };
 
     // ── Step 2: Sparse File Pre-allocation (Native Win32 fast_io) ──────────
-    // This activates FSCTL_SET_SPARSE and attempts the VDL bypass.
     let _file = crate::engine::fast_io::prepare_file_allocation(std::path::Path::new(&file_path), total_size)
         .map_err(|e| e.to_string())?;
 
@@ -103,6 +128,22 @@ pub async fn start_download_internal(
         s.last_modified = last_modified;
     }
 
+    start_manager_orchestration(id, window, app_state, manager, cancel_token).await
+}
+
+/// Helper to register a manager and spawn the orchestration task.
+async fn start_manager_orchestration(
+    id: String,
+    window: tauri::WebviewWindow,
+    app_state: Arc<AppState>,
+    manager: DownloadManager,
+    cancel_token: CancellationToken,
+) -> Result<String, String> {
+    let url = manager.url.clone();
+    let file_path = manager.file_path.clone();
+    let max_workers = manager.max_workers;
+    let state_clone = manager.state.clone();
+
     // Register the download handle in shared state.
     {
         let mut d_map = app_state.downloads.lock().await;
@@ -110,11 +151,11 @@ pub async fn start_download_internal(
             id.clone(),
             DownloadHandle {
                 cancel_token: cancel_token.clone(),
-                state: manager.state.clone(),
+                state: state_clone,
                 status: DownloadStatus::Downloading,
                 url,
                 file_path,
-                max_workers: num_workers,
+                max_workers,
             },
         );
     }

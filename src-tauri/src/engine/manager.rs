@@ -116,37 +116,67 @@ impl DownloadManager {
                         break;
                     }
 
-                    // Two-phase segment acquisition: fast path first, slow path second.
-                    let (segment_idx, _is_split, total_size) = {
+                    // Two-phase segment acquisition: 
+                    // - Monolithic: fast path (CLAIM) -> slow path (SPLIT)
+                    // - Stream: sequential path (CLAIM next TS segment)
+                    let (segment_idx, job_type, total_size, stream_url) = {
                         let mut s = state.lock().await;
                         let ts = s.total_size;
+                        let jt = s.job_type;
+                        
                         if let Some(idx) = s.claim_next_segment() {
-                            (Some(idx), false, ts)
-                        } else if let Some(idx) = s.split_and_claim() {
-                            let seg = &s.segments[idx];
-                            log::info!("Mathematical re-balance: Split S[k] into S[k] and S[new] at mid {}", seg.start);
-                            (Some(idx), true, ts)
+                            let url = if jt == crate::types::JobType::Stream {
+                                s.stream_metadata.as_ref().map(|m| m.segments[idx].clone())
+                            } else {
+                                None
+                            };
+                            (Some(idx), jt, ts, url)
+                        } else if jt == crate::types::JobType::Monolithic {
+                            // Only split for monolithic range-based downloads
+                            if let Some(idx) = s.split_and_claim() {
+                                let seg = &s.segments[idx];
+                                log::info!("Mathematical re-balance: Split S[k] into S[k] and S[new] at mid {}", seg.start);
+                                (Some(idx), jt, ts, None)
+                            } else {
+                                (None, jt, ts, None)
+                            }
                         } else {
-                            (None, false, ts)
+                            (None, jt, ts, None)
                         }
                     };
 
                     match segment_idx {
                         Some(idx) => {
-                            let result = download_segment(
-                                client.clone(),
-                                url.clone(),
-                                idx,
-                                file_path.clone(),
-                                state.clone(),
-                                cancel_token.clone(),
-                                total_size,
-                                shaper.clone(),
-                                quota_tracker.clone(),
-                                Some(Arc::new(app_state.simulation_engine.clone())),
-                                cookies.clone(),
-                                referer.clone(),
-                            ).await;
+                            let result = if job_type == crate::types::JobType::Monolithic {
+                                download_segment(
+                                    client.clone(),
+                                    url.clone(),
+                                    idx,
+                                    file_path.clone(),
+                                    state.clone(),
+                                    cancel_token.clone(),
+                                    total_size,
+                                    shaper.clone(),
+                                    quota_tracker.clone(),
+                                    Some(Arc::new(app_state.simulation_engine.clone())),
+                                    cookies.clone(),
+                                    referer.clone(),
+                                ).await
+                            } else {
+                                // For HLS/DASH, we download the discrete segment URLs
+                                let segment_url = stream_url.unwrap_or_default();
+                                let segment_path = format!("{}.part_{}", file_path, idx);
+                                crate::engine::connection::download_stream_segment(
+                                    client.clone(),
+                                    segment_url,
+                                    segment_path,
+                                    state.clone(),
+                                    idx,
+                                    cancel_token.clone(),
+                                    cookies.clone(),
+                                    referer.clone(),
+                                ).await
+                            };
 
                             // On error, mark the segment for retry.
                             if let Err(e) = result {
@@ -223,8 +253,39 @@ impl DownloadManager {
         }
 
         // Final status event.
-        let s_lock = self.state.lock().await;
+        let mut s_lock = self.state.lock().await;
         let is_done = s_lock.is_complete();
+
+        // ── Stream Post-Processing (FFmpeg Merge) ──────────────────────────
+        if is_done && s_lock.job_type == crate::types::JobType::Stream {
+            log::info!("[Manager] Media segments complete. Initiating FFmpeg merge...");
+            
+            if let Some(win) = &window {
+                let _ = win.emit("download-msg", "Merging video segments...");
+            }
+
+            let mut parts = Vec::new();
+            for i in 0..s_lock.segments.len() {
+                parts.push(std::path::PathBuf::from(format!("{}.part_{}", self.file_path, i)));
+            }
+
+            let output_path = std::path::PathBuf::from(&self.file_path);
+            let final_mp4 = output_path.with_extension("mp4");
+
+            match crate::engine::media::MediaStream::merge_with_ffmpeg(&parts, &final_mp4) {
+                Ok(_) => {
+                    log::info!("[Manager] FFmpeg merge successful: {:?}", final_mp4);
+                    // Clean up segment parts
+                    for p in parts { let _ = std::fs::remove_file(p); }
+                }
+                Err(e) => {
+                    log::error!("[Manager] FFmpeg merge failed: {}", e);
+                    if let Some(win) = &window {
+                        let _ = win.emit("download-msg", format!("Merge failed: {}", e));
+                    }
+                }
+            }
+        }
 
         // Persist the final state if we're not done (e.g. paused or error).
         if !is_done {

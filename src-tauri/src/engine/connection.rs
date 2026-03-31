@@ -227,6 +227,51 @@ async fn download_segment_attempt(
     Ok(())
 }
 
+/// Downloads a discrete media segment (HLS .ts / DASH .m4s) and saves it to a part file.
+pub async fn download_stream_segment(
+    client: reqwest::Client,
+    url: String,
+    part_path: String,
+    state: Arc<Mutex<DownloadState>>,
+    segment_idx: usize,
+    cancel_token: CancellationToken,
+    cookies: Option<String>,
+    referer: Option<String>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let mut rb = client.get(&url).header(USER_AGENT, "Mdownloader/2.0");
+    if let Some(c) = cookies { rb = rb.header(COOKIE, c); }
+    if let Some(r) = referer { rb = rb.header(REFERER, r); }
+
+    let response = rb.send().await?;
+    if !response.status().is_success() {
+        return Err(format!("Stream segment fetch failed: {}", response.status()).into());
+    }
+
+    let mut file = tokio::fs::File::create(&part_path).await?;
+    let mut stream = response.bytes_stream();
+
+    while let Some(chunk_result) = stream.next().await {
+        if cancel_token.is_cancelled() {
+            return Ok(());
+        }
+        let data = chunk_result?;
+        file.write_all(&data).await?;
+    }
+
+    file.flush().await?;
+
+    // Mark completed in shared state
+    {
+        let mut s = state.lock().await;
+        if let Some(seg) = s.segments.get_mut(segment_idx) {
+            seg.state = crate::types::SegmentState::Completed;
+            seg.downloaded = 1; // Mark as non-zero to show progress
+        }
+    }
+
+    Ok(())
+}
+
 fn is_transient_error(e: &(dyn std::error::Error + Send + Sync)) -> bool {
     let s = e.to_string().to_lowercase();
     s.contains("timeout")
