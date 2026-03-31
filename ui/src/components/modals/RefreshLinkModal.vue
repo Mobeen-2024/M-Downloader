@@ -1,18 +1,59 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { X, ExternalLink, Link, AlertTriangle } from 'lucide-vue-next';
+import { ref, onUnmounted, watch } from 'vue';
+import { X, ExternalLink, Link, AlertTriangle, Loader2 } from 'lucide-vue-next';
+import { listen } from '@tauri-apps/api/event';
+import { useDownload } from '../../composables/useDownload';
 import GlassPanel from '../ui/GlassPanel.vue';
 
 const props = defineProps<{
   show: boolean;
+  id: string;
   downloadName: string;
   sourceUrl?: string;
 }>();
 
 const emit = defineEmits(['close', 'refresh']);
 
+const { startRefreshMode, cancelRefreshMode, resumeDownload } = useDownload();
+
 const newUrl = ref('');
 const error = ref('');
+const isWaiting = ref(true);
+const captureSuccess = ref(false);
+let unlisten: (() => void) | null = null;
+
+const setupListener = async () => {
+  if (unlisten) unlisten();
+  
+  // Subscribe to transparent refresh events from the bridge
+  unlisten = await listen('url-refreshed', (event: any) => {
+    if (event.payload.id === props.id) {
+      isWaiting.value = false;
+      captureSuccess.value = true;
+      setTimeout(() => {
+        emit('close');
+        resumeDownload(props.id);
+      }, 1500);
+    }
+  });
+};
+
+watch(() => props.show, async (newVal) => {
+  if (newVal) {
+    isWaiting.value = true;
+    captureSuccess.value = false;
+    await startRefreshMode(props.id);
+    await setupListener();
+  } else {
+    await cancelRefreshMode();
+    if (unlisten) unlisten();
+  }
+});
+
+onUnmounted(async () => {
+  await cancelRefreshMode();
+  if (unlisten) unlisten();
+});
 
 const handleSubmit = () => {
   if (!newUrl.value) {
@@ -46,15 +87,29 @@ const openUrl = (url: string) => {
       </div>
 
       <div class="modal-body">
-        <div class="alert-box warning">
+        <div v-if="!captureSuccess" class="alert-box warning">
           <AlertTriangle class="alert-icon" />
           <div class="alert-text">
             <strong>Link Expired:</strong> The current URL for <code>{{ downloadName }}</code> is no longer valid (403 Forbidden). 
-            Please provide a new one to resume.
           </div>
         </div>
 
-        <div v-if="sourceUrl" class="info-group">
+        <div v-if="captureSuccess" class="alert-box success">
+          <div class="alert-text">
+            <strong>Success!</strong> New address intercepted. Resuming download...
+          </div>
+        </div>
+
+        <!-- Automated Capture State -->
+        <div v-if="isWaiting" class="capture-state pulse">
+          <Loader2 class="spinner" />
+          <div class="capture-info">
+            <h4>Waiting for link interception...</h4>
+            <p>Re-click the download button in your browser to refresh automatically.</p>
+          </div>
+        </div>
+
+        <div v-if="sourceUrl && !captureSuccess && isWaiting" class="info-group">
           <label>Source Page</label>
           <div class="source-link">
             <span>{{ sourceUrl }}</span>
@@ -63,11 +118,10 @@ const openUrl = (url: string) => {
               Open Page
             </button>
           </div>
-          <p class="help-text">Click "Open Page" and re-click the download button in your browser to get a fresh link.</p>
         </div>
 
-        <div class="input-group">
-          <label for="new-url">New Download URL</label>
+        <div v-if="!captureSuccess && !isWaiting" class="input-group">
+          <label for="new-url">Manual URL Entry</label>
           <div class="input-wrapper">
             <input 
               id="new-url"
@@ -136,20 +190,54 @@ const openUrl = (url: string) => {
   cursor: pointer;
 }
 
-.alert-box {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  border-radius: 8px;
-  margin-bottom: 20px;
-  font-size: 0.85rem;
+.alert-box.success {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
 }
 
-.alert-icon {
-  color: #f59e0b;
-  flex-shrink: 0;
+.capture-state {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.pulse {
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  color: var(--accent-primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.capture-info h4 {
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.capture-info p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 .info-group, .input-group {

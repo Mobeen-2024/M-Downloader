@@ -24,6 +24,7 @@ pub struct AppState {
     pub quota_tracker: Arc<UsageTracker>,
     pub simulation_engine: crate::engine::test_utils::SimulationEngine,
     pub deobfuscator: Arc<crate::engine::deobfuscator::YouTubeDeobfuscator>,
+    pub refresh_task_id: Arc<Mutex<Option<String>>>,
 }
 
 impl AppState {
@@ -47,6 +48,7 @@ impl AppState {
             quota_tracker: Arc::new(quota_tracker),
             simulation_engine: crate::engine::test_utils::SimulationEngine::new(),
             deobfuscator,
+            refresh_task_id: Arc::new(Mutex::new(None)),
         }
     }
 }

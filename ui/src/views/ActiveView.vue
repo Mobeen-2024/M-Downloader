@@ -47,7 +47,9 @@ const handleRefreshSubmit = async (newUrl: string) => {
     <RefreshLinkModal
       v-if="refreshTarget"
       :show="showRefreshModal"
+      :id="refreshTarget.id"
       :download-name="refreshTarget.name"
+      :source-url="refreshTarget.url"
       @close="showRefreshModal = false"
       @refresh="handleRefreshSubmit"
     />

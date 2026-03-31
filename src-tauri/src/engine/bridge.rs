@@ -94,7 +94,26 @@ pub fn setup_ipc_bridge(app: AppHandle) {
                                 }
                             };
 
-                            let state = app_handle.state::<std::sync::Arc<AppState>>();
+                            let state_arc = app_handle.state::<std::sync::Arc<AppState>>();
+
+                            // ── Refresh Address Mode (403 Recovery) ──────────
+                            let mut refresh_id_lock = state_arc.refresh_task_id.lock().await;
+                            if let Some(target_id) = refresh_id_lock.take() {
+                                log::warn!("[Bridge] REFRESH CAPTURE HIT: Updating task {} with new URL", target_id);
+                                match crate::commands::reliability::refresh_task_logic(
+                                    target_id.clone(),
+                                    req.url.clone(), // Clone to allow further use of req below
+                                    state_arc.inner().clone()
+                                ).await {
+                                    Ok(_) => {
+                                        log::info!("[Bridge] Task {} address refreshed successfully.", target_id);
+                                        let _ = app_handle.emit("url-refreshed", serde_json::json!({ "id": target_id }));
+                                        continue; // Finished refresh — exit read loop
+                                    }
+                                    Err(e) => log::error!("[Bridge] Automated refresh failed: {}", e),
+                                }
+                            }
+                            drop(refresh_id_lock);
 
                             // ── Media Stream Sniffing ───────────────────────
                             let is_media = req.url.contains(".m3u8") || req.url.contains(".mpd");
@@ -111,7 +130,7 @@ pub fn setup_ipc_bridge(app: AppHandle) {
                             match start_download_internal(
                                 req.url,
                                 window,
-                                state.inner().clone(),
+                                state_arc.inner().clone(),
                                 req.cookies,
                                 req.referrer,
                             ).await {

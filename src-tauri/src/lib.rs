@@ -28,6 +28,8 @@ pub fn run() {
             crate::commands::download::resume_download,
             crate::commands::download::set_speed_limit,
             crate::commands::reliability::update_download_url,
+            crate::commands::reliability::start_refresh_mode,
+            crate::commands::reliability::cancel_refresh_mode,
             crate::commands::reliability::set_ignore_ssl,
             crate::commands::reliability::set_network_condition,
             crate::commands::system::check_dependencies,

@@ -156,6 +156,18 @@ impl DownloadState {
             seg.state = SegmentState::Completed;
         }
     }
+
+    /// Refresh the source URL for this task (403 recovery).
+    /// Resets all failed segments to Pending so they can be retried with the new address.
+    pub fn update_url(&mut self, new_url: String) {
+        self.url = new_url;
+        for seg in &mut self.segments {
+            if seg.state == SegmentState::Failed {
+                seg.state = SegmentState::Pending;
+                seg.retry_count = 0;
+            }
+        }
+    }
 }
 
 #[cfg(test)]

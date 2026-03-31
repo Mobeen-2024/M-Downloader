@@ -16,11 +16,20 @@ fn meta_path(file_path: &str) -> String {
 }
 
 /// Persists the current DownloadState to a JSON sidecar file alongside the partial download.
-/// Called after each segment completes so we lose at most one segment of progress on crash.
+/// Uses a "Save-then-Rename" pattern to ensure atomicity and prevent state corruption during crashes.
 pub async fn save_state(state: &DownloadState) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let path = meta_path(&state.file_path);
+    let tmp_path = format!("{}.tmp", path);
+    
     let json = serde_json::to_string_pretty(state)?;
-    tokio::fs::write(&path, json).await?;
+    
+    // 1. Write to temporary file
+    tokio::fs::write(&tmp_path, json).await?;
+    
+    // 2. Atomic swap (rename) to the final path
+    // On Windows, this is atomic within the same volume.
+    tokio::fs::rename(tmp_path, path).await?;
+    
     Ok(())
 }
 

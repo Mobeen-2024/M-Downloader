@@ -53,5 +53,29 @@ export function useDownload() {
     }
   };
 
-  return { startDownload, pauseDownload, cancelDownload, resumeDownload, refreshDownload };
+  const startRefreshMode = async (id: string) => {
+    try {
+      await invoke('start_refresh_mode', { id });
+    } catch (e) {
+      console.error('Failed to start refresh mode:', e);
+    }
+  };
+
+  const cancelRefreshMode = async () => {
+    try {
+      await invoke('cancel_refresh_mode');
+    } catch (e) {
+      console.error('Failed to cancel refresh mode:', e);
+    }
+  };
+
+  return { 
+    startDownload, 
+    pauseDownload, 
+    cancelDownload, 
+    resumeDownload, 
+    refreshDownload,
+    startRefreshMode,
+    cancelRefreshMode 
+  };
 }

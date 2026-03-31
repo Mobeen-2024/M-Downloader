@@ -1,28 +1,63 @@
 use crate::engine::state::AppState;
-use tauri::State;
+use tauri::{State, command};
 use std::sync::Arc;
-// use crate::engine::persistence;
+use crate::engine::persistence;
 
-#[tauri::command]
+#[command]
 pub async fn update_download_url(
     id: String,
     new_url: String,
-    _app_state: State<'_, Arc<AppState>>,
+    state: State<'_, Arc<AppState>>,
 ) -> Result<(), String> {
-    // 1. Find the download in the active pool or state store.
-    // For now, we'll assume the DownloadManager for this ID is either in AppState or its .mdown file is on disk.
+    log::info!("[Reliability] Initiating Manual URL Refresh for task: {}", id);
+    refresh_task_logic(id, new_url, state.inner().clone()).await
+}
+
+/// Shared logic to hot-swap a task's URL and perform an atomic persistence checkpoint.
+/// Can be called from IPC commands or the browser bridge.
+pub async fn refresh_task_logic(
+    id: String,
+    new_url: String,
+    state: Arc<AppState>
+) -> Result<(), String> {
+    let downloads = state.downloads.lock().await;
     
-    // In a real implementation, we'd look up the active DownloadManager in a registry.
-    // Since we don't have a central registry yet, we update the .mdown file on disk.
-    // When the user resumes, it will use the new URL.
-    
-    // TODO: Integrate with a central TaskRegistry in AppState for live updates.
-    
-    log::info!("Updating URL for download {}: {}", id, new_url);
-    
-    // For this simple implementation, we'll suggest the user Pause/Resume 
-    // after we update the sidecar file.
-    
+    if let Some(handle) = downloads.get(&id) {
+        // 1. Update the inner DownloadState (Thread-safe)
+        let mut download_state = handle.state.lock().await;
+        
+        log::info!("[Reliability] Task {} hot-swap: {} -> {}", id, download_state.url, new_url);
+        download_state.update_url(new_url);
+        
+        // 2. Perform an atomic checkpoint to the .mdown sidecar
+        persistence::save_state(&download_state).await
+            .map_err(|e| format!("Atomic checkpoint failure: {}", e))?;
+            
+        Ok(())
+    } else {
+        log::error!("[Reliability] URL Update failed: Task {} not found", id);
+        Err(format!("Task with ID {} not found", id))
+    }
+}
+
+#[command]
+pub async fn start_refresh_mode(
+    id: String,
+    state: State<'_, Arc<AppState>>,
+) -> Result<(), String> {
+    log::warn!("[Reliability] ENTERING REFRESH CAPTURE MODE for task: {}", id);
+    let mut refresh_id = state.refresh_task_id.lock().await;
+    *refresh_id = Some(id);
+    Ok(())
+}
+
+#[command]
+pub async fn cancel_refresh_mode(
+    state: State<'_, Arc<AppState>>,
+) -> Result<(), String> {
+    log::info!("[Reliability] Refresh capture mode cancelled.");
+    let mut refresh_id = state.refresh_task_id.lock().await;
+    *refresh_id = None;
     Ok(())
 }
 
