@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Mdownloader Companion",
+  "version": "1.0",
+  "description": "High-performance link capturing for Mdownloader",
+  "permissions": ["nativeMessaging", "downloads"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "128": "icon128.png"
+  }
+}

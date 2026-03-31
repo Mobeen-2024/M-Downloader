@@ -1,0 +1,10 @@
+{
+  "name": "com.mdownloader.app",
+  "description": "Mdownloader Browser Companion",
+  "path": "d:\\WorkStation\\IDM\\src-tauri\\target\\debug\\helper.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://ojnbmfmkpjngfpcifjdmknnbmgbfnbnb/",
+    "chrome-extension://fihpbgbepebohpobhlakjdlpfibocnee/"
+  ]
+}

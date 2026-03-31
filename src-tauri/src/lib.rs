@@ -1,0 +1,26 @@
+pub mod types;
+pub mod engine;
+pub mod commands;
+
+use crate::engine::state::AppState;
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_log::Builder::default().build())
+        .plugin(tauri_plugin_store::Builder::default().build())
+        .manage(AppState::new())
+        .setup(|app| {
+            crate::engine::bridge::setup_ipc_bridge(app.handle().clone());
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            crate::commands::download::start_download,
+            crate::commands::download::pause_download,
+            crate::commands::download::cancel_download,
+            crate::commands::download::resume_download,
+            crate::commands::download::set_speed_limit,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}

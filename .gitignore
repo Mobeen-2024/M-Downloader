@@ -1,0 +1,31 @@
+# Build Artifacts
+node_modules/
+target/
+ui/node_modules/
+src-tauri/target/
+bin/
+*.exe
+*.msi
+*.zip
+*.bin
+
+# Local Environment & Secrets
+.env
+.env.local
+.DS_Store
+*.mdown
+*.zip
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Tauri specific
+src-tauri/src/bin/stress_test.rs
+stress_test_*.bin
+stress_test_*.zip
+stress_out*.txt
+stress_manual_out.txt
+check_final_v5.txt
