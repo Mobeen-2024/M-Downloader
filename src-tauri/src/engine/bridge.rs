@@ -99,8 +99,13 @@ pub fn setup_ipc_bridge(app: AppHandle) {
                             // ── Media Stream Sniffing ───────────────────────
                             let is_media = req.url.contains(".m3u8") || req.url.contains(".mpd");
                             if is_media {
-                                log::info!("[Bridge] Media stream detected: {}", req.url);
-                                // Future: invoke MediaManager::from_hls
+                                log::info!("[Bridge] Media stream intercepted: {}", req.url);
+                                let _ = app_handle.emit("media-intercepted", serde_json::json!({
+                                    "url": req.url,
+                                    "filename": req.filename.unwrap_or_else(|| "Adaptive Video Stream".to_string()),
+                                    "mime": req.mime
+                                }));
+                                continue; // Wait for user to click "Download" on the HUD
                             }
 
                             match start_download_internal(

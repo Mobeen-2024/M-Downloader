@@ -1,9 +1,9 @@
 use std::process::Command;
 use std::path::PathBuf;
-// use m3u8_rs::Playlist;
+use m3u8_rs::Playlist;
 use reqwest::Client;
 use async_recursion::async_recursion;
-// pub use dash_mpd::MPD;
+pub use dash_mpd::MPD;
 
 pub struct MediaSegment {
     pub url: String,
@@ -18,14 +18,13 @@ pub struct MediaStream {
 impl MediaStream {
     /// Parses an HLS .m3u8 playlist and returns all segment URLs.
     #[async_recursion]
-    pub async fn from_hls(_client: &Client, _url: &str) -> Result<Self, String> {
-        Err("HLS (.m3u8) parsing is currently disabled. This feature requires the 'protoc' compiler to be installed during build time.".to_string())
-        /*
+    pub async fn from_hls(client: &Client, url: &str) -> Result<Self, String> {
         let res = client.get(url).send().await.map_err(|e| e.to_string())?;
         let bytes = res.bytes().await.map_err(|e| e.to_string())?;
         
         match m3u8_rs::parse_playlist_res(&bytes) {
             Ok(Playlist::MasterPlaylist(master)) => {
+                // If master, pick the first (usually highest quality) variant.
                 let first_variant = master.variants.first()
                     .ok_or("Master playlist contains no variants")?;
                 let variant_url = resolve_url(url, &first_variant.uri);
@@ -43,7 +42,6 @@ impl MediaStream {
             }
             Err(e) => Err(format!("Failed to parse HLS playlist: {:?}", e)),
         }
-        */
     }
 
     /// Merges downloaded .ts or .m4s segments into a single .mp4 file via FFmpeg.
@@ -87,13 +85,40 @@ impl MediaStream {
     }
 
     /// Parses a DASH .mpd manifest and returns all segment URLs.
-    pub async fn from_dash(_client: &Client, _url: &str) -> Result<Self, String> {
-        Err("DASH (.mpd) parsing is currently disabled. This feature requires the 'protoc' compiler to be installed during build time.".to_string())
+    pub async fn from_dash(client: &Client, url: &str) -> Result<Self, String> {
+        let res = client.get(url).send().await.map_err(|e| e.to_string())?;
+        let text = res.text().await.map_err(|e| e.to_string())?;
+        
+        let mpd: dash_mpd::MPD = dash_mpd::parse(&text).map_err(|e| format!("DASH parse error: {}", e))?;
+        
+        let mut segments = Vec::new();
+        if let Some(period) = mpd.periods.first() {
+            for as_set in &period.adaptations {
+                if let Some(rep) = as_set.representations.first() {
+                    if let Some(st) = &rep.SegmentTemplate {
+                        if let Some(media_tmpl) = &st.media {
+                            for i in 1..10 { // Placeholder for demo
+                                let segment_url: String = media_tmpl.replace("$Number$", &i.to_string());
+                                segments.push(MediaSegment {
+                                    url: resolve_url(url, &segment_url),
+                                    duration_secs: 2.0,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if segments.is_empty() {
+            return Err("No segments found in DASH manifest".to_string());
+        }
+
+        Ok(Self { segments, master_url: url.to_string() })
     }
 }
 
 /// Resolves a relative URL against a base URL.
-#[allow(dead_code)]
 fn resolve_url(base: &str, relative: &str) -> String {
     if relative.starts_with("http") {
         return relative.to_string();

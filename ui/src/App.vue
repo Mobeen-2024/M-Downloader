@@ -24,6 +24,7 @@ onMounted(() => {
 <template>
   <div id="app" class="app-shell">
     <TitleBar />
+    <MediaSnifferHud />
     
     <div class="app-body">
       <AppSidebar />

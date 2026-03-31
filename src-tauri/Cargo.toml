@@ -41,8 +41,8 @@ windows-sys = { version = "0.52", features = [
 
 rusqlite = { version = "0.31", features = ["bundled"] }
 chrono = "0.4"
-# m3u8-rs = "6.0"
-# tokio-stream = "0.1"
+m3u8-rs = "6.0"
+tokio-stream = "0.1"
 # dash-mpd = "0.15"
 tempfile = "3.10"
 parking_lot = "0.12"
