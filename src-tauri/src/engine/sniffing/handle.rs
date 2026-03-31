@@ -1,10 +1,12 @@
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 use std::ptr::null_mut;
-use windows_sys::Win32::Foundation::*;
-use windows_sys::Win32::Storage::FileSystem::*;
-use windows_sys::Win32::System::IO::*;
-use windows_sys::Win32::System::Ioctl::*;
+use windows_sys::Win32::Foundation::{
+    CloseHandle, GetLastError, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
+};
+use windows_sys::Win32::Storage::FileSystem::{
+    CreateFileW, FILE_ATTRIBUTE_NORMAL, OPEN_EXISTING,
+};
 
 /// Mdownloader WFP Driver Handle
 pub struct SniffingHandle {
