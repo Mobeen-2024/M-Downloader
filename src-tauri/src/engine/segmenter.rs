@@ -1,3 +1,4 @@
+use serde::{Serialize, Deserialize};
 use crate::types::{SegmentInfo, SegmentState, JobType, MediaJobMetadata};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

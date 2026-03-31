@@ -113,9 +113,10 @@ body::before {
 .gap-4 { gap: 16px; }
 .mt-auto { margin-top: auto; }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - "Stealth" Glow Implementation */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -123,12 +124,14 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  transition: var(--transition-smooth);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
+  background: var(--accent-primary);
+  box-shadow: 0 0 10px var(--accent-primary);
 }
 
 /* Global Transitions */

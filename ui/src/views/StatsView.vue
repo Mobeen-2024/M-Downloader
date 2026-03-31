@@ -117,6 +117,7 @@ const applySimulation = async (latency: number, packetLoss: number) => {
   height: 100%;
   overflow-y: auto;
   padding: 32px;
+  padding-bottom: 80px;
 }
 
 .view-header {
@@ -160,6 +161,7 @@ const applySimulation = async (latency: number, packetLoss: number) => {
   font-weight: 800;
   margin-bottom: 12px;
   background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

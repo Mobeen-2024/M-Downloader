@@ -5,7 +5,7 @@ use crate::engine::persistence;
 use crate::types::{DownloadProgressEvent, DownloadStatus};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 use tokio_util::sync::CancellationToken;
 use reqwest::Client;
 
@@ -63,6 +63,30 @@ impl DownloadManager {
             max_workers,
             shaper: limit.map(|bps| Arc::new(crate::engine::shaper::TokenBucket::new(bps))),
             cookies: None, // Metadata is usually transient and not persisted in sidecars
+            referer: None,
+        }
+    }
+
+    /// Creates a DownloadManager for a multi-track stream (DASH/HLS).
+    pub fn new_stream(
+        id: String,
+        url: String,
+        file_path: String,
+        metadata: crate::types::MediaJobMetadata,
+        client: Client,
+        cancel_token: CancellationToken,
+        max_workers: usize,
+    ) -> Self {
+        let state = DownloadState::new_stream(id, url.clone(), file_path.clone(), metadata);
+        Self {
+            url,
+            file_path,
+            client,
+            state: Arc::new(Mutex::new(state)),
+            cancel_token,
+            max_workers,
+            shaper: None,
+            cookies: None,
             referer: None,
         }
     }
@@ -263,7 +287,7 @@ impl DownloadManager {
         }
 
         // Final status event.
-        let mut s_lock = self.state.lock().await;
+        let s_lock = self.state.lock().await;
         let is_done = s_lock.is_complete();
 
         // ── Stream Post-Processing (FFmpeg Merge & Mux) ────────────────────
@@ -286,38 +310,45 @@ impl DownloadManager {
 
                 let track_output = std::path::PathBuf::from(format!("{}.track_{}", self.file_path, track.name.to_lowercase()));
                 
-                match crate::engine::media::MediaStream::merge_with_ffmpeg(&segment_files, &track_output) {
-                    Ok(_) => {
-                        log::info!("[Manager] Track '{}' merged: {:?}", track.name, track_output);
-                        track_files.push((track.name.clone(), track_output));
-                        // Clean up segment parts
-                        for p in segment_files { let _ = std::fs::remove_file(p); }
+                if let Some(win) = &window {
+                    let app_handle = win.app_handle();
+                    match crate::engine::media::MediaStream::merge_with_ffmpeg(&app_handle, &segment_files, &track_output) {
+                        Ok(_) => {
+                            log::info!("[Manager] Track '{}' merged: {:?}", track.name, track_output);
+                            track_files.push((track.name.clone(), track_output));
+                            // Clean up segment parts
+                            for p in segment_files { let _ = std::fs::remove_file(p); }
+                        }
+                        Err(e) => log::error!("[Manager] Track '{}' merge failed: {}", track.name, e),
                     }
-                    Err(e) => log::error!("[Manager] Track '{}' merge failed: {}", track.name, e),
                 }
 
                 current_idx += track.segments.len();
             }
 
             // Final Muxing for Multi-track jobs (DASH separate Audio/Video)
-            if track_files.len() >= 2 {
-                let video = track_files.iter().find(|(n, _)| n == "Video").map(|(_, p)| p);
-                let audio = track_files.iter().find(|(n, _)| n == "Audio").map(|(_, p)| p);
+            if let Some(win) = &window {
+                let app_handle = win.app_handle();
+                
+                if track_files.len() >= 2 {
+                    let video = track_files.iter().find(|(n, _)| n == "Video").map(|(_, p)| p);
+                    let audio = track_files.iter().find(|(n, _)| n == "Audio").map(|(_, p)| p);
 
-                if let (Some(v), Some(a)) = (video, audio) {
-                    let final_mp4 = std::path::PathBuf::from(&self.file_path).with_extension("mp4");
-                    match crate::engine::media::MediaStream::mux_dash_streams(v, a, &final_mp4) {
-                        Ok(_) => {
-                            log::info!("[Manager] DASH muxing successful: {:?}", final_mp4);
-                            for (_, p) in track_files { let _ = std::fs::remove_file(p); }
+                    if let (Some(v), Some(a)) = (video, audio) {
+                        let final_mp4 = std::path::PathBuf::from(&self.file_path).with_extension("mp4");
+                        match crate::engine::media::MediaStream::mux_dash_streams(&app_handle, v, a, &final_mp4) {
+                            Ok(_) => {
+                                log::info!("[Manager] DASH muxing successful: {:?}", final_mp4);
+                                for (_, p) in track_files { let _ = std::fs::remove_file(p); }
+                            }
+                            Err(e) => log::error!("[Manager] DASH muxing failed: {}", e),
                         }
-                        Err(e) => log::error!("[Manager] DASH muxing failed: {}", e),
                     }
+                } else if let Some((_, single_file)) = track_files.first() {
+                    // Single track (HLS) — just rename the merged stream to final
+                    let final_mp4 = std::path::PathBuf::from(&self.file_path).with_extension("mp4");
+                    let _ = std::fs::rename(single_file, final_mp4);
                 }
-            } else if let Some((_, single_file)) = track_files.first() {
-                // Single track (HLS) — just rename the merged stream to final
-                let final_mp4 = std::path::PathBuf::from(&self.file_path).with_extension("mp4");
-                let _ = std::fs::rename(single_file, final_mp4);
             }
         }
 

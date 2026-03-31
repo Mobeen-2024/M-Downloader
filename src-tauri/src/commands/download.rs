@@ -62,7 +62,7 @@ pub async fn start_download_internal(
         };
 
         let metadata = crate::types::MediaJobMetadata {
-            segments: stream.segments.into_iter().map(|s| s.url).collect(),
+            tracks: stream.tracks,
             master_url: url.clone(),
         };
 
@@ -72,6 +72,9 @@ pub async fn start_download_internal(
             url.clone(),
             file_path.clone(),
             metadata,
+            app_state.client.clone(),
+            cancel_token.clone(),
+            DEFAULT_WORKERS,
         );
         return start_manager_orchestration(id, window, app_state, manager, cancel_token).await;
     }

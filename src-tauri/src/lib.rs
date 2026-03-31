@@ -30,6 +30,7 @@ pub fn run() {
             crate::commands::reliability::update_download_url,
             crate::commands::reliability::set_ignore_ssl,
             crate::commands::reliability::set_network_condition,
+            crate::commands::system::check_dependencies,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

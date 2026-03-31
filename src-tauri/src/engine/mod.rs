@@ -8,4 +8,6 @@ pub mod fast_io;
 pub mod shaper;
 pub mod quota;
 pub mod media;
+pub mod deobfuscator;
+pub mod provisioner;
 pub mod test_utils;

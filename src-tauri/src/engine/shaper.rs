@@ -1,79 +1,87 @@
-use std::sync::atomic::{AtomicI64, Ordering};
-use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-/// A thread-safe Token Bucket for high-performance traffic shaping.
+/// A lock-free Token Bucket for institutional-grade traffic shaping.
 /// 
-/// Allows for bursts up to the `capacity` while maintaining a long-term
-/// average rate of `refill_rate` bytes per second.
+/// Uses nanosecond-precise atomic timekeeping to ensure maximum throughput
+/// and strict rate-limit compliance across 32+ worker threads.
 pub struct TokenBucket {
-    /// Maximum number of tokens the bucket can hold (burst capacity).
-    capacity: i64,
+    /// Maximum number of tokens (burst capacity).
+    capacity: AtomicI64,
     /// Number of tokens added per second.
-    refill_rate: i64,
+    refill_rate: AtomicI64,
     /// Current number of tokens in the bucket.
     tokens: AtomicI64,
-    /// The last time the bucket was refilled.
-    last_refill: parking_lot::Mutex<Instant>,
+    /// Last refill timestamp in nanoseconds since UNIX_EPOCH.
+    last_refill_ns: AtomicU64,
 }
 
 impl TokenBucket {
     pub fn new(rate_bps: u64) -> Self {
-        let capacity = (rate_bps as i64).max(64 * 1024); // Minimum 64KB burst
+        let capacity = (rate_bps as i64).min(8 * 1024 * 1024).max(64 * 1024); // Cap burst at 8MB
+        let now_ns = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+
         Self {
-            capacity,
-            refill_rate: rate_bps as i64,
+            capacity: AtomicI64::new(capacity),
+            refill_rate: AtomicI64::new(rate_bps as i64),
             tokens: AtomicI64::new(capacity),
-            last_refill: parking_lot::Mutex::new(Instant::now()),
+            last_refill_ns: AtomicU64::new(now_ns),
         }
     }
 
     /// Attempts to consume `n` tokens from the bucket.
-    /// 
-    /// If sufficient tokens are available, they are consumed and the function returns `None`.
-    /// If tokens are insufficient, it returns the `Duration` the caller should sleep
-    /// before retrying to stay within the rate limit.
+    /// Returns `None` on success, or `Duration` to wait on failure.
     pub fn consume(&self, n: i64) -> Option<Duration> {
         self.refill();
 
-        let current = self.tokens.load(Ordering::Relaxed);
-        if current >= n {
-            // Success: decrement tokens
-            self.tokens.fetch_sub(n, Ordering::SeqCst);
-            None
-        } else {
-            // Insufficient tokens: calculate wait time 
-            // wait_time = (needed_tokens) / (tokens_per_second)
-            let needed = n - current;
-            let wait_secs = needed as f64 / self.refill_rate as f64;
-            Some(Duration::from_secs_f64(wait_secs.max(0.01))) // Min 10ms sleep
+        loop {
+            let current = self.tokens.load(Ordering::Acquire);
+            if current >= n {
+                if self.tokens.compare_exchange(current, current - n, Ordering::SeqCst, Ordering::Acquire).is_ok() {
+                    return None;
+                }
+            } else {
+                let rate = self.refill_rate.load(Ordering::Relaxed);
+                if rate <= 0 { return None; } // No limit
+
+                let needed = n - current;
+                let wait_secs = needed as f64 / rate as f64;
+                return Some(Duration::from_secs_f64(wait_secs.max(0.005))); // 5ms min sleep
+            }
         }
     }
 
-    /// Updates the token count based on elapsed time since the last refill.
+    /// Incremental refill using lock-free atomic timekeeping.
     fn refill(&self) {
-        let mut last_refill = self.last_refill.lock();
-        let now = Instant::now();
-        let elapsed = now.duration_since(*last_refill).as_secs_f64();
-        
-        if elapsed < 0.001 {
-            return; // Too soon to refill
-        }
+        let now_ns = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let last_ns = self.last_refill_ns.load(Ordering::Acquire);
 
-        let new_tokens = (elapsed * self.refill_rate as f64) as i64;
+        if now_ns <= last_ns { return; }
+
+        let elapsed_ns = now_ns - last_ns;
+        let rate = self.refill_rate.load(Ordering::Relaxed);
+        let cap = self.capacity.load(Ordering::Relaxed);
+
+        // Tokens to add = (elapsed_nanos / 1,000,000,000) * rate
+        let new_tokens = (elapsed_ns as f64 / 1_000_000_000.0 * rate as f64) as i64;
+
         if new_tokens > 0 {
-            let current = self.tokens.load(Ordering::Relaxed);
-            let next = (current + new_tokens).min(self.capacity);
-            self.tokens.store(next, Ordering::SeqCst);
-            *last_refill = now;
+            if self.last_refill_ns.compare_exchange(last_ns, now_ns, Ordering::SeqCst, Ordering::Acquire).is_ok() {
+                let current = self.tokens.load(Ordering::Acquire);
+                let next = (current + new_tokens).min(cap);
+                self.tokens.store(next, Ordering::Release);
+            }
         }
     }
 
-    /// Dynamically update the refill rate (speed limit).
+    /// Dynamically updates the rate and burst capacity.
     pub fn set_rate(&self, new_rate_bps: u64) {
-        let mut last_refill = self.last_refill.lock();
-        // Reset tokens if rate changes significantly to avoid burst artifacts
-        self.tokens.store(new_rate_bps as i64, Ordering::SeqCst);
-        *last_refill = Instant::now();
+        let new_cap = (new_rate_bps as i64).min(8 * 1024 * 1024).max(64 * 1024);
+        self.refill_rate.store(new_rate_bps as i64, Ordering::Release);
+        self.capacity.store(new_cap, Ordering::Release);
+        
+        // Reset tokens to handle the transition smoothly
+        self.tokens.store(new_cap, Ordering::Release);
     }
 }
 

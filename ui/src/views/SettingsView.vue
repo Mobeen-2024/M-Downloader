@@ -89,6 +89,7 @@ const themes = [
   height: 100%;
   overflow-y: auto;
   padding: 32px;
+  padding-bottom: 80px;
 }
 
 .settings-header {

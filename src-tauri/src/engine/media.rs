@@ -1,10 +1,9 @@
-use std::process::Command;
 use std::path::PathBuf;
 use m3u8_rs::Playlist;
 use reqwest::Client;
 use async_recursion::async_recursion;
 use roxmltree::Document;
-use crate::types::{MediaTrack, MediaJobMetadata};
+use crate::types::MediaTrack;
 use crate::engine::deobfuscator::YouTubeDeobfuscator;
 
 pub struct MediaSegment {
@@ -51,7 +50,11 @@ impl MediaStream {
     }
 
     /// Merges downloaded .ts or .m4s segments into a single .mp4 file via FFmpeg.
-    pub fn merge_with_ffmpeg(segment_files: &[PathBuf], output_file: &PathBuf) -> Result<(), String> {
+    pub fn merge_with_ffmpeg(
+        app: &tauri::AppHandle,
+        segment_files: &[PathBuf], 
+        output_file: &PathBuf
+    ) -> Result<(), String> {
         let concat_content = segment_files.iter()
             .map(|f| format!("file '{}'", f.to_str().unwrap().replace("\\", "/")))
             .collect::<Vec<_>>()
@@ -60,7 +63,8 @@ impl MediaStream {
         let concat_file = output_file.with_extension("txt");
         std::fs::write(&concat_file, concat_content).map_err(|e| e.to_string())?;
 
-        let status = Command::new("ffmpeg")
+        let mut cmd = crate::engine::provisioner::get_ffmpeg_command(app)?;
+        let status = cmd
             .arg("-f").arg("concat")
             .arg("-safe").arg("0")
             .arg("-i").arg(&concat_file)
@@ -80,8 +84,14 @@ impl MediaStream {
     }
 
     /// Muxes separate Video and Audio streams into a single .mp4 file via FFmpeg.
-    pub fn mux_dash_streams(video_file: &PathBuf, audio_file: &PathBuf, output_file: &PathBuf) -> Result<(), String> {
-        let status = Command::new("ffmpeg")
+    pub fn mux_dash_streams(
+        app: &tauri::AppHandle,
+        video_file: &PathBuf, 
+        audio_file: &PathBuf, 
+        output_file: &PathBuf
+    ) -> Result<(), String> {
+        let mut cmd = crate::engine::provisioner::get_ffmpeg_command(app)?;
+        let status = cmd
             .arg("-i").arg(video_file)
             .arg("-i").arg(audio_file)
             .arg("-c").arg("copy")
@@ -95,17 +105,6 @@ impl MediaStream {
         } else {
             Err("FFmpeg failed to mux streams".to_string())
         }
-    }
-
-    /// Checks if FFmpeg is installed and accessible in the system PATH.
-    pub fn is_ffmpeg_available() -> bool {
-        Command::new("ffmpeg")
-            .arg("-version")
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false)
     }
 
     /// Parses a DASH .mpd manifest using lightweight roxmltree and returns all tracks.
@@ -161,13 +160,15 @@ impl MediaStream {
                                     if segment_url.contains("youtube.com") || segment_url.contains("googlevideo.com") {
                                         // Solve "n" parameter
                                         if let Some(n_param) = extract_query_param(&segment_url, "n") {
-                                            if let Ok(solved_n) = deob.solve_n(&n_param, b_js).await {
+                                            if let Ok(sn) = deob.solve_n(&n_param, b_js).await {
+                                                let solved_n: String = sn;
                                                 segment_url = replace_query_param(&segment_url, "n", &solved_n);
                                             }
                                         }
                                         // Solve signature "sig" if present
                                         if let Some(s_param) = extract_query_param(&segment_url, "sig") {
-                                            if let Ok(solved_s) = deob.solve_signature(&s_param, b_js).await {
+                                            if let Ok(ss) = deob.solve_signature(&s_param, b_js).await {
+                                                let solved_s: String = ss;
                                                 segment_url = replace_query_param(&segment_url, "sig", &solved_s);
                                             }
                                         }

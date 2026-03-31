@@ -1,20 +1,28 @@
 <script setup lang="ts">
-import { Plus, Wifi, Activity, Gauge } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useDownloadStore } from '../../stores/download.store';
 import { useFormatters } from '../../composables/useFormatters';
 import { invoke } from '@tauri-apps/api/core';
 import SpeedGraph from '../ui/SpeedGraph.vue';
+import { Plus, Wifi, Activity, Gauge, Zap } from 'lucide-vue-next';
 
 const store = useDownloadStore();
 const { formatSpeed } = useFormatters();
 
 const isLimitEnabled = ref(false);
 const speedLimitKbps = ref(1024); // Default 1 MB/s
+const depStatus = ref({ ffmpeg_found: false, ffprobe_found: false });
+
+const checkDeps = async () => {
+  try {
+    depStatus.value = await invoke('check_dependencies');
+  } catch (e) {
+    console.error('Failed to check dependencies:', e);
+  }
+};
 
 const updateLimits = async () => {
   const limitBps = isLimitEnabled.value ? speedLimitKbps.value * 1024 : null;
-  // Apply limit to all active downloads
   for (const dl of store.downloads) {
     if (dl.status === 'Downloading') {
       await invoke('set_speed_limit', { id: dl.id, limit: limitBps });
@@ -23,6 +31,10 @@ const updateLimits = async () => {
 };
 
 watch([isLimitEnabled, speedLimitKbps], updateLimits);
+
+onMounted(() => {
+  checkDeps();
+});
 
 defineEmits(['new-download']);
 </script>
@@ -46,6 +58,18 @@ defineEmits(['new-download']);
         <div class="stat-details">
           <div class="stat-label">Active</div>
           <div class="stat-value">{{ store.activeDownloads.length }}</div>
+        </div>
+      </div>
+
+      <div class="stat-divider"></div>
+
+      <div class="stat-item">
+        <Zap class="stat-icon" :class="{ 'engine-online': depStatus.ffmpeg_found, 'engine-offline': !depStatus.ffmpeg_found }" />
+        <div class="stat-details">
+          <div class="stat-label">Muxing Engine</div>
+          <div class="stat-value" :class="{ 'text-online': depStatus.ffmpeg_found, 'text-offline': !depStatus.ffmpeg_found }">
+            {{ depStatus.ffmpeg_found ? 'ONLINE' : 'OFFLINE' }}
+          </div>
         </div>
       </div>
 
@@ -113,6 +137,7 @@ defineEmits(['new-download']);
   width: 20px;
   height: 20px;
   color: var(--text-secondary);
+  transition: var(--transition-smooth);
 }
 
 .stat-icon.text-accent {
@@ -133,6 +158,18 @@ defineEmits(['new-download']);
   font-family: var(--font-mono, monospace);
   color: var(--text-primary);
 }
+
+/* Engine Status Styles */
+.engine-online { 
+  color: var(--color-downloading); 
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4));
+}
+.engine-offline { 
+  color: var(--color-error); 
+  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.4));
+}
+.text-online { color: var(--color-downloading); }
+.text-offline { color: var(--color-error); }
 
 .top-bar-graph {
   margin-left: 12px;
@@ -165,6 +202,7 @@ defineEmits(['new-download']);
 .limiter-slider {
   width: 100px;
   height: 4px;
+  appearance: none;
   -webkit-appearance: none;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;

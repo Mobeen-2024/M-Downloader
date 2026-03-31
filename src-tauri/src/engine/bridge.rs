@@ -1,7 +1,7 @@
 use crate::engine::state::AppState;
 use crate::commands::download::start_download_internal;
 use serde::Deserialize;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, Emitter};
 use tokio::io::AsyncReadExt;
 use tokio::net::windows::named_pipe::ServerOptions;
 

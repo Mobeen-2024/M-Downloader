@@ -75,6 +75,9 @@ onMounted(() => {
 
 .page-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   overflow: hidden;
   position: relative;
 }
