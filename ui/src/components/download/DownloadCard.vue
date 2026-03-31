@@ -93,7 +93,6 @@ const progressPercent = computed(() => {
           <button class="btn-icon danger" @click="cancelDownload(download.id)">
             <X />
           </button>
-        </div>
       </div>
     </div>
 

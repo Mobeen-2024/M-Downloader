@@ -42,6 +42,7 @@ impl AppState {
             client,
             downloads: Arc::new(Mutex::new(HashMap::new())),
             quota_tracker: Arc::new(quota_tracker),
+            simulation_engine: crate::engine::test_utils::SimulationEngine::new(),
         }
     }
 }

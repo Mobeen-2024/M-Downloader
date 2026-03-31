@@ -1,4 +1,5 @@
-use tauri::{State, Window};
+use tauri::{State, Window, Manager};
+use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 use crate::engine::state::{AppState, DownloadHandle};
 use crate::engine::manager::DownloadManager;
@@ -13,9 +14,9 @@ const DEFAULT_WORKERS: usize = 8;
 pub async fn start_download(
     url: String,
     window: tauri::WebviewWindow,
-    state: State<'_, AppState>,
+    state: State<'_, Arc<AppState>>,
 ) -> Result<String, String> {
-    start_download_internal(url, window, state.inner()).await
+    start_download_internal(url, window, &state).await
 }
 
 /// Internal shared logic for starting a download.
@@ -112,7 +113,7 @@ pub async fn start_download_internal(
     }
 
     // Spawn the download orchestration in a background task.
-    let app_state_arc = state.inner().clone();
+    let app_state_arc = state.0.clone();
     tokio::spawn(async move {
         let _ = manager.start(Some(window), app_state_arc).await;
     });
@@ -124,7 +125,7 @@ pub async fn start_download_internal(
 pub async fn set_speed_limit(
     id: String,
     limit: Option<u64>,
-    state: State<'_, AppState>,
+    state: State<'_, Arc<AppState>>,
 ) -> Result<(), String> {
     let d_map = state.downloads.lock().await;
     if let Some(handle) = d_map.get(&id) {
@@ -135,7 +136,7 @@ pub async fn set_speed_limit(
 }
 
 #[tauri::command]
-pub async fn pause_download(id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn pause_download(id: String, state: State<'_, Arc<AppState>>) -> Result<(), String> {
     let mut d_map = state.downloads.lock().await;
     if let Some(handle) = d_map.get_mut(&id) {
         handle.cancel_token.cancel();
@@ -145,7 +146,7 @@ pub async fn pause_download(id: String, state: State<'_, AppState>) -> Result<()
 }
 
 #[tauri::command]
-pub async fn cancel_download(id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn cancel_download(id: String, state: State<'_, Arc<AppState>>) -> Result<(), String> {
     let mut d_map = state.downloads.lock().await;
     if let Some(handle) = d_map.get_mut(&id) {
         handle.cancel_token.cancel();
@@ -160,7 +161,7 @@ pub async fn cancel_download(id: String, state: State<'_, AppState>) -> Result<(
 pub async fn resume_download(
     id: String,
     window: tauri::WebviewWindow,
-    state: State<'_, AppState>,
+    state: State<'_, Arc<AppState>>,
 ) -> Result<(), String> {
     let (url, file_path, max_workers) = {
         let mut d_map = state.downloads.lock().await;
@@ -244,7 +245,7 @@ pub async fn resume_download(
         }
     }
 
-    let app_state_arc = state.inner().clone();
+    let app_state_arc = state.0.clone();
     tokio::spawn(async move {
         let _ = manager.start(Some(window), app_state_arc).await;
     });

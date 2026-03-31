@@ -1,0 +1,7 @@
+[build]
+# Relocate target to a profile-specific directory to bypass some Windows policy restrictions
+target-dir = "C:/Users/-Mobeen-/.cargo/target-mdownloader"
+
+[env]
+# Point to the manually installed protoc binary
+PROTOC = { value = "D:/WorkStation/IDM/tools/bin/protoc.exe", relative = false }

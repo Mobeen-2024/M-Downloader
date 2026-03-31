@@ -150,6 +150,7 @@ impl DownloadManager {
                                             status: DownloadStatus::RefreshNeeded,
                                             segments: s.segments.clone(),
                                             last_error_code: Some(403),
+                                            metrics: None,
                                         };
                                         let _ = win.emit("download-progress", event);
                                     }
@@ -235,6 +236,8 @@ impl DownloadManager {
                     DownloadStatus::Paused
                 },
                 segments: s_lock.segments.clone(),
+                last_error_code: None,
+                metrics: None,
             };
             let _ = win.emit("download-progress", event);
         }

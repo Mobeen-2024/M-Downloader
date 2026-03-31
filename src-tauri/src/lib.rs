@@ -2,6 +2,8 @@ pub mod types;
 pub mod engine;
 pub mod commands;
 
+use tauri::Manager;
+
 use crate::engine::state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -14,7 +16,7 @@ pub fn run() {
             std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data dir");
             
             let app_state = AppState::new(app_data_dir);
-            app.manage(app_state);
+            app.manage(std::sync::Arc::new(app_state));
 
             crate::engine::bridge::setup_ipc_bridge(app.handle().clone());
             Ok(())

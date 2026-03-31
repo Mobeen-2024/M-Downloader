@@ -8,6 +8,7 @@ pub struct NetworkConditions {
     pub packet_loss_rate: f64, // 0.0 to 1.0
 }
 
+#[derive(Clone)]
 pub struct SimulationEngine {
     pub conditions: Arc<Mutex<NetworkConditions>>,
 }

@@ -2,7 +2,8 @@ use std::process::Command;
 use std::path::PathBuf;
 use m3u8_rs::Playlist;
 use reqwest::Client;
-pub use dash_mpd::fetch::MPD;
+use async_recursion::async_recursion;
+pub use dash_mpd::MPD;
 
 pub struct MediaSegment {
     pub url: String,
@@ -16,6 +17,7 @@ pub struct MediaStream {
 
 impl MediaStream {
     /// Parses an HLS .m3u8 playlist and returns all segment URLs.
+    #[async_recursion]
     pub async fn from_hls(client: &Client, url: &str) -> Result<Self, String> {
         let res = client.get(url).send().await.map_err(|e| e.to_string())?;
         let bytes = res.bytes().await.map_err(|e| e.to_string())?;
@@ -95,15 +97,15 @@ impl MediaStream {
         let mut segments = Vec::new();
         // Simplified: pick the first AdaptationSet and first Representation.
         if let Some(period) = mpd.periods.first() {
-            for as_set in &period.adaptation_sets {
+            for as_set in &period.adaptations {
                 if let Some(rep) = as_set.representations.first() {
                     // Extract segment URLs (logic varies by DASH profile, this is basic SegmentList/Template)
-                    if let Some(st) = &rep.SegmentTemplate {
+                    if let Some(st) = &rep.segment_template {
                         if let Some(media_tmpl) = &st.media {
                             // Example: segment_$Number$.m4s
                             // In a real app, we'd iterate through SegmentTimeline or startNumber.
                             for i in 1..10 { // Placeholder: first 10 segments for demo
-                                let segment_url = media_tmpl.replace("$Number$", &i.to_string());
+                                let segment_url: String = media_tmpl.replace("$Number$", &i.to_string());
                                 segments.push(MediaSegment {
                                     url: resolve_url(url, &segment_url),
                                     duration_secs: 2.0, // Default for DASH
