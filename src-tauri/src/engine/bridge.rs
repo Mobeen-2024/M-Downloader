@@ -96,6 +96,13 @@ pub fn setup_ipc_bridge(app: AppHandle) {
 
                             let state = app_handle.state::<AppState>();
 
+                            // ── Media Stream Sniffing ───────────────────────
+                            let is_media = req.url.contains(".m3u8") || req.url.contains(".mpd");
+                            if is_media {
+                                log::info!("[Bridge] Media stream detected: {}", req.url);
+                                // Future: invoke MediaManager::from_hls
+                            }
+
                             match start_download_internal(req.url, window, state.inner()).await {
                                 Ok(download_id) => {
                                     log::info!(

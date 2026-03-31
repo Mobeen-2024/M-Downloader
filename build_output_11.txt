@@ -1,0 +1,24 @@
+﻿cargo :     Updating crates.io 
+index
+At line:1 char:54
++ ... H = "$env:USERPROFILE\.carg
+o\bin;$env:PATH"; cargo check 
+2>&1 | Out-F ...
++                                
+                  
+~~~~~~~~~~~~~~~~
+    + CategoryInfo          : No 
+   tSpecified: (    Updating cr  
+  ates.io index:String) [], Re   
+ moteException
+    + FullyQualifiedErrorId : Na 
+   tiveCommandError
+ 
+error: no matching package found
+searched package name: `Dash-MPD`
+perhaps you meant:      dash-mpd
+location searched: crates.io 
+index
+required by package `mdownloader 
+v0.2.0 
+(D:\WorkStation\IDM\src-tauri)`

@@ -76,3 +76,21 @@ impl UsageTracker {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn test_quota_tracking() {
+        let dir = tempdir().unwrap();
+        let tracker = UsageTracker::new(dir.path().to_path_buf()).unwrap();
+        
+        tracker.log_bytes(1024 * 1024).await; // 1MB
+        tracker.log_bytes(1024 * 1024).await; // 1MB
+        
+        let usage = tracker.get_usage_mb(1).await;
+        assert_eq!(usage, 2.0);
+    }
+}

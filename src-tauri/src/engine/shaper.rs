@@ -76,3 +76,29 @@ impl TokenBucket {
         *last_refill = Instant::now();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::thread;
+
+    #[test]
+    fn test_token_bucket_refill() {
+        let bucket = TokenBucket::new(1000); // 1000 bytes per sec
+        
+        // Initial state should be full
+        assert!(bucket.consume(1000).is_none());
+        assert!(bucket.consume(1).is_some()); // Empty now
+        
+        // Wait for refill (at least 100ms for 100 tokens)
+        thread::sleep(Duration::from_millis(150));
+        assert!(bucket.consume(100).is_none());
+    }
+
+    #[test]
+    fn test_token_bucket_burst() {
+        let bucket = TokenBucket::new(100); 
+        // Should allow consuming capacity (100 or 64KB min) immediately
+        assert!(bucket.consume(100).is_none());
+    }
+}
