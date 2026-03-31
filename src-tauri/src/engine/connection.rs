@@ -30,6 +30,7 @@ pub async fn download_segment(
     total_size: u64,
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     quota_tracker: Arc<crate::engine::quota::UsageTracker>,
+    simulation: Option<Arc<crate::engine::test_utils::SimulationEngine>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut retry_count = 0;
     const MAX_RETRIES: u32 = 5;
@@ -45,6 +46,7 @@ pub async fn download_segment(
             total_size,
             shaper.clone(),
             quota_tracker.clone(),
+            simulation.clone(),
         )
         .await
         {
@@ -70,6 +72,7 @@ async fn download_segment_attempt(
     total_size: u64,
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     quota_tracker: Arc<crate::engine::quota::UsageTracker>,
+    simulation: Option<Arc<crate::engine::test_utils::SimulationEngine>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Capture the initial byte range for the HTTP request.
     let (start, initial_end) = {
@@ -133,6 +136,11 @@ async fn download_segment_attempt(
     let mut write_pos = final_start;
 
     while let Some(chunk_result) = tokio::time::timeout(std::time::Duration::from_secs(30), stream.next()).await? {
+        // ── Performance Validation: Simulation Hook ───────────────────────
+        if let Some(ref sim) = simulation {
+            sim.apply().await;
+        }
+
         // Honour cancellation (pause or cancel).
         if cancel_token.is_cancelled() {
             writer.flush().await?;

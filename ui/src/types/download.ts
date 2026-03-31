@@ -8,6 +8,12 @@ export interface SegmentInfo {
   retry_count: number;
 }
 
+export interface DownloadMetrics {
+  io_efficiency: number;
+  active_workers: number;
+  avg_latency_ms: number;
+}
+
 export interface DownloadProgressEvent {
   id: string;
   downloaded: number;
@@ -16,6 +22,7 @@ export interface DownloadProgressEvent {
   status: DownloadStatus;
   segments: SegmentInfo[];
   last_error_code?: number;
+  metrics?: DownloadMetrics;
 }
 
 export interface DownloadItem extends DownloadProgressEvent {

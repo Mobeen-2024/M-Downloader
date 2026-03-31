@@ -20,6 +20,7 @@ const navItems = [
   { name: 'Active', icon: Download, path: '/active', badge: () => store.activeDownloads.length },
   { name: 'Completed', icon: CheckCircle, path: '/completed' },
   { name: 'Queued', icon: Clock, path: '/queued' },
+  { name: 'Statistics', icon: LayoutDashboard, path: '/stats' },
 ];
 
 const categories = [

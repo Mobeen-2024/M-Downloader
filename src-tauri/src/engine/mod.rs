@@ -8,3 +8,4 @@ pub mod fast_io;
 pub mod shaper;
 pub mod quota;
 pub mod media;
+pub mod test_utils;

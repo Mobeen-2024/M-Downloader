@@ -30,8 +30,21 @@ pub async fn update_download_url(
 pub async fn set_ignore_ssl(
     id: String,
     ignore: bool,
-    app_state: State<'_, Arc<AppState>>,
+    _app_state: State<'_, Arc<AppState>>,
 ) -> Result<(), String> {
     log::info!("Setting ignore_ssl for {}: {}", id, ignore);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_network_condition(
+    latency: u64,
+    packet_loss: f64,
+    app_state: State<'_, Arc<AppState>>,
+) -> Result<(), String> {
+    let mut cond = app_state.simulation_engine.conditions.lock().await;
+    cond.latency_ms = latency;
+    cond.packet_loss_rate = packet_loss;
+    log::warn!("NETWORK SIMULATION ACTIVE: Latency={}ms, Loss={}%", latency, packet_loss * 100.0);
     Ok(())
 }

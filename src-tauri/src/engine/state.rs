@@ -22,6 +22,7 @@ pub struct AppState {
     pub client: Client,
     pub downloads: Arc<Mutex<HashMap<String, DownloadHandle>>>,
     pub quota_tracker: Arc<UsageTracker>,
+    pub simulation_engine: crate::engine::test_utils::SimulationEngine,
 }
 
 impl AppState {

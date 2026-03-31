@@ -46,7 +46,14 @@ impl SegmentInfo {
     }
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DownloadMetrics {
+    pub io_efficiency: f64,
+    pub active_workers: usize,
+    pub avg_latency_ms: u64,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DownloadProgressEvent {
     pub id: String,
     pub downloaded: u64,
@@ -55,4 +62,5 @@ pub struct DownloadProgressEvent {
     pub status: DownloadStatus,
     pub segments: Vec<SegmentInfo>,
     pub last_error_code: Option<u16>,
+    pub metrics: Option<DownloadMetrics>,
 }
