@@ -1,0 +1,752 @@
+﻿cargo.exe :    Compiling 
+mdownloader v0.2.0 
+(D:\WorkStation\IDM\src-tauri)
+At line:1 char:1
++ & "$env:USERPROFILE\.cargo\bin\
+cargo.exe" test 
+engine::segmenter --ma ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          : No 
+   tSpecified: (   Compiling md  
+  ...\IDM\src-tauri):String) [   
+ ], RemoteException
+    + FullyQualifiedErrorId : Na 
+   tiveCommandError
+ 
+error[E0432]: unresolved import 
+`rusqlite`
+ --> src\engine\quota.rs:1:5
+  |
+1 | use rusqlite::{params, 
+Connection};
+  |     ^^^^^^^^ use of 
+unresolved module or unlinked 
+crate `rusqlite`
+  |
+  = help: if you wanted to use a 
+crate named `rusqlite`, use 
+`cargo add rusqlite` to add it 
+to your `Cargo.toml`
+
+error[E0432]: unresolved import 
+`chrono`
+ --> src\engine\quota.rs:3:5
+  |
+3 | use chrono::{Utc, Duration 
+as ChronoDuration};
+  |     ^^^^^^ use of unresolved 
+module or unlinked crate `chrono`
+  |
+  = help: if you wanted to use a 
+crate named `chrono`, use `cargo 
+add chrono` to add it to your 
+`Cargo.toml`
+
+error[E0432]: unresolved import 
+`m3u8_rs`
+ --> src\engine\media.rs:3:5
+  |
+3 | use m3u8_rs::Playlist;
+  |     ^^^^^^^ use of 
+unresolved module or unlinked 
+crate `m3u8_rs`
+  |
+  = help: if you wanted to use a 
+crate named `m3u8_rs`, use 
+`cargo add m3u8_rs` to add it to 
+your `Cargo.toml`
+
+error[E0432]: unresolved import 
+`dash_mpd`
+ --> src\engine\media.rs:6:9
+  |
+6 | pub use dash_mpd::MPD;
+  |         ^^^^^^^^ use of 
+unresolved module or unlinked 
+crate `dash_mpd`
+  |
+  = help: if you wanted to use a 
+crate named `dash_mpd`, use 
+`cargo add dash_mpd` to add it 
+to your `Cargo.toml`
+
+error[E0432]: unresolved import 
+`tempfile`
+  --> src\engine\quota.rs:83:9
+   |
+83 |     use tempfile::tempdir;
+   |         ^^^^^^^^ use of 
+unresolved module or unlinked 
+crate `tempfile`
+   |
+   = help: if you wanted to use 
+a crate named `tempfile`, use 
+`cargo add tempfile` to add it 
+to your `Cargo.toml`
+
+error[E0308]: mismatched types
+   --> 
+src\engine\connection.rs:115:31
+    |
+115 |               s.segments = 
+vec![crate::types::SegmentInfo {
+    |  
+_______________________________^
+116 | |                 start: 0,
+117 | |                 end: 
+s.total_size.saturating_sub(1),
+118 | |                 
+downloaded: 0,
+119 | |                 state: cr
+ate::types::SegmentState::Active,
+120 | |                 
+retry_count: 0,
+121 | |             }];
+    | |_____________^ expected 
+`segmenter::SegmentInfo`, found 
+`types::SegmentInfo`
+    |
+    = note: `types::SegmentInfo` 
+and `segmenter::SegmentInfo` 
+have similar names, but are 
+actually distinct types
+note: `types::SegmentInfo` is 
+defined in module `crate::types` 
+of the current crate
+   --> src\types.rs:27:1
+    |
+ 27 | pub struct SegmentInfo {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+note: `segmenter::SegmentInfo` 
+is defined in module 
+`crate::engine::segmenter` of 
+the current crate
+   --> 
+src\engine\segmenter.rs:12:1
+    |
+ 12 | pub struct SegmentInfo {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0308]: mismatched types
+   --> 
+src\engine\connection.rs:205:29
+    |
+205 |             if seg.state 
+== SegmentState::Active && 
+seg.downloaded >= (seg.end - 
+seg.start + 1) {
+    |                ---------   
+ ^^^^^^^^^^^^^^^^^^^^ expected 
+`segmenter::SegmentState`, found 
+`types::SegmentState`
+    |                |
+    |                expected 
+because this is 
+`segmenter::SegmentState`
+    |
+    = note: 
+`types::SegmentState` and 
+`segmenter::SegmentState` have 
+similar names, but are actually 
+distinct types
+note: `types::SegmentState` is 
+defined in module `crate::types` 
+of the current crate
+   --> src\types.rs:15:1
+    |
+ 15 | pub enum SegmentState {
+    | ^^^^^^^^^^^^^^^^^^^^^
+note: `segmenter::SegmentState` 
+is defined in module 
+`crate::engine::segmenter` of 
+the current crate
+   --> 
+src\engine\segmenter.rs:4:1
+    |
+  4 | pub enum SegmentState {
+    | ^^^^^^^^^^^^^^^^^^^^^
+
+error[E0308]: mismatched types
+   --> 
+src\engine\connection.rs:206:29
+    |
+206 |                 seg.state 
+= SegmentState::Completed;
+    |                 ---------  
+ ^^^^^^^^^^^^^^^^^^^^^^^ 
+expected 
+`segmenter::SegmentState`, found 
+`types::SegmentState`
+    |                 |
+    |                 expected 
+due to the type of this binding
+    |
+    = note: 
+`types::SegmentState` and 
+`segmenter::SegmentState` have 
+similar names, but are actually 
+distinct types
+note: `types::SegmentState` is 
+defined in module `crate::types` 
+of the current crate
+   --> src\types.rs:15:1
+    |
+ 15 | pub enum SegmentState {
+    | ^^^^^^^^^^^^^^^^^^^^^
+note: `segmenter::SegmentState` 
+is defined in module 
+`crate::engine::segmenter` of 
+the current crate
+   --> 
+src\engine\segmenter.rs:4:1
+    |
+  4 | pub enum SegmentState {
+    | ^^^^^^^^^^^^^^^^^^^^^
+
+error[E0308]: mismatched types
+   --> 
+src\engine\manager.rs:152:55
+    |
+152 | ...                   
+segments: s.segments.clone(),
+    |                            
+     ^^^^^^^^^^^^^^^^^^ expected 
+`types::SegmentInfo`, found 
+`segmenter::SegmentInfo`
+    |
+    = note: 
+`segmenter::SegmentInfo` and 
+`types::SegmentInfo` have 
+similar names, but are actually 
+distinct types
+note: `segmenter::SegmentInfo` 
+is defined in module 
+`crate::engine::segmenter` of 
+the current crate
+   --> 
+src\engine\segmenter.rs:12:1
+    |
+ 12 | pub struct SegmentInfo {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+note: `types::SegmentInfo` is 
+defined in module `crate::types` 
+of the current crate
+   --> src\types.rs:27:1
+    |
+ 27 | pub struct SegmentInfo {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0308]: mismatched types
+   --> 
+src\engine\manager.rs:177:107
+    |
+177 | ...                   
+active_workers: s_inner.segments.
+iter().filter(|seg| seg.state == 
+crate::types::SegmentState::Activ
+e).count(),
+    |                            
+                                 
+               ---------    ^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
+expected 
+`segmenter::SegmentState`, found 
+`types::SegmentState`
+    |                            
+                                 
+               |
+    |                            
+                                 
+               expected because 
+this is `segmenter::SegmentState`
+    |
+    = note: 
+`types::SegmentState` and 
+`segmenter::SegmentState` have 
+similar names, but are actually 
+distinct types
+note: `types::SegmentState` is 
+defined in module `crate::types` 
+of the current crate
+   --> src\types.rs:15:1
+    |
+ 15 | pub enum SegmentState {
+    | ^^^^^^^^^^^^^^^^^^^^^
+note: `segmenter::SegmentState` 
+is defined in module 
+`crate::engine::segmenter` of 
+the current crate
+   --> 
+src\engine\segmenter.rs:4:1
+    |
+  4 | pub enum SegmentState {
+    | ^^^^^^^^^^^^^^^^^^^^^
+
+error[E0308]: mismatched types
+   --> 
+src\engine\manager.rs:188:47
+    |
+188 | ...                   
+segments: s.segments.clone(),
+    |                            
+     ^^^^^^^^^^^^^^^^^^ expected 
+`types::SegmentInfo`, found 
+`segmenter::SegmentInfo`
+    |
+    = note: 
+`segmenter::SegmentInfo` and 
+`types::SegmentInfo` have 
+similar names, but are actually 
+distinct types
+note: `segmenter::SegmentInfo` 
+is defined in module 
+`crate::engine::segmenter` of 
+the current crate
+   --> 
+src\engine\segmenter.rs:12:1
+    |
+ 12 | pub struct SegmentInfo {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+note: `types::SegmentInfo` is 
+defined in module `crate::types` 
+of the current crate
+   --> src\types.rs:27:1
+    |
+ 27 | pub struct SegmentInfo {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0599]: no method named 
+`is_complete` found for struct 
+`tokio::sync::MutexGuard<'_, 
+DownloadState>` in the current 
+scope
+   --> 
+src\engine\manager.rs:216:30
+    |
+216 |         let is_done = 
+s_lock.is_complete();
+    |                            
+  ^^^^^^^^^^^ method not found 
+in `tokio::sync::MutexGuard<'_, 
+DownloadState>`
+
+error[E0599]: no method named 
+`is_complete` found for struct 
+`tokio::sync::MutexGuard<'_, 
+segmenter::DownloadState>` in 
+the current scope
+   --> 
+src\engine\manager.rs:216:30
+    |
+216 |         let is_done = 
+s_lock.is_complete();
+    |                            
+  ^^^^^^^^^^^ method not found 
+in `tokio::sync::MutexGuard<'_, 
+segmenter::DownloadState>`
+
+error[E0308]: mismatched types
+   --> 
+src\engine\manager.rs:239:27
+    |
+239 |                 segments: 
+s_lock.segments.clone(),
+    |                           
+^^^^^^^^^^^^^^^^^^^^^^^ expected 
+`types::SegmentInfo`, found 
+`segmenter::SegmentInfo`
+    |
+    = note: 
+`segmenter::SegmentInfo` and 
+`types::SegmentInfo` have 
+similar names, but are actually 
+distinct types
+note: `segmenter::SegmentInfo` 
+is defined in module 
+`crate::engine::segmenter` of 
+the current crate
+   --> 
+src\engine\segmenter.rs:12:1
+    |
+ 12 | pub struct SegmentInfo {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+note: `types::SegmentInfo` is 
+defined in module `crate::types` 
+of the current crate
+   --> src\types.rs:27:1
+    |
+ 27 | pub struct SegmentInfo {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0308]: mismatched types
+  --> 
+src\engine\persistence.rs:37:25
+   |
+37 |         if seg.state == 
+SegmentState::Active {
+   |            ---------    
+^^^^^^^^^^^^^^^^^^^^ expected 
+`segmenter::SegmentState`, found 
+`types::SegmentState`
+   |            |
+   |            expected because 
+this is `segmenter::SegmentState`
+   |
+   = note: `types::SegmentState` 
+and `segmenter::SegmentState` 
+have similar names, but are 
+actually distinct types
+note: `types::SegmentState` is 
+defined in module `crate::types` 
+of the current crate
+  --> src\types.rs:15:1
+   |
+15 | pub enum SegmentState {
+   | ^^^^^^^^^^^^^^^^^^^^^
+note: `segmenter::SegmentState` 
+is defined in module 
+`crate::engine::segmenter` of 
+the current crate
+  --> src\engine\segmenter.rs:4:1
+   |
+ 4 | pub enum SegmentState {
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+error[E0308]: mismatched types
+  --> 
+src\engine\persistence.rs:38:25
+   |
+38 |             seg.state = 
+SegmentState::Pending;
+   |             ---------   
+^^^^^^^^^^^^^^^^^^^^^ expected 
+`segmenter::SegmentState`, found 
+`types::SegmentState`
+   |             |
+   |             expected due to 
+the type of this binding
+   |
+   = note: `types::SegmentState` 
+and `segmenter::SegmentState` 
+have similar names, but are 
+actually distinct types
+note: `types::SegmentState` is 
+defined in module `crate::types` 
+of the current crate
+  --> src\types.rs:15:1
+   |
+15 | pub enum SegmentState {
+   | ^^^^^^^^^^^^^^^^^^^^^
+note: `segmenter::SegmentState` 
+is defined in module 
+`crate::engine::segmenter` of 
+the current crate
+  --> src\engine\segmenter.rs:4:1
+   |
+ 4 | pub enum SegmentState {
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+error[E0282]: type annotations 
+needed
+  --> src\engine\quota.rs:43:13
+   |
+43 |         let conn = 
+self.conn.lock().await;
+   |             ^^^^
+44 |         let ts = 
+Utc::now().timestamp();
+45 |         let _ = 
+conn.execute(
+   |                 ---- type 
+must be known at this point
+   |
+help: consider giving `conn` an 
+explicit type
+   |
+43 |         let conn: /* Type 
+*/ = self.conn.lock().await;
+   |                 ++++++++++++
+
+error[E0282]: type annotations 
+needed
+  --> src\engine\quota.rs:53:13
+   |
+53 |         let conn = 
+self.conn.lock().await;
+   |             ^^^^
+...
+56 |         let result: 
+Result<i64, _> = conn.query_row(
+   |                             
+         ---- type must be known 
+at this point
+   |
+help: consider giving `conn` an 
+explicit type
+   |
+53 |         let conn: /* Type 
+*/ = self.conn.lock().await;
+   |                 ++++++++++++
+
+error[E0282]: type annotations 
+needed
+  --> src\engine\quota.rs:59:14
+   |
+59 |             |row| 
+row.get(0),
+   |              ^^^  --- type 
+must be known at this point
+   |
+help: consider giving this 
+closure parameter an explicit 
+type
+   |
+59 |             |row: /* Type 
+*/| row.get(0),
+   |                 ++++++++++++
+
+error[E0282]: type annotations 
+needed
+  --> src\engine\quota.rs:71:13
+   |
+71 |         let conn = 
+self.conn.lock().await;
+   |             ^^^^
+72 |         let thirty_days_ago 
+= (Utc::now() - ChronoDuration::d
+ays(30)).timestamp();
+73 |         let _ = 
+conn.execute(
+   |                 ---- type 
+must be known at this point
+   |
+help: consider giving `conn` an 
+explicit type
+   |
+71 |         let conn: /* Type 
+*/ = self.conn.lock().await;
+   |                 ++++++++++++
+
+error[E0433]: failed to resolve: 
+use of unresolved module or 
+unlinked crate `dash_mpd`
+  --> src\engine\media.rs:95:34
+   |
+95 |         let mpd: 
+dash_mpd::MPD = dash_mpd::parse(&
+text).map_err(|e| format!("DASH 
+parse error: {}", e))?;
+   |                             
+     ^^^^^^^^ use of unresolved 
+module or unlinked crate 
+`dash_mpd`
+   |
+   = help: if you wanted to use 
+a crate named `dash_mpd`, use 
+`cargo add dash_mpd` to add it 
+to your `Cargo.toml`
+
+error[E0282]: type annotations 
+needed
+   --> src\engine\media.rs:108:59
+    |
+108 | ...                   let 
+segment_url: String = 
+media_tmpl.replace("$Number$", 
+&i.to_string());
+    |                            
+                     ^^^^^^^^^^ 
+cannot infer type
+
+error[E0609]: no field `etag` on 
+type 
+`tokio::sync::MutexGuard<'_, 
+segmenter::DownloadState>`
+  --> 
+src\commands\download.rs:95:11
+   |
+95 |         s.etag = etag;
+   |           ^^^^ unknown field
+   |
+   = note: available fields are: 
+`id`, `url`, `file_path`, 
+`total_size`, `segments` ... and 
+2 others
+
+error[E0609]: no field `etag` on 
+type 
+`tokio::sync::MutexGuard<'_, 
+DownloadState>`
+  --> 
+src\commands\download.rs:95:11
+   |
+95 |         s.etag = etag;
+   |           ^^^^ unknown field
+   |
+   = note: available fields are: 
+`id`, `url`, `file_path`, 
+`total_size`, `segments` ... and 
+2 others
+
+error[E0609]: no field 
+`last_modified` on type 
+`tokio::sync::MutexGuard<'_, 
+segmenter::DownloadState>`
+  --> 
+src\commands\download.rs:96:11
+   |
+96 |         s.last_modified = 
+last_modified;
+   |           ^^^^^^^^^^^^^ 
+unknown field
+   |
+   = note: available fields are: 
+`id`, `url`, `file_path`, 
+`total_size`, `segments` ... and 
+2 others
+
+error[E0609]: no field 
+`last_modified` on type 
+`tokio::sync::MutexGuard<'_, 
+DownloadState>`
+  --> 
+src\commands\download.rs:96:11
+   |
+96 |         s.last_modified = 
+last_modified;
+   |           ^^^^^^^^^^^^^ 
+unknown field
+   |
+   = note: available fields are: 
+`id`, `url`, `file_path`, 
+`total_size`, `segments` ... and 
+2 others
+
+error[E0609]: no field `etag` on 
+type `segmenter::DownloadState`
+   --> 
+src\commands\download.rs:198:67
+    |
+198 |         if let 
+(Some(saved_etag), 
+Some(now_etag)) = 
+(&saved_state.etag, 
+current_etag) {
+    |                            
+                                 
+      ^^^^ unknown field
+    |
+    = note: available fields 
+are: `id`, `url`, `file_path`, 
+`total_size`, `segments` ... and 
+2 others
+
+error[E0609]: no field `etag` on 
+type `DownloadState`
+   --> 
+src\commands\download.rs:198:67
+    |
+198 |         if let 
+(Some(saved_etag), 
+Some(now_etag)) = 
+(&saved_state.etag, 
+current_etag) {
+    |                            
+                                 
+      ^^^^ unknown field
+    |
+    = note: available fields 
+are: `id`, `url`, `file_path`, 
+`total_size`, `segments` ... and 
+2 others
+
+error[E0609]: no field 
+`last_modified` on type 
+`DownloadState`
+   --> 
+src\commands\download.rs:202:70
+    |
+202 |         } else if let 
+(Some(saved_lm), Some(now_lm)) = 
+(&saved_state.last_modified, 
+current_lm) {
+    |                            
+                                 
+         ^^^^^^^^^^^^^ unknown 
+field
+    |
+    = note: available fields 
+are: `id`, `url`, `file_path`, 
+`total_size`, `segments` ... and 
+2 others
+
+error[E0609]: no field 
+`last_modified` on type 
+`segmenter::DownloadState`
+   --> 
+src\commands\download.rs:202:70
+    |
+202 |         } else if let 
+(Some(saved_lm), Some(now_lm)) = 
+(&saved_state.last_modified, 
+current_lm) {
+    |                            
+                                 
+         ^^^^^^^^^^^^^ unknown 
+field
+    |
+    = note: available fields 
+are: `id`, `url`, `file_path`, 
+`total_size`, `segments` ... and 
+2 others
+
+error[E0433]: failed to resolve: 
+use of unresolved module or 
+unlinked crate `m3u8_rs`
+  --> src\engine\media.rs:25:15
+   |
+25 |         match m3u8_rs::parse
+_playlist_res(&bytes) {
+   |               ^^^^^^^ use 
+of unresolved module or unlinked 
+crate `m3u8_rs`
+   |
+   = help: if you wanted to use 
+a crate named `m3u8_rs`, use 
+`cargo add m3u8_rs` to add it to 
+your `Cargo.toml`
+
+error[E0433]: failed to resolve: 
+use of unresolved module or 
+unlinked crate `dash_mpd`
+  --> src\engine\media.rs:95:18
+   |
+95 |         let mpd: 
+dash_mpd::MPD = dash_mpd::parse(&
+text).map_err(|e| format!("DASH 
+parse error: {}", e))?;
+   |                  ^^^^^^^^ 
+use of unresolved module or 
+unlinked crate `dash_mpd`
+   |
+   = help: if you wanted to use 
+a crate named `dash_mpd`, use 
+`cargo add dash_mpd` to add it 
+to your `Cargo.toml`
+
+Some errors have detailed 
+explanations: E0282, E0308, 
+E0432, E0433, E0599, E0609.
+For more information about an 
+error, try `rustc --explain 
+E0282`.
+error: could not compile 
+`mdownloader` (lib) due to 26 
+previous errors
+warning: build failed, waiting 
+for other jobs to finish...
+error: could not compile 
+`mdownloader` (lib test) due to 
+27 previous errors

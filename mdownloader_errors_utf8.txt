@@ -1,0 +1,55 @@
+﻿cargo.exe :    Compiling 
+pssh-box v0.1.11
+At line:1 char:1
++ & "$env:USERPROFILE\.cargo\bin\
+cargo.exe" check --bin 
+mdownloader --m ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          : No 
+   tSpecified: (   Compiling ps  
+  sh-box v0.1.11:String) [], R   
+ emoteException
+    + FullyQualifiedErrorId : Na 
+   tiveCommandError
+ 
+    Checking no-std-compat v0.4.1
+    Checking hex v0.4.3
+    Checking lazy_static v1.5.0
+    Checking hxdmp v0.2.1
+    Checking futures-timer v3.0.3
+    Checking hex-literal v1.1.0
+    Checking minimal-lexical 
+v0.2.1
+    Checking nonzero_ext v0.3.0
+    Checking sync_wrapper v0.1.2
+    Checking fastrand v2.3.0
+    Checking tower-http v0.6.8
+error: failed to run custom 
+build command for `pssh-box 
+v0.1.11`
+
+Caused by:
+  process didn't exit 
+successfully: `D:\WorkStation\IDM
+\src-tauri\target\debug\build\pss
+h-box-e7fd86eb29ea2ecf\build-scri
+pt-build` (exit code: 1)
+  --- stderr
+  Error: Custom { kind: 
+NotFound, error: "Could not find 
+`protoc`. If `protoc` is 
+installed, try setting the 
+`PROTOC` environment variable to 
+the path of the `protoc` binary. 
+Try installing 
+`protobuf-compiler` or 
+`protobuf` using your package 
+manager. It is also available at 
+https://github.com/protocolbuffer
+s/protobuf/releases  For more 
+information: https://docs.rs/pros
+t-build/#sourcing-protoc" }
+warning: build failed, waiting 
+for other jobs to finish...
