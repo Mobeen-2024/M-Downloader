@@ -126,6 +126,44 @@ onMounted(async () => {
           </div>
         </div>
       </GlassPanel>
+      <GlassPanel class="settings-card roadmap-card">
+        <div class="card-title">
+          <Activity :size="20" class="text-accent" />
+          <h4>Next-Gen Roadmap</h4>
+        </div>
+        <div class="roadmap-items">
+          <div class="roadmap-item">
+            <div class="roadmap-dot active"></div>
+            <div class="roadmap-content">
+              <h5>HTTP/3 (QUIC) Support</h5>
+              <p>Eliminating head-of-line blocking for multi-threaded acceleration. (Engine Ready)</p>
+            </div>
+          </div>
+          <div class="roadmap-item">
+            <div class="roadmap-dot"></div>
+            <div class="roadmap-content">
+              <h5>Cloud Stream Proxying</h5>
+              <p>Direct-to-Cloud (Google Drive/Dropbox) parallel fetching and uploading.</p>
+            </div>
+          </div>
+          <div class="roadmap-item">
+            <div class="roadmap-dot"></div>
+            <div class="roadmap-content">
+              <h5>WFP Stealth Sniffing</h5>
+              <p>Institutional-grade media detection with kernel-mode traffic interception.</p>
+            </div>
+          </div>
+        </div>
+      </GlassPanel>
+    </div>
+
+    <div class="conclusion-box">
+      <p>
+        Building Mdownloader is an intensive undertaking across networking, filesystem optimization, and browser internals. 
+        By utilizing dynamic segmentation and robust deobfuscation, we maximize network utility while providing a 
+        silent, resilient user experience.
+      </p>
+      <div class="version-badge">Mdownloader v0.2.0 Modernization Suite</div>
     </div>
   </div>
 </template>
@@ -280,36 +318,71 @@ onMounted(async () => {
   border-radius: 4px;
 }
 
-.theme-picker {
+.roadmap-items {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.theme-btn {
-  flex: 1;
+.roadmap-item {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s;
+  gap: 16px;
 }
 
-.theme-btn.active {
+.roadmap-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
-  border-color: var(--theme-color);
-  color: var(--text-primary);
+  margin-top: 6px;
+  flex-shrink: 0;
+  border: 2px solid var(--border-color);
 }
 
-.color-preview {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  background: var(--theme-color);
+.roadmap-dot.active {
+  background: var(--accent-primary);
+  box-shadow: 0 0 10px var(--accent-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.roadmap-content h5 {
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.roadmap-content p {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.conclusion-box {
+  margin-top: 60px;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  max-width: 800px;
+  text-align: center;
+}
+
+.conclusion-box p {
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  opacity: 0.8;
+}
+
+.version-badge {
+  display: inline-block;
+  padding: 8px 24px;
+  background: var(--accent-primary);
+  color: white;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 </style>
