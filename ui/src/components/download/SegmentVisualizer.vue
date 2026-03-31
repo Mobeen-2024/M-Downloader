@@ -31,23 +31,24 @@ const draw = () => {
     const endX = (seg.end / props.total) * width;
     const segWidth = Math.max(1, endX - startX);
 
-    // 1. Draw segment background (pending area)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+    // 1. Draw segment background (pending area = PINK)
+    ctx.fillStyle = 'rgba(255, 105, 180, 0.3)'; // semi-transparent pink
     ctx.fillRect(startX, 0, segWidth, height);
 
-    // 2. Draw downloaded progress
-    const progressWidth = ((seg.downloaded) / (seg.end - seg.start + 1)) * segWidth;
+    // 2. Draw downloaded progress (BLUE)
+    const segmentRange = (seg.end - seg.start + 1);
+    const progressWidth = (seg.downloaded / segmentRange) * segWidth;
     
-    // Create gradient for the segment
-    const gradient = ctx.createLinearGradient(startX, 0, startX + progressWidth, 0);
-    gradient.addColorStop(0, '#3b82f6'); // blue-500
-    gradient.addColorStop(1, '#60a5fa'); // blue-400
-    
-    ctx.fillStyle = gradient;
+    if (seg.state === 'Completed') {
+      ctx.fillStyle = '#2ecc71'; // Success Green
+    } else {
+      ctx.fillStyle = '#3498db'; // IDM Blue
+    }
     ctx.fillRect(startX, 0, progressWidth, height);
 
     // 3. Active pulse effect
-    if (seg.active && seg.downloaded < (seg.end - seg.start + 1)) {
+    // We check if segment is Active (state enum)
+    if (seg.state === 'Active' && seg.downloaded < segmentRange) {
       const shimmerX = (time * 150) % (progressWidth + 40) - 20;
       const shimmerGrad = ctx.createLinearGradient(startX + shimmerX, 0, startX + shimmerX + 20, 0);
       shimmerGrad.addColorStop(0, 'rgba(255,255,255,0)');

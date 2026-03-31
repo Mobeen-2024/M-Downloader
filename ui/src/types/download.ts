@@ -1,10 +1,11 @@
-export type DownloadStatus = 'Downloading' | 'Paused' | 'Completed' | 'Error' | 'Queued';
+export type DownloadStatus = 'Downloading' | 'Paused' | 'Completed' | 'Error' | 'Queued' | 'RefreshNeeded';
 
 export interface SegmentInfo {
   start: number;
   end: number;
   downloaded: number;
-  active: boolean;
+  state: 'Pending' | 'Active' | 'Completed' | 'Failed';
+  retry_count: number;
 }
 
 export interface DownloadProgressEvent {
@@ -14,10 +15,12 @@ export interface DownloadProgressEvent {
   speed_bps: number;
   status: DownloadStatus;
   segments: SegmentInfo[];
+  last_error_code?: number;
 }
 
 export interface DownloadItem extends DownloadProgressEvent {
   name: string;
   url: string;
   addedAt: number;
+  category?: string;
 }

@@ -8,7 +8,8 @@ import {
   FileCode, 
   FileVideo, 
   FileImage,
-  FolderOpen
+  FolderOpen,
+  RotateCw
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import type { DownloadItem } from '../../types/download';
@@ -21,6 +22,8 @@ import GlassPanel from '../ui/GlassPanel.vue';
 const props = defineProps<{
   download: DownloadItem;
 }>();
+
+const emit = defineEmits(['refresh']);
 
 const { formatSize, formatSpeed, formatEta } = useFormatters();
 const { pauseDownload, resumeDownload, cancelDownload } = useDownload();
@@ -59,7 +62,14 @@ const progressPercent = computed(() => {
 
       <div class="card-actions">
         <StatusBadge :status="download.status" />
-        <div class="button-group">
+          <button 
+            v-if="download.status === 'RefreshNeeded'" 
+            class="btn-icon warning"
+            title="Refresh Download Link (Expired)"
+            @click="$emit('refresh', download)"
+          >
+            <RotateCw />
+          </button>
           <button 
             v-if="download.status === 'Downloading'" 
             class="btn-icon" 
@@ -90,15 +100,24 @@ const progressPercent = computed(() => {
     <div class="card-body">
       <div class="progress-info">
         <div class="progress-labels">
-          <span class="speed">{{ formatSpeed(download.speed_bps) }}</span>
+          <div class="speed-meta">
+            <span class="speed">{{ formatSpeed(download.speed_bps) }}</span>
+            <span class="percentage">{{ progressPercent.toFixed(1) }}%</span>
+          </div>
           <span class="eta">ETA: {{ formatEta(download.downloaded, download.total, download.speed_bps) }}</span>
         </div>
-        <div class="progress-bar-container">
-          <div class="progress-bar" :style="{ width: progressPercent + '%' }"></div>
+        
+        <!-- Professional Segmented Visualization (Pink & Blue) -->
+        <SegmentVisualizer 
+          :segments="download.segments" 
+          :total="download.total" 
+          class="main-visualizer"
+        />
+
+        <div class="download-stats text-secondary">
+          <span>{{ formatSize(download.downloaded) }} of {{ formatSize(download.total) }}</span>
         </div>
       </div>
-
-      <SegmentVisualizer :segments="download.segments" :total="download.total" />
     </div>
   </GlassPanel>
 </template>

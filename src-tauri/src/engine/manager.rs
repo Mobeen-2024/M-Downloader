@@ -136,9 +136,24 @@ impl DownloadManager {
                             ).await;
 
                             // On error, mark the segment for retry.
-                            if result.is_err() {
+                            if let Err(e) = result {
                                 let mut s = state.lock().await;
                                 s.mark_failed(idx);
+                                if e.to_string().starts_with("AUTH_REQUIRED") {
+                                    if let Some(ref win) = window_clone {
+                                        let event = DownloadProgressEvent {
+                                            id: s.id.clone(),
+                                            downloaded: s.total_downloaded(),
+                                            total: s.total_size,
+                                            speed_bps: 0.0,
+                                            status: DownloadStatus::RefreshNeeded,
+                                            segments: s.segments.clone(),
+                                            last_error_code: Some(403),
+                                        };
+                                        let _ = win.emit("download-progress", event);
+                                    }
+                                    break; // Stop this worker.
+                                }
                             }
 
                             // Emit a live progress event after each segment finishes if a window is present.

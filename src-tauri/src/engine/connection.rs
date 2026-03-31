@@ -91,7 +91,11 @@ async fn download_segment_attempt(
         .await?;
 
     if !response.status().is_success() {
-        return Err(format!("Server returned error: {}", response.status()).into());
+        let status = response.status();
+        if status == reqwest::StatusCode::FORBIDDEN || status == reqwest::StatusCode::UNAUTHORIZED {
+            return Err(format!("AUTH_REQUIRED:{}", status.as_u16()).into());
+        }
+        return Err(format!("Server returned error: {}", status).into());
     }
 
     let status = response.status();

@@ -43,6 +43,7 @@ export const useDownloadStore = defineStore('downloads', () => {
 
   const addDownload = (url: string, id: string) => {
     const name = url.split('/').pop() || 'unknown';
+    const category = getCategoryFromFilename(name);
     downloads.value.push({
       id,
       url,
@@ -53,6 +54,7 @@ export const useDownloadStore = defineStore('downloads', () => {
       status: 'Downloading',
       segments: [],
       addedAt: Date.now(),
+      category,
     });
   };
 
@@ -70,6 +72,39 @@ export const useDownloadStore = defineStore('downloads', () => {
     downloads.value = downloads.value.filter(d => d.id !== id);
   };
 
+  const getCategoryFromFilename = (filename: string): string => {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'iso'].includes(ext)) return 'Compressed';
+    if (['mp4', 'mkv', 'avi', 'mov', 'flv', 'wmv'].includes(ext)) return 'Video';
+    if (['mp3', 'wav', 'flac', 'm4a', 'aac'].includes(ext)) return 'Music';
+    if (['exe', 'msi', 'dmg', 'app', 'deb', 'rpm'].includes(ext)) return 'Programs';
+    if (['pdf', 'doc', 'docx', 'txt', 'rtf', 'epub'].includes(ext)) return 'Documents';
+    return 'General';
+  };
+
+  const downloadsByCategory = (category: string) => {
+    if (category === 'All') return downloads.value;
+    return downloads.value.filter(d => d.category === category);
+  };
+
+  const categoryCounts = computed(() => {
+    const counts: Record<string, number> = {
+      All: downloads.value.length,
+      Compressed: 0,
+      Video: 0,
+      Music: 0,
+      Programs: 0,
+      Documents: 0,
+      General: 0,
+    };
+    downloads.value.forEach(d => {
+      if (counts[d.category!] !== undefined) {
+        counts[d.category!]++;
+      }
+    });
+    return counts;
+  });
+
   return {
     downloads,
     activeDownloads,
@@ -79,5 +114,7 @@ export const useDownloadStore = defineStore('downloads', () => {
     addDownload,
     updateProgress,
     removeDownload,
+    downloadsByCategory,
+    categoryCounts,
   };
 });

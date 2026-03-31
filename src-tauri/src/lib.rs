@@ -25,6 +25,8 @@ pub fn run() {
             crate::commands::download::cancel_download,
             crate::commands::download::resume_download,
             crate::commands::download::set_speed_limit,
+            crate::commands::reliability::update_download_url,
+            crate::commands::reliability::set_ignore_ssl,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

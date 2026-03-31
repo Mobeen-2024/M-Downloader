@@ -7,6 +7,7 @@ pub enum DownloadStatus {
     Completed,
     Error,
     Queued,
+    RefreshNeeded,
 }
 
 /// Fine-grained state for each byte-range segment.
@@ -53,4 +54,5 @@ pub struct DownloadProgressEvent {
     pub speed_bps: f64,
     pub status: DownloadStatus,
     pub segments: Vec<SegmentInfo>,
+    pub last_error_code: Option<u16>,
 }

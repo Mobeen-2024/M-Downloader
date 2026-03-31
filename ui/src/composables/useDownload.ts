@@ -44,5 +44,14 @@ export function useDownload() {
     }
   };
 
-  return { startDownload, pauseDownload, cancelDownload, resumeDownload };
+  const refreshDownload = async (id: string, newUrl: string) => {
+    try {
+      await invoke('update_download_url', { id, newUrl });
+      await resumeDownload(id);
+    } catch (e) {
+      console.error('Failed to refresh download:', e);
+    }
+  };
+
+  return { startDownload, pauseDownload, cancelDownload, resumeDownload, refreshDownload };
 }

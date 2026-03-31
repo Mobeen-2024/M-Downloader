@@ -1,9 +1,30 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useDownloadStore } from '../stores/download.store';
+import { useDownload } from '../composables/useDownload';
 import DownloadCard from '../components/download/DownloadCard.vue';
+import RefreshLinkModal from '../components/modals/RefreshLinkModal.vue';
 import { Layers } from 'lucide-vue-next';
+import type { DownloadItem } from '../types/download';
 
 const store = useDownloadStore();
+const { refreshDownload } = useDownload();
+
+const showRefreshModal = ref(false);
+const refreshTarget = ref<DownloadItem | null>(null);
+
+const handleRefreshClick = (download: DownloadItem) => {
+  refreshTarget.value = download;
+  showRefreshModal.value = true;
+};
+
+const handleRefreshSubmit = async (newUrl: string) => {
+  if (refreshTarget.value) {
+    await refreshDownload(refreshTarget.value.id, newUrl);
+    showRefreshModal.value = false;
+    refreshTarget.value = null;
+  }
+};
 </script>
 
 <template>
@@ -19,8 +40,17 @@ const store = useDownloadStore();
         v-for="download in store.activeDownloads" 
         :key="download.id" 
         :download="download" 
+        @refresh="handleRefreshClick"
       />
     </div>
+
+    <RefreshLinkModal
+      v-if="refreshTarget"
+      :show="showRefreshModal"
+      :download-name="refreshTarget.name"
+      @close="showRefreshModal = false"
+      @refresh="handleRefreshSubmit"
+    />
   </div>
 </template>
 

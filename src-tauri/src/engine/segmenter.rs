@@ -17,6 +17,8 @@ pub struct DownloadState {
     pub etag: Option<String>,
     pub last_modified: Option<String>,
     pub is_fallback: bool,
+    pub source_page_url: Option<String>,
+    pub ignore_ssl: bool,
 }
 
 impl DownloadState {
@@ -40,6 +42,8 @@ impl DownloadState {
             etag: None,
             last_modified: None,
             is_fallback: false,
+            source_page_url: None,
+            ignore_ssl: false,
         }
     }
 
