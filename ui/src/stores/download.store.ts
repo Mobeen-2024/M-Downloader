@@ -7,6 +7,7 @@ export const useDownloadStore = defineStore('downloads', () => {
   const downloads = ref<DownloadItem[]>([]);
   const bridgeConnected = ref(false);
   const interceptedMedia = ref<any[]>([]); // New: Stores detected media streams for HUD
+  const isAnalyzingMedia = ref(false);
   
   // Load from localStorage on startup
   const saved = localStorage.getItem('mdownloader_tasks');
@@ -122,7 +123,12 @@ export const useDownloadStore = defineStore('downloads', () => {
     }
   };
 
+  const handleMediaAnalyzing = () => {
+    isAnalyzingMedia.value = true;
+  };
+
   const handleMediaIntercept = (media: any) => {
+    isAnalyzingMedia.value = false;
     // Add to intercepted list if not already present
     if (!interceptedMedia.value.some(m => m.url === media.url)) {
       interceptedMedia.value.unshift(media);
@@ -189,7 +195,9 @@ export const useDownloadStore = defineStore('downloads', () => {
     start_queue,
     stop_queue,
     interceptedMedia,
+    isAnalyzingMedia,
     updateTaskUrl,
+    handleMediaAnalyzing,
     handleMediaIntercept,
     clearMediaDetection,
   };

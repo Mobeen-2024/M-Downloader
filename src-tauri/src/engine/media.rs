@@ -3,7 +3,7 @@ use m3u8_rs::Playlist;
 use reqwest::Client;
 use async_recursion::async_recursion;
 use roxmltree::Document;
-use crate::types::MediaTrack;
+use crate::types::{MediaTrack, MediaResolution};
 use crate::engine::deobfuscator::YouTubeDeobfuscator;
 
 pub struct MediaSegment {
@@ -133,18 +133,11 @@ impl MediaStream {
                     continue;
                 }
 
-                let mut best_rep = None;
-                let mut max_bandwidth = 0;
-
                 for rep in adaptation.descendants().filter(|n| n.has_tag_name("Representation")) {
                     let bandwidth = rep.attribute("bandwidth").and_then(|b| b.parse::<u64>().ok()).unwrap_or(0);
-                    if bandwidth > max_bandwidth {
-                        max_bandwidth = bandwidth;
-                        best_rep = Some(rep);
-                    }
-                }
-
-                if let Some(rep) = best_rep {
+                    let width = rep.attribute("width").and_then(|w| w.parse::<u32>().ok());
+                    let height = rep.attribute("height").and_then(|h| h.parse::<u32>().ok());
+                    
                     let mut segments = Vec::new();
                     if let Some(st) = rep.descendants().find(|n| n.has_tag_name("SegmentTemplate")) {
                         if let Some(media_tmpl) = st.attribute("media") {
@@ -152,37 +145,52 @@ impl MediaStream {
                                 segments.push(resolve_url(url, init_tmpl));
                             }
 
-                            for i in 1..10 { 
+                            // Just peek at the first few segments to verify URLs for HUD
+                            for i in 1..3 { 
                                 let mut segment_url = resolve_url(url, &media_tmpl.replace("$Number$", &i.to_string()));
 
                                 // ── YouTube Deobfuscation Integration ──────────────────────
                                 if let (Some(deob), Some(b_js)) = (deobfuscator, base_js_url) {
                                     if segment_url.contains("youtube.com") || segment_url.contains("googlevideo.com") {
-                                        // Solve "n" parameter
                                         if let Some(n_param) = extract_query_param(&segment_url, "n") {
                                             if let Ok(sn) = deob.solve_n(&n_param, b_js).await {
-                                                let solved_n: String = sn;
-                                                segment_url = replace_query_param(&segment_url, "n", &solved_n);
+                                                segment_url = replace_query_param(&segment_url, "n", &sn);
                                             }
                                         }
-                                        // Solve signature "sig" if present
                                         if let Some(s_param) = extract_query_param(&segment_url, "sig") {
                                             if let Ok(ss) = deob.solve_signature(&s_param, b_js).await {
-                                                let solved_s: String = ss;
-                                                segment_url = replace_query_param(&segment_url, "sig", &solved_s);
+                                                segment_url = replace_query_param(&segment_url, "sig", &ss);
                                             }
                                         }
                                     }
                                 }
-
                                 segments.push(segment_url);
                             }
                         }
+                    } else if let Some(base_url_node) = rep.descendants().find(|n| n.has_tag_name("BaseURL")) {
+                        // Single file DASH (typical for some streams)
+                        let mut base_url = resolve_url(url, base_url_node.text().unwrap_or(""));
+                        
+                        if let (Some(deob), Some(b_js)) = (deobfuscator, base_js_url) {
+                            if base_url.contains("youtube.com") || base_url.contains("googlevideo.com") {
+                                if let Some(n_param) = extract_query_param(&base_url, "n") {
+                                    if let Ok(sn) = deob.solve_n(&n_param, b_js).await {
+                                        base_url = replace_query_param(&base_url, "n", &sn);
+                                    }
+                                }
+                                if let Some(s_param) = extract_query_param(&base_url, "sig") {
+                                    if let Ok(ss) = deob.solve_signature(&s_param, b_js).await {
+                                        base_url = replace_query_param(&base_url, "sig", &ss);
+                                    }
+                                }
+                            }
+                        }
+                        segments.push(base_url);
                     }
                     
                     if !segments.is_empty() {
                         tracks.push(MediaTrack {
-                            name: if is_video { "Video".to_string() } else { "Audio".to_string() },
+                            name: format!("{} - {}bps", if is_video { "Video" } else { "Audio" }, bandwidth),
                             segments,
                             mime_type: Some(mime_type.to_string()),
                         });
@@ -196,6 +204,64 @@ impl MediaStream {
         }
 
         Ok(Self { tracks, master_url: url.to_string() })
+    }
+
+    /// Extracts all available resolutions and bitrates from a DASH manifest for the UI HUD.
+    pub async fn extract_resolutions(
+        client: &Client,
+        url: &str,
+    ) -> Result<Vec<MediaResolution>, String> {
+        let res = client.get(url).send().await.map_err(|e| e.to_string())?;
+        let text = res.text().await.map_err(|e| e.to_string())?;
+        
+        let doc = Document::parse(&text).map_err(|e| format!("MPD parse error: {}", e))?;
+        let mut resolutions = Vec::new();
+
+        // 1. Collect Audio Tracks first (to attach to video resolutions if needed)
+        let mut audio_tracks = Vec::new();
+        for adaptation in doc.descendants().filter(|n| n.has_tag_name("AdaptationSet")) {
+            let mime = adaptation.attribute("mimeType").unwrap_or("");
+            if mime.contains("audio") || adaptation.attribute("contentType") == Some("audio") {
+                for rep in adaptation.descendants().filter(|n| n.has_tag_name("Representation")) {
+                    if let Some(base_url) = rep.descendants().find(|n| n.has_tag_name("BaseURL")) {
+                        audio_tracks.push(resolve_url(url, base_url.text().unwrap_or("")));
+                    }
+                }
+            }
+        }
+
+        // 2. Collect Video Representations
+        for adaptation in doc.descendants().filter(|n| n.has_tag_name("AdaptationSet")) {
+            let mime = adaptation.attribute("mimeType").unwrap_or("");
+            if mime.contains("video") || adaptation.attribute("contentType") == Some("video") {
+                for rep in adaptation.descendants().filter(|n| n.has_tag_name("Representation")) {
+                    let id = rep.attribute("id").unwrap_or("unknown");
+                    let bandwidth = rep.attribute("bandwidth").and_then(|b| b.parse::<u64>().ok()).unwrap_or(0);
+                    let width = rep.attribute("width").and_then(|w| w.parse::<u32>().ok());
+                    let height = rep.attribute("height").and_then(|h| h.parse::<u32>().ok());
+                    
+                    let video_url = if let Some(base) = rep.descendants().find(|n| n.has_tag_name("BaseURL")) {
+                        resolve_url(url, base.text().unwrap_or(""))
+                    } else {
+                        url.to_string() // Fallback to master if template based
+                    };
+
+                    let label = format!("{}p ({} Mbps)", height.unwrap_or(0), (bandwidth as f64 / 1_000_000.0).round());
+                    
+                    resolutions.push(MediaResolution {
+                        label,
+                        video_url,
+                        audio_url: audio_tracks.first().cloned(), // Attach first available audio track
+                        bandwidth,
+                        width,
+                        height,
+                    });
+                }
+            }
+        }
+
+        resolutions.sort_by(|a, b| b.bandwidth.cmp(&a.bandwidth));
+        Ok(resolutions)
     }
 }
 

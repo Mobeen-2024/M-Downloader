@@ -26,6 +26,10 @@ export function useIpcEvents() {
       store.handleMediaIntercept(event.payload);
     });
 
+    const unlistenAnalyzing = await listen<any>('media-analyzing', () => {
+      store.handleMediaAnalyzing();
+    });
+
     const unlistenRefresh = await listen<any>('url-refreshed', (event) => {
       if (event.payload.id) {
         // Since URL is refreshed internally, we might want to tell the store to update its ID's URL?
@@ -38,10 +42,11 @@ export function useIpcEvents() {
       unlistenProgress();
       unlistenBridge();
       unlistenMedia();
+      unlistenAnalyzing();
       unlistenRefresh();
     });
 
-    return { unlistenProgress, unlistenBridge, unlistenMedia, unlistenRefresh };
+    return { unlistenProgress, unlistenBridge, unlistenMedia, unlistenAnalyzing, unlistenRefresh };
   };
 
   return { initListeners };

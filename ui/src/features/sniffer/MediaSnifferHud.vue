@@ -49,8 +49,18 @@ function dismiss() {
 
 <template>
   <transition name="slide-up">
-    <div v-if="currentMedia" class="media-hud">
-      <div class="hud-content">
+    <div v-if="currentMedia || store.isAnalyzingMedia" class="media-hud">
+      <!-- Loading State -->
+      <div v-if="store.isAnalyzingMedia" class="loading-state">
+        <div class="loader-circle"></div>
+        <div class="text">
+          <h4>Analyzing Stream...</h4>
+          <p>Solving signatures and extracting qualities.</p>
+        </div>
+      </div>
+
+      <!-- Detection State -->
+      <div v-else-if="currentMedia" class="hud-content">
         <div class="media-info">
           <div class="icon">
             <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" class="pulse">
@@ -113,6 +123,27 @@ function dismiss() {
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
   padding: 16px;
+  min-height: 80px;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px;
+}
+
+.loader-circle {
+  width: 32px;
+  height: 32px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .hud-content {

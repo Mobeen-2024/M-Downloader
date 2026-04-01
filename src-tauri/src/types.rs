@@ -27,6 +27,27 @@ pub struct MediaTrack {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MediaResolution {
+    pub label: String,
+    pub video_url: String,
+    pub audio_url: Option<String>,
+    pub bandwidth: u64,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MediaInterceptionEvent {
+    pub id: Option<String>,
+    pub url: String,
+    pub filename: String,
+    pub mime: Option<String>,
+    pub resolutions: Vec<MediaResolution>,
+    pub cookies: Option<String>,
+    pub referer: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MediaJobMetadata {
     pub tracks: Vec<MediaTrack>,
     pub master_url: String,

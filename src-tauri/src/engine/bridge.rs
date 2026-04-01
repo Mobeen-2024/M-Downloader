@@ -123,23 +123,50 @@ pub fn setup_ipc_bridge(app: AppHandle) {
                             drop(refresh_id_lock);
 
                             // ── Intelligent Media Sniffing ──────────────────
-                            let is_media = req.url.contains(".m3u8") || req.url.contains(".mpd") || req.url.contains("youtube.com/watch") || req.url.contains("googlevideo.com");
+                            let is_media = req.url.contains(".m3u8") || req.url.contains(".mpd") || req.url.contains("googlevideo.com");
                             
                             if is_media {
                                 log::info!("[Bridge] Media stream intercepted: {}", req.url);
                                 
-                                let _ = app_handle.emit("media-intercepted", serde_json::json!({
-                                    "id": req.id,
-                                    "url": req.url,
-                                    "filename": req.filename.unwrap_or_else(|| "Detected Media".to_string()),
-                                    "mime": req.mime,
-                                    "resolutions": [
-                                        { "label": "4K (Ultra HD)", "video_url": req.url, "audio_url": None::<String> },
-                                        { "label": "1080p (Full HD)", "video_url": req.url, "audio_url": None::<String> },
-                                        { "label": "720p (HD)", "video_url": req.url, "audio_url": None::<String> }
-                                    ]
-                                }));
-                                continue; // Wait for user verification on the HUD
+                                let app_for_analysis = app_handle.clone();
+                                let req_for_analysis = req; // consumes req
+                                
+                                tauri::async_runtime::spawn(async move {
+                                    // 1. Notify UI that analysis is starting
+                                    let _ = app_for_analysis.emit("media-analyzing", serde_json::json!({
+                                        "url": req_for_analysis.url
+                                    }));
+
+                                    let client = reqwest::Client::new();
+                                    
+                                    // 2. Extract real resolutions (DASH/HLS)
+                                    let resolutions = if req_for_analysis.url.contains(".mpd") || req_for_analysis.url.contains("googlevideo.com") {
+                                        crate::engine::media::MediaStream::extract_resolutions(&client, &req_for_analysis.url).await
+                                            .unwrap_or_default()
+                                    } else {
+                                        // Fallback for simple HLS or direct links
+                                        vec![crate::types::MediaResolution {
+                                            label: "Original (HD)".to_string(),
+                                            video_url: req_for_analysis.url.clone(),
+                                            audio_url: None,
+                                            bandwidth: 0,
+                                            width: None,
+                                            height: None,
+                                        }]
+                                    };
+
+                                    // 3. Emit final interception data
+                                    let _ = app_for_analysis.emit("media-intercepted", crate::types::MediaInterceptionEvent {
+                                        id: req_for_analysis.id,
+                                        url: req_for_analysis.url,
+                                        filename: req_for_analysis.filename.unwrap_or_else(|| "Detected Media".to_string()),
+                                        mime: req_for_analysis.mime,
+                                        resolutions,
+                                        cookies: req_for_analysis.cookies,
+                                        referer: req_for_analysis.referrer,
+                                    });
+                                });
+                                continue; 
                             }
 
                             match crate::commands::download::start_download_internal(
