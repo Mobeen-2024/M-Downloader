@@ -32,33 +32,33 @@ const classes = computed(() => {
 // High-fidelity spring animations
 const handlePointerEnter = () => {
   if (props.disabled || props.loading || !buttonRef.value) return;
-  animate(buttonRef.value, 
+  (animate as any)(buttonRef.value, 
     { scale: 1.02, y: -2 }, 
-    { easing: spring({ stiffness: 400, damping: 25 }) }
+    { easing: spring({ stiffness: 400, damping: 25 }) } as any
   );
 };
 
 const handlePointerLeave = () => {
   if (props.disabled || props.loading || !buttonRef.value) return;
-  animate(buttonRef.value, 
+  (animate as any)(buttonRef.value, 
     { scale: 1, y: 0 }, 
-    { easing: spring({ stiffness: 400, damping: 25 }) }
+    { easing: spring({ stiffness: 400, damping: 25 }) } as any
   );
 };
 
 const handlePointerDown = () => {
   if (props.disabled || props.loading || !buttonRef.value) return;
-  animate(buttonRef.value, 
+  (animate as any)(buttonRef.value, 
     { scale: 0.95 }, 
-    { easing: spring({ stiffness: 600, damping: 30 }) }
+    { easing: spring({ stiffness: 600, damping: 30 }) } as any
   );
 };
 
 const handlePointerUp = () => {
   if (props.disabled || props.loading || !buttonRef.value) return;
-  animate(buttonRef.value, 
+  (animate as any)(buttonRef.value, 
     { scale: 1.02 }, 
-    { easing: spring({ stiffness: 400, damping: 25 }) }
+    { easing: spring({ stiffness: 400, damping: 25 }) } as any
   );
 };
 </script>

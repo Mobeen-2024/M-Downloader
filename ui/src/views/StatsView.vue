@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { listen } from '@tauri-apps/api/event';
 import { useDownloadStore } from '@/stores/download.store';
+import { animate, stagger, spring } from 'motion';
 import { 
   Cpu, 
   HardDrive, 
@@ -103,7 +104,21 @@ const formatSpeed = (bps: number) => {
   return parseFloat((bps / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
+const gridRef = ref<HTMLElement | null>(null);
+
 onMounted(async () => {
+  // Phase 5: Dashboard Entry Animation
+  if (gridRef.value) {
+    (animate as any)(
+      ".dashboard-item",
+      { opacity: [0, 1], y: [20, 0] },
+      { 
+        delay: stagger(0.05),
+        easing: spring({ stiffness: 300, damping: 30 })
+      }
+    );
+  }
+
   unlistenSniffer = await listen('sniffer-hit', (event: any) => {
     snifferLogs.value.unshift(event.payload);
     if (snifferLogs.value.length > 50) snifferLogs.value.pop();
@@ -137,16 +152,16 @@ onUnmounted(() => {
     </header>
 
     <div v-if="!activeDownload && !snifferLogs.length" class="empty-state">
-      <BaseCard variant="glass" padding="lg" class="empty-card">
+      <BaseCard variant="glass" padding="lg" class="empty-card" ref="emptyCardRef">
         <Activity :size="48" class="empty-icon" />
         <h3>Awaiting Data Packets</h3>
         <p>No active telemetry detected. Start a transmission or browse the web to see live packet interception.</p>
       </BaseCard>
     </div>
 
-    <div v-else class="dashboard-grid">
+    <div v-else class="dashboard-grid" ref="gridRef">
       <!-- Throughput Visualizer -->
-      <BaseCard variant="glass" padding="md" class="throughput-card full-width">
+      <BaseCard variant="glass" padding="md" class="throughput-card full-width dashboard-item">
         <div class="card-header">
           <div class="header-main">
             <History :size="16" class="text-accent" />
@@ -187,7 +202,7 @@ onUnmounted(() => {
 
       <!-- IO & Engine Health -->
       <div class="stats-subgrid full-width">
-        <BaseCard variant="glass" padding="md" class="stat-mini-card">
+        <BaseCard variant="glass" padding="md" class="stat-mini-card dashboard-item">
           <div class="mini-header">
             <HardDrive :size="14" />
             <span>Disk I/O Efficiency</span>
@@ -198,7 +213,7 @@ onUnmounted(() => {
           </div>
         </BaseCard>
 
-        <BaseCard variant="glass" padding="md" class="stat-mini-card">
+        <BaseCard variant="glass" padding="md" class="stat-mini-card dashboard-item">
           <div class="mini-header">
             <ShieldCheck :size="14" class="text-success" />
             <span>Engine Reliability</span>
@@ -209,7 +224,7 @@ onUnmounted(() => {
           </div>
         </BaseCard>
 
-        <BaseCard variant="glass" padding="md" class="stat-mini-card">
+        <BaseCard variant="glass" padding="md" class="stat-mini-card dashboard-item">
           <div class="mini-header">
             <Cpu :size="14" class="text-accent" />
             <span>Active Workers</span>
@@ -224,7 +239,7 @@ onUnmounted(() => {
           </div>
         </BaseCard>
 
-        <BaseCard variant="glass" padding="md" class="stat-mini-card">
+        <BaseCard variant="glass" padding="md" class="stat-mini-card dashboard-item">
           <div class="mini-header">
             <Network :size="14" />
             <span>Latency (TTFB)</span>
@@ -235,20 +250,21 @@ onUnmounted(() => {
       </div>
 
       <!-- Latency Heatmap -->
-      <BaseCard variant="glass" padding="md" class="heatmap-card" v-if="activeDownload">
+      <BaseCard variant="glass" padding="md" class="heatmap-card dashboard-item" v-if="activeDownload">
         <div class="card-header">
           <div class="header-main">
             <Layers :size="16" />
             <h3>Segment Heatmap</h3>
           </div>
         </div>
-        <div class="heatmap-grid">
+        <div class="heatmap-grid" ref="heatmapRef">
           <div 
             v-for="(seg, idx) in activeDownload.segments" 
             :key="idx" 
             class="heat-pixel"
             :class="getSegmentColor(seg)"
             :title="`Segment ${idx}: ${seg.last_latency_ms}ms`"
+            :style="{ '--delay': idx * 0.01 + 's' }"
           ></div>
         </div>
         <div class="heatmap-legend">
@@ -260,7 +276,7 @@ onUnmounted(() => {
       </BaseCard>
 
       <!-- Sniffer Logs -->
-      <BaseCard variant="glass" padding="md" class="sniffer-card" :class="{ 'full-width': !activeDownload }">
+      <BaseCard variant="glass" padding="md" class="sniffer-card dashboard-item" :class="{ 'full-width': !activeDownload }">
         <div class="card-header">
           <div class="header-main">
             <Terminal :size="16" />
@@ -281,7 +297,7 @@ onUnmounted(() => {
       </BaseCard>
 
       <!-- Simulation Controls -->
-      <BaseCard variant="glass" padding="md" class="simulation-card full-width">
+      <BaseCard variant="glass" padding="md" class="simulation-card full-width dashboard-item">
         <div class="card-header">
           <div class="header-main">
             <AlertCircle :size="16" class="text-warn" />
@@ -411,6 +427,18 @@ onUnmounted(() => {
 
 .graph-line {
   filter: drop-shadow(0 0 4px var(--accent-primary));
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: draw-line 2s ease-out forwards, pulse-glow 3s infinite;
+}
+
+@keyframes draw-line {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--accent-primary)); opacity: 1; }
+  50% { filter: drop-shadow(0 0 12px var(--accent-primary)); opacity: 0.8; }
 }
 
 .graph-footer {
@@ -521,6 +549,16 @@ onUnmounted(() => {
 .heat-pixel.active-slow { background: #ef4444; }
 .heat-pixel.active-idle { background: var(--accent-primary); }
 .heat-pixel.completed { background: rgba(255, 255, 255, 0.2); }
+
+.heat-pixel {
+  animation: pixel-entry 0.5s ease-out both;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes pixel-entry {
+  from { opacity: 0; transform: scale(0); }
+  to { opacity: 1; transform: scale(1); }
+}
 
 .heatmap-legend {
   display: flex;

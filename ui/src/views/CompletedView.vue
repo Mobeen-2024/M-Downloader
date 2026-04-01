@@ -3,8 +3,24 @@ import { useDownloadStore } from '@/stores/download.store';
 import DownloadCard from '@/features/downloads/DownloadCard.vue';
 import { Trophy } from 'lucide-vue-next';
 import BaseButton from '@/features/shared/components/BaseButton.vue';
+import { onMounted, ref } from 'vue';
+import { animate, stagger, spring } from 'motion';
 
 const store = useDownloadStore();
+const gridRef = ref<HTMLElement | null>(null);
+
+onMounted(() => {
+  if (gridRef.value) {
+    (animate as any)(
+      ".vault-item",
+      { opacity: [0, 1], y: [30, 0] },
+      { 
+        delay: stagger(0.06),
+        easing: spring({ stiffness: 260, damping: 28 })
+      } as any
+    );
+  }
+});
 </script>
 
 <template>
@@ -32,12 +48,13 @@ const store = useDownloadStore();
       </div>
     </div>
 
-    <div v-else class="items-grid">
+    <div v-else class="items-grid" ref="gridRef">
       <TransitionGroup name="list-move">
         <DownloadCard 
           v-for="download in store.completedDownloads" 
           :key="download.id" 
           :download="download" 
+          class="vault-item"
         />
       </TransitionGroup>
     </div>
