@@ -237,11 +237,19 @@ pub async fn resume_download(
     window: tauri::WebviewWindow,
     state: State<'_, Arc<AppState>>,
 ) -> Result<(), String> {
+    resume_download_internal(id, Some(window), state.inner().clone()).await
+}
+
+pub async fn resume_download_internal(
+    id: String,
+    window: Option<tauri::WebviewWindow>,
+    state: Arc<AppState>,
+) -> Result<(), String> {
     let (url, file_path, max_workers) = {
         let d_map = state.downloads.lock().await;
         let handle = d_map.get(&id).ok_or("Download not found")?;
-        if handle.status != DownloadStatus::Paused && handle.status != DownloadStatus::Error {
-            return Err("Download is not in a resumable state".to_string());
+        if handle.status != DownloadStatus::Paused && handle.status != DownloadStatus::Error && handle.status != DownloadStatus::Queued {
+            return Err("Download is not in a resumable or queued state".to_string());
         }
         (handle.url.clone(), handle.file_path.clone(), handle.max_workers)
     };

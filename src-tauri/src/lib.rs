@@ -1,6 +1,7 @@
 pub mod types;
 pub mod engine;
 pub mod commands;
+pub mod queue;
 
 use tauri::Manager;
 
@@ -36,6 +37,10 @@ pub fn run() {
             crate::commands::system::check_dependencies,
             crate::commands::system::toggle_system_sniffing,
             crate::commands::system::get_sniffer_status,
+            crate::commands::queue::add_to_queue,
+            crate::commands::queue::start_queue_scheduler,
+            crate::commands::queue::stop_queue_scheduler,
+            crate::commands::queue::set_parallel_job_limit,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -118,6 +118,39 @@ impl DownloadManager {
             s.total_downloaded()
         };
 
+        // ── Advanced File Pre-allocation ───────────────────────────────────
+        let total_size = {
+            let s = self.state.lock().await;
+            s.total_size
+        };
+
+        if total_size > 0 {
+            log::info!("[Manager] Pre-allocating {} bytes for: {}", total_size, self.file_path);
+            if let Ok(file) = std::fs::File::create(&self.file_path) {
+                let _ = file.set_len(total_size);
+                
+                #[cfg(windows)]
+                {
+                    use std::os::windows::io::AsRawHandle;
+                    let handle = file.as_raw_handle();
+                    // Mark as sparse to optimize disk usage
+                    unsafe {
+                        let mut bytes_returned = 0;
+                        let _ = windows_sys::Win32::System::Ioctl::DeviceIoControl(
+                            handle as _,
+                            windows_sys::Win32::Storage::FileSystem::FSCTL_SET_SPARSE,
+                            std::ptr::null_mut(),
+                            0,
+                            std::ptr::null_mut(),
+                            0,
+                            &mut bytes_returned,
+                            std::ptr::null_mut(),
+                        );
+                    }
+                }
+            }
+        }
+
         let mut workers = Vec::new();
 
         for _worker_id in 0..self.max_workers {
@@ -266,6 +299,9 @@ impl DownloadManager {
 
                             // Persist after each completed segment for crash recovery.
                             let _ = persistence::save_state(&s).await;
+                            
+                            // ── Scheduler Pulse ────────────────────────────
+                            app_state.queue_manager.tick(app_state.clone()).await;
                         }
                         None => {
                             // No work left — this worker exits.

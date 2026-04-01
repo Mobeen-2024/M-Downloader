@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
 import type { DownloadItem, DownloadProgressEvent } from '../types/download';
 
 export const useDownloadStore = defineStore('downloads', () => {
@@ -57,6 +58,49 @@ export const useDownloadStore = defineStore('downloads', () => {
       addedAt: Date.now(),
       category,
     });
+  };
+
+  const queue_active = ref(false);
+
+  const add_to_queue = async (url: string, id: string) => {
+    const name = url.split('/').pop() || 'unknown';
+    const category = getCategoryFromFilename(name);
+    downloads.value.push({
+      id,
+      url,
+      name,
+      downloaded: 0,
+      total: 0,
+      speed_bps: 0,
+      status: 'Queued',
+      segments: [],
+      addedAt: Date.now(),
+      category,
+    });
+    
+    try {
+      await invoke('add_to_queue', { id });
+    } catch (e) {
+      console.error('Failed to add to queue:', e);
+    }
+  };
+
+  const start_queue = async () => {
+    try {
+      await invoke('start_queue_scheduler');
+      queue_active.value = true;
+    } catch (e) {
+      console.error('Failed to start queue:', e);
+    }
+  };
+
+  const stop_queue = async () => {
+    try {
+      await invoke('stop_queue_scheduler');
+      queue_active.value = false;
+    } catch (e) {
+      console.error('Failed to stop queue:', e);
+    }
   };
 
   const updateProgress = (event: DownloadProgressEvent) => {
@@ -118,5 +162,9 @@ export const useDownloadStore = defineStore('downloads', () => {
     downloadsByCategory,
     categoryCounts,
     bridgeConnected,
+    queue_active,
+    add_to_queue,
+    start_queue,
+    stop_queue,
   };
 });
