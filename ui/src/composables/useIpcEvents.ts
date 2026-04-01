@@ -18,11 +18,16 @@ export function useIpcEvents() {
       store.updateProgress(event.payload);
     });
 
-    onUnmounted(() => {
-      unlistenProgress();
+    const unlistenBridge = await listen<boolean>('bridge-status-changed', (event) => {
+      store.bridgeConnected = event.payload;
     });
 
-    return { unlistenProgress };
+    onUnmounted(() => {
+      unlistenProgress();
+      unlistenBridge();
+    });
+
+    return { unlistenProgress, unlistenBridge };
   };
 
   return { initListeners };

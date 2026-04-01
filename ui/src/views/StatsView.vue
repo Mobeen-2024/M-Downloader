@@ -18,11 +18,22 @@ const activeDownload = computed(() => {
 });
 
 const metrics = computed(() => {
-  return activeDownload.value?.metrics || {
+  if (!activeDownload.value?.metrics) return {
     io_efficiency: 0,
     active_workers: 0,
     avg_latency_ms: 0
   };
+  
+  return activeDownload.value.metrics;
+});
+
+const latencyStatus = computed(() => {
+  const ms = metrics.value.avg_latency_ms;
+  if (ms === 0) return { label: 'Idle', class: 'idle' };
+  if (ms < 50) return { label: 'Ultra-Low', class: 'ultra' };
+  if (ms < 150) return { label: 'Stable', class: 'ok' };
+  if (ms < 300) return { label: 'Moderate Jitter', class: 'warn' };
+  return { label: 'Severe Latency', class: 'error' };
 });
 
 const applySimulation = async (latency: number, packetLoss: number) => {
@@ -86,13 +97,13 @@ const applySimulation = async (latency: number, packetLoss: number) => {
       <GlassPanel class="stats-card">
         <div class="card-header">
           <Activity class="card-icon yellow" />
-          <h3>Average Latency</h3>
+          <h3>Engine Latency (TTFB)</h3>
         </div>
-        <div class="metric-value">{{ metrics.avg_latency_ms }} ms</div>
-        <div class="latency-status" :class="{ ok: metrics.avg_latency_ms < 100 }">
-          {{ metrics.avg_latency_ms < 100 ? 'Healthy' : 'High Jitter' }}
+        <div class="metric-value">{{ metrics.avg_latency_ms }}<span class="unit">ms</span></div>
+        <div class="latency-status" :class="latencyStatus.class">
+          {{ latencyStatus.label }}
         </div>
-        <p class="card-desc">Average response time per chunk. Validates rebalancing logic.</p>
+        <p class="card-desc">Real-time Time-To-First-Byte across all active segments.</p>
       </GlassPanel>
     </div>
 
@@ -166,6 +177,13 @@ const applySimulation = async (latency: number, packetLoss: number) => {
   -webkit-text-fill-color: transparent;
 }
 
+.unit {
+  font-size: 1rem;
+  margin-left: 4px;
+  color: var(--text-secondary);
+  -webkit-text-fill-color: var(--text-secondary);
+}
+
 .progress-bar-mini {
   height: 6px;
   background: rgba(255, 255, 255, 0.05);
@@ -204,15 +222,15 @@ const applySimulation = async (latency: number, packetLoss: number) => {
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 700;
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
 }
 
-.latency-status.ok {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-}
+.latency-status.idle { color: var(--text-secondary); }
+.latency-status.ultra { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.latency-status.ok { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+.latency-status.warn { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.latency-status.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
 .card-desc {
   font-size: 0.8rem;

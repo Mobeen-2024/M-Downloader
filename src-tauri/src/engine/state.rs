@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -25,6 +26,7 @@ pub struct AppState {
     pub simulation_engine: crate::engine::test_utils::SimulationEngine,
     pub deobfuscator: Arc<crate::engine::deobfuscator::YouTubeDeobfuscator>,
     pub refresh_task_id: Arc<Mutex<Option<String>>>,
+    pub bridge_connected: Arc<AtomicBool>,
 }
 
 impl AppState {
@@ -49,6 +51,7 @@ impl AppState {
             simulation_engine: crate::engine::test_utils::SimulationEngine::new(),
             deobfuscator,
             refresh_task_id: Arc::new(Mutex::new(None)),
+            bridge_connected: Arc::new(AtomicBool::new(false)),
         }
     }
 }

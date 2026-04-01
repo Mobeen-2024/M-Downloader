@@ -1,4 +1,5 @@
 use crate::engine::state::AppState;
+use std::sync::atomic::Ordering;
 use crate::commands::download::start_download_internal;
 use serde::Deserialize;
 use tauri::{AppHandle, Manager, Emitter};
@@ -63,6 +64,10 @@ pub fn setup_ipc_bridge(app: AppHandle) {
                 log::warn!("[Bridge] Pipe connect failed: {}", e);
                 continue;
             }
+
+            let state_arc = app.state::<Arc<AppState>>();
+            state_arc.bridge_connected.store(true, Ordering::SeqCst);
+            let _ = app.emit("bridge-status-changed", true);
 
             log::info!("[Bridge] Client connected — reading payload...");
 
@@ -163,6 +168,10 @@ pub fn setup_ipc_bridge(app: AppHandle) {
                     log::warn!("[Bridge] Pipe read error: {}", e);
                 }
             }
+
+            // Client disconnected or read finished
+            state_arc.bridge_connected.store(false, Ordering::SeqCst);
+            let _ = app.emit("bridge-status-changed", false);
         }
     });
 }

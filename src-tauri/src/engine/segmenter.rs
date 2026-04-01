@@ -14,6 +14,8 @@ pub struct DownloadState {
     pub speed_limit_bps: Option<u64>,
     pub etag: Option<String>,
     pub last_modified: Option<String>,
+    pub last_latency_ms: u64,
+    pub io_commits: u64,
 }
 
 impl DownloadState {
@@ -39,6 +41,8 @@ impl DownloadState {
             speed_limit_bps: None,
             etag: None,
             last_modified: None,
+            last_latency_ms: 0,
+            io_commits: 0,
         }
     }
 
@@ -70,6 +74,8 @@ impl DownloadState {
             speed_limit_bps: None,
             etag: None,
             last_modified: None,
+            last_latency_ms: 0,
+            io_commits: 0,
         }
     }
 

@@ -4,6 +4,7 @@ import type { DownloadItem, DownloadProgressEvent } from '../types/download';
 
 export const useDownloadStore = defineStore('downloads', () => {
   const downloads = ref<DownloadItem[]>([]);
+  const bridgeConnected = ref(false);
   
   // Load from localStorage on startup
   const saved = localStorage.getItem('mdownloader_tasks');
@@ -116,5 +117,6 @@ export const useDownloadStore = defineStore('downloads', () => {
     removeDownload,
     downloadsByCategory,
     categoryCounts,
+    bridgeConnected,
   };
 });

@@ -107,7 +107,15 @@ async fn download_segment_attempt(
         rb = rb.header(IF_RANGE, lm);
     }
 
+    let start_time = std::time::Instant::now();
     let response = rb.send().await?;
+    let latency = start_time.elapsed().as_millis() as u64;
+
+    // Update global latency in state
+    {
+        let mut s = state.lock().await;
+        s.last_latency_ms = latency;
+    }
 
     if !response.status().is_success() {
         let status = response.status();
@@ -185,6 +193,12 @@ async fn download_segment_attempt(
 
         writer.write_all(&data[..bytes_to_write]).await?;
         write_pos += bytes_to_write as u64;
+        
+        // Update I/O commits
+        {
+            let mut s = state.lock().await;
+            s.io_commits += 1;
+        }
 
         // ── Bandwidth Governance: Traffic Shaping ───────────────────────────
         if let Some(ref bucket) = shaper {

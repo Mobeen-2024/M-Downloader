@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useSettingsStore } from '@/stores/settings.store';
-import { Settings, Cpu, Folder, Palette, Activity } from 'lucide-vue-next';
+import { Settings, Cpu, Folder, Palette, Activity, Link2, Clipboard } from 'lucide-vue-next';
 import GlassPanel from '@/features/shared/components/GlassPanel.vue';
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
@@ -99,6 +99,45 @@ onMounted(async () => {
             >
               <div class="color-preview"></div>
               <span>{{ theme.name }}</span>
+            </button>
+          </div>
+        </div>
+      </GlassPanel>
+
+      <GlassPanel class="settings-card">
+        <div class="card-title">
+          <Link2 :size="20" class="text-accent" />
+          <h4>Integrations</h4>
+        </div>
+        <div class="setting-item">
+          <div class="setting-row">
+            <label>Browser Extension Bridge</label>
+            <button 
+              class="toggle-btn"
+              :class="{ active: settings.bridgeEnabled }"
+              @click="settings.bridgeEnabled = !settings.bridgeEnabled"
+            >
+              <div class="toggle-slider"></div>
+            </button>
+          </div>
+          <p class="helper-text">Enable high-performance communication with browser extensions via named pipes.</p>
+        </div>
+        <div class="setting-divider"></div>
+        <div class="setting-item">
+          <div class="setting-row">
+            <div class="flex flex-col">
+              <div class="flex items-center gap-2">
+                <Clipboard :size="16" class="text-accent" />
+                <label>Clipboard Monitoring</label>
+              </div>
+              <p class="helper-text">Detect download URLs in the system clipboard.</p>
+            </div>
+            <button 
+              class="toggle-btn"
+              :class="{ active: settings.monitorClipboard }"
+              @click="settings.monitorClipboard = !settings.monitorClipboard"
+            >
+              <div class="toggle-slider"></div>
             </button>
           </div>
         </div>
@@ -247,6 +286,13 @@ onMounted(async () => {
   color: var(--text-secondary);
   font-style: italic;
   line-height: 1.4;
+}
+
+.setting-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 16px 0;
+  opacity: 0.5;
 }
 
 .range-input {

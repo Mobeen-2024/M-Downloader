@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { useDownloadStore } from '@/stores/download.store';
+import { useSettingsStore } from '@/stores/settings.store';
 import { useFormatters } from '@/composables/useFormatters';
 import { invoke } from '@tauri-apps/api/core';
 import SpeedGraph from '@/features/shared/components/SpeedGraph.vue';
-import { Plus, Wifi, Activity, Gauge, Zap } from 'lucide-vue-next';
+import { Plus, Wifi, Activity, Zap, Link2, Clipboard } from 'lucide-vue-next';
+import { useClipboardMonitor } from '@/composables/useClipboardMonitor';
 
 const store = useDownloadStore();
+const settings = useSettingsStore();
 const { formatSpeed } = useFormatters();
+const { isEnabled: isClipboardEnabled, detectedUrl, startMonitoring, stopMonitoring, clearDetected } = useClipboardMonitor();
 
 const isLimitEnabled = ref(false);
 const speedLimitKbps = ref(1024); // Default 1 MB/s
@@ -31,6 +35,16 @@ const updateLimits = async () => {
 };
 
 watch([isLimitEnabled, speedLimitKbps], updateLimits);
+
+const toggleClipboard = () => {
+  settings.monitorClipboard = !settings.monitorClipboard;
+};
+
+// Sync clipboard monitor with setting
+watch(() => settings.monitorClipboard, (newVal) => {
+  if (newVal) startMonitoring();
+  else stopMonitoring();
+}, { immediate: true });
 
 onMounted(() => {
   checkDeps();
@@ -73,25 +87,41 @@ defineEmits(['new-download']);
         </div>
       </div>
 
-      <div class="stat-divider"></div>
+      <div v-if="settings.bridgeEnabled" class="stat-divider"></div>
 
-      <div class="stat-item limiter-group">
-        <div class="limiter-toggle" @click="isLimitEnabled = !isLimitEnabled" :class="{ active: isLimitEnabled }">
-          <Gauge class="stat-icon" :class="{ 'text-accent': isLimitEnabled }" />
-          <div class="stat-details">
-            <div class="stat-label">Speed Limit</div>
-            <div class="stat-value">{{ isLimitEnabled ? speedLimitKbps + ' KB/s' : 'OFF' }}</div>
+      <div v-if="settings.bridgeEnabled" class="stat-item">
+        <Link2 class="stat-icon" :class="{ 'bridge-active': store.bridgeConnected, 'bridge-waiting': !store.bridgeConnected }" />
+        <div class="stat-details">
+          <div class="stat-label">Extension Bridge</div>
+          <div class="stat-value" :class="{ 'text-online': store.bridgeConnected }">
+            {{ store.bridgeConnected ? 'CONNECTED' : 'WAITING' }}
           </div>
         </div>
-        <input 
-          v-if="isLimitEnabled"
-          type="range" 
-          v-model.number="speedLimitKbps" 
-          min="128" 
-          max="10240" 
-          step="128"
-          class="limiter-slider"
-        />
+      </div>
+
+      <div class="stat-divider"></div>
+
+      <div class="stat-item clipboard-group" :class="{ active: isClipboardEnabled }">
+        <div class="clipboard-toggle" @click="toggleClipboard">
+          <Clipboard class="stat-icon" :class="{ 'text-accent': isClipboardEnabled }" />
+          <div class="stat-details">
+            <div class="stat-label">Clipboard</div>
+            <div class="stat-value">{{ isClipboardEnabled ? 'MONITORING' : 'OFF' }}</div>
+          </div>
+        </div>
+        
+        <Transition name="slide-fade">
+          <div v-if="detectedUrl" class="clip-popup glass-panel shadow-glow">
+            <div class="clip-info">
+              <span class="clip-label">URL Detected</span>
+              <span class="clip-url">{{ detectedUrl.split('/').pop() }}</span>
+            </div>
+            <div class="clip-actions">
+              <button class="clip-btn btn-add" @click="$emit('new-download', detectedUrl); clearDetected()">Add</button>
+              <button class="clip-btn btn-ignore" @click="clearDetected()">Dismiss</button>
+            </div>
+          </div>
+        </Transition>
       </div>
     </div>
 
@@ -170,6 +200,70 @@ defineEmits(['new-download']);
 }
 .text-online { color: var(--color-downloading); }
 .text-offline { color: var(--color-error); }
+
+/* Bridge Animations */
+.bridge-active {
+  color: var(--color-downloading);
+  animation: pulse-green 2s infinite;
+}
+
+.bridge-waiting {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+@keyframes pulse-green {
+  0% { filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.4)); }
+  50% { filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8)); }
+  100% { filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.4)); }
+}
+
+/* Clipboard Styles */
+.clipboard-group {
+  position: relative;
+}
+
+.clipboard-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.clipboard-toggle:hover { background: rgba(255, 255, 255, 0.05); }
+.clipboard-group.active .clipboard-toggle { background: rgba(59, 130, 246, 0.1); }
+
+.clip-popup {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  width: 240px;
+  padding: 12px;
+  border-radius: 12px;
+  z-index: 100;
+  border: 1px solid var(--accent-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clip-info { display: flex; flex-direction: column; gap: 2px; }
+.clip-label { font-size: 0.6rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 800; }
+.clip-url { font-size: 0.75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary); }
+
+.clip-actions { display: flex; gap: 8px; }
+.clip-btn { flex: 1; padding: 6px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; }
+.btn-add { background: var(--accent-primary); color: white; }
+.btn-ignore { background: rgba(255, 255, 255, 0.1); color: var(--text-primary); }
+.clip-btn:hover { filter: brightness(1.2); }
+
+/* Transitions */
+.slide-fade-enter-active, .slide-fade-leave-active { transition: all 0.3s ease-out; }
+.slide-fade-enter-from { transform: translateY(-10px); opacity: 0; }
+.slide-fade-leave-to { transform: translateY(-10px); opacity: 0; }
 
 .top-bar-graph {
   margin-left: 12px;
