@@ -1,0 +1,15 @@
+﻿    Checking mdownloader v0.2.0 (D:\WorkStation\IDM\src-tauri)
+error[E0599]: no method named `start_queue` found for struct `Arc<QueueManager>` in the current scope
+  --> src\commands\queue.rs:13:25
+   |
+13 |     state.queue_manager.start_queue(state.inner().clone(), state.queue_manager.clone()).await;
+   |                         ^^^^^^^^^^^ method not found in `Arc<QueueManager>`
+System.Management.Automation.RemoteException
+error[E0599]: no method named `stop_queue` found for struct `Arc<QueueManager>` in the current scope
+  --> src\commands\queue.rs:19:25
+   |
+19 |     state.queue_manager.stop_queue().await;
+   |                         ^^^^^^^^^^ method not found in `Arc<QueueManager>`
+System.Management.Automation.RemoteException
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `mdownloader` (lib) due to 2 previous errors

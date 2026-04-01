@@ -47,10 +47,27 @@ pub fn run() {
 
             crate::engine::bridge::setup_ipc_bridge(app.handle().clone());
 
-            // Auto-start the queue scheduler
+            // ── detached Queue Heartbeat ──────────────────────────────────────
+            // Drives the scheduler by calculating active slots and ticking the manager
             let state_for_queue = state_arc.clone();
             tauri::async_runtime::spawn(async move {
-                state_for_queue.queue_manager.start_queue(state_for_queue.clone(), state_for_queue.queue_manager.clone()).await;
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
+                loop {
+                    interval.tick().await;
+                    
+                    if !state_for_queue.queue_manager.is_active.load(std::sync::atomic::Ordering::SeqCst) {
+                        continue;
+                    }
+
+                    let currently_running = {
+                        let downloads = state_for_queue.downloads.lock().await;
+                        downloads.values()
+                            .filter(|d| d.status == crate::types::DownloadStatus::Downloading)
+                            .count()
+                    };
+
+                    state_for_queue.queue_manager.tick(currently_running).await;
+                }
             });
 
             Ok(())

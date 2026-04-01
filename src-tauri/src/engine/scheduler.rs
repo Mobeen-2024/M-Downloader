@@ -1,21 +1,26 @@
 use std::collections::VecDeque;
-use std::sync::Arc;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::Mutex;
-use crate::engine::state::AppState;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use serde_json;
+use log;
 
 pub struct QueueManager {
     pub queue: Mutex<VecDeque<String>>, // Ordered list of Job IDs
     pub max_parallel: Mutex<usize>,
-    pub is_active: Mutex<bool>,
+    pub is_active: Arc<AtomicBool>,
+    pub orchestration_tx: UnboundedSender<String>,
     pub app_data_dir: std::path::PathBuf,
 }
 
 impl QueueManager {
-    pub fn new(app_data_dir: std::path::PathBuf) -> Self {
+    pub fn new(app_data_dir: std::path::PathBuf, orchestration_tx: UnboundedSender<String>) -> Self {
         let mut qm = Self {
             queue: Mutex::new(VecDeque::new()),
             max_parallel: Mutex::new(2), // Default to 2 parallel downloads
-            is_active: Mutex::new(false),
+            is_active: Arc::new(AtomicBool::new(false)),
+            orchestration_tx,
             app_data_dir,
         };
         // Sync with existing disk state if available
@@ -62,51 +67,16 @@ impl QueueManager {
         *p = limit;
     }
 
-    pub async fn start_queue(&self, app_state: Arc<AppState>, self_arc: Arc<QueueManager>) {
-        let mut active = self.is_active.lock().await;
-        if *active { return; }
-        *active = true;
-        drop(active);
-        
-        // Start independent heartbeat loop to drive the queue
-        tokio::spawn(async move {
-            loop {
-                {
-                    let active = self_arc.is_active.lock().await;
-                    if !*active { break; }
-                }
-                self_arc.tick(app_state.clone()).await;
-                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-            }
-        });
-    }
-
-    pub async fn stop_queue(&self) {
-        let mut active = self.is_active.lock().await;
-        *active = false;
-    }
-
     /// The heartbeat of the scheduler.
     /// Checks if we have available slots and starts the next job in the queue.
-    pub async fn tick(&self, app_state: Arc<AppState>) {
-        let active = self.is_active.lock().await;
-        if !*active { return; }
-        drop(active);
-
+    pub async fn tick(&self, currently_running: usize) {
         let max = *self.max_parallel.lock().await;
         
-        let currently_running = {
-            let downloads = app_state.downloads.lock().await;
-            downloads.values().filter(|d| d.status == crate::types::DownloadStatus::Downloading).count()
-        };
-
         if currently_running < max {
             let mut q = self.queue.lock().await;
             if let Some(next_id) = q.pop_front() {
                 log::info!("[Scheduler] Queue Slot Available: Transitioning {} to Active", next_id);
-                // Update persistent state to "Queued" -> "Downloading" isn't strictly needed here 
-                // but the orchestrator will handle the resume logic.
-                let _ = app_state.orchestration_tx.send(next_id);
+                let _ = self.orchestration_tx.send(next_id);
                 let _ = self.save_to_disk(&*q);
             }
         }

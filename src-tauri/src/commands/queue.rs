@@ -10,13 +10,13 @@ pub async fn add_to_queue(id: String, state: State<'_, Arc<AppState>>) -> Result
 
 #[tauri::command]
 pub async fn start_queue_scheduler(state: State<'_, Arc<AppState>>) -> Result<(), String> {
-    state.queue_manager.start_queue(state.inner().clone(), state.queue_manager.clone()).await;
+    state.queue_manager.is_active.store(true, std::sync::atomic::Ordering::SeqCst);
     Ok(())
 }
 
 #[tauri::command]
 pub async fn stop_queue_scheduler(state: State<'_, Arc<AppState>>) -> Result<(), String> {
-    state.queue_manager.stop_queue().await;
+    state.queue_manager.is_active.store(false, std::sync::atomic::Ordering::SeqCst);
     Ok(())
 }
 

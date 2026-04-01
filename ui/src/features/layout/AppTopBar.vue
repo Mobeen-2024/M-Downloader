@@ -5,7 +5,7 @@ import { useSettingsStore } from '@/stores/settings.store';
 import { useFormatters } from '@/composables/useFormatters';
 import { invoke } from '@tauri-apps/api/core';
 import SpeedGraph from '@/features/shared/components/SpeedGraph.vue';
-import { Plus, Wifi, Activity, Zap, Link2, Clipboard } from 'lucide-vue-next';
+import { Plus, Wifi, Activity, Zap, Link2, Clipboard, Gauge } from 'lucide-vue-next';
 import { useClipboardMonitor } from '@/composables/useClipboardMonitor';
 
 const store = useDownloadStore();
@@ -97,6 +97,25 @@ defineEmits(['new-download']);
             {{ store.bridgeConnected ? 'CONNECTED' : 'WAITING' }}
           </div>
         </div>
+      </div>
+
+      <div class="stat-divider"></div>
+
+      <div class="stat-item limiter-group" :class="{ active: isLimitEnabled }">
+        <div class="limiter-toggle" @click="isLimitEnabled = !isLimitEnabled">
+          <Gauge class="stat-icon" :class="{ 'text-accent': isLimitEnabled }" />
+          <div class="stat-details">
+            <div class="stat-label">Speed Limit</div>
+            <div class="stat-value">{{ isLimitEnabled ? speedLimitKbps + ' KB/s' : 'UNLIMITED' }}</div>
+          </div>
+        </div>
+        <input 
+          v-if="isLimitEnabled"
+          type="range" 
+          v-model.number="speedLimitKbps" 
+          min="100" max="10240" step="100" 
+          class="limiter-slider"
+        />
       </div>
 
       <div class="stat-divider"></div>
