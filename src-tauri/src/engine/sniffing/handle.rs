@@ -7,10 +7,21 @@ use windows_sys::Win32::Foundation::{
 use windows_sys::Win32::Storage::FileSystem::{
     CreateFileW, FILE_ATTRIBUTE_NORMAL, OPEN_EXISTING,
 };
+use windows_sys::Win32::System::IO::DeviceIoControl;
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SniffedUrl {
+    pub url: String,
+    pub process_id: u32,
+    pub process_name: String,
+    pub content_type: String,
+    pub timestamp: u64,
+}
 
 /// Mdownloader WFP Driver Handle
 pub struct SniffingHandle {
-    device_handle: HANDLE,
+    pub device_handle: HANDLE,
 }
 
 impl SniffingHandle {
@@ -49,9 +60,12 @@ impl SniffingHandle {
     }
 
     /// Placeholder for IOCTL-based manifest polling or event notification.
-    pub fn poll_driver_events(&self) -> Result<Vec<String>, String> {
+    pub fn poll_driver_events(&self) -> Result<Vec<SniffedUrl>, String> {
         // In a real implementation, we would call DeviceIoControl here
-        // for an IOCTL_MDOWNLOADER_GET_MANIFESTS.
+        // with IOCTL_MDOWNLOADER_GET_URLS.
+        
+        // For demonstration/simulation, we return an empty vec.
+        // The orchestrator will handle the polling loop.
         Ok(vec![])
     }
 }

@@ -26,6 +26,17 @@ const toggleSniffer = async () => {
   }
 };
 
+const newExt = ref('');
+const addExt = () => {
+  if (newExt.value && !settings.snifferFilter.includes(newExt.value.toLowerCase())) {
+    settings.snifferFilter.push(newExt.value.toLowerCase().replace('.', ''));
+    newExt.value = '';
+  }
+};
+const removeExt = (ext: string) => {
+  settings.snifferFilter = settings.snifferFilter.filter(e => e !== ext);
+};
+
 onMounted(async () => {
   try {
     snifferActive.value = await invoke('get_sniffer_status');
@@ -160,6 +171,26 @@ onMounted(async () => {
             </button>
           </div>
           <p class="helper-text">Enable kernel-mode sniffing to intercept media from non-browser applications. Requires Driver Installation.</p>
+          
+          <div v-if="snifferActive" class="sniffer-rules mt-4">
+            <label class="text-xs uppercase opacity-60 font-bold mb-2 block">Interception Rules (Extensions)</label>
+            <div class="ext-tags">
+              <span v-for="ext in settings.snifferFilter" :key="ext" class="ext-tag">
+                .{{ ext }}
+                <button @click="removeExt(ext)" class="remove-tag">&times;</button>
+              </span>
+              <div class="add-ext-box">
+                <input 
+                  type="text" 
+                  v-model="newExt" 
+                  placeholder="add..." 
+                  @keyup.enter="addExt"
+                />
+              </div>
+            </div>
+            <p class="helper-text mt-2">Only files matching these extensions will be intercepted by the WFP engine.</p>
+          </div>
+
           <div v-if="snifferError" class="status-error mt-2">
             {{ snifferError }}
           </div>
@@ -476,6 +507,54 @@ onMounted(async () => {
 .disabled {
   opacity: 0.5;
   pointer-events: none;
+}
+
+/* Sniffer Rules */
+.ext-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.ext-tag {
+  background: var(--accent-primary);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.remove-tag {
+  background: rgba(0, 0, 0, 0.2);
+  border: none;
+  color: white;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-ext-box input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  width: 60px;
+  outline: none;
+  padding: 2px 4px;
 }
 
 .setting-row {

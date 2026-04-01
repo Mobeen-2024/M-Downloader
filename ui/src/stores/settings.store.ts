@@ -10,6 +10,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const bridgeEnabled = ref(true);
   const enableSpeedLimit = ref(false);
   const maxDownloadSpeed = ref(1024); // KB/s
+  const snifferFilter = ref(['mp4', 'mp3', 'mkv', 'zip', 'exe', 'iso']);
 
   // Load from localStorage
   const saved = localStorage.getItem('mdownloader_settings');
@@ -23,13 +24,14 @@ export const useSettingsStore = defineStore('settings', () => {
       bridgeEnabled.value = data.bridgeEnabled ?? true;
       enableSpeedLimit.value = data.enableSpeedLimit ?? false;
       maxDownloadSpeed.value = data.maxDownloadSpeed ?? 1024;
+      snifferFilter.value = data.snifferFilter || ['mp4', 'mp3', 'mkv', 'zip', 'exe', 'iso'];
     } catch (e) {
       console.error('Failed to load settings:', e);
     }
   }
 
   // Persist
-  watch([maxConnections, downloadDir, themeAccent, monitorClipboard, bridgeEnabled, enableSpeedLimit, maxDownloadSpeed], () => {
+  watch([maxConnections, downloadDir, themeAccent, monitorClipboard, bridgeEnabled, enableSpeedLimit, maxDownloadSpeed, snifferFilter], () => {
     localStorage.setItem('mdownloader_settings', JSON.stringify({
       maxConnections: maxConnections.value,
       downloadDir: downloadDir.value,
@@ -38,6 +40,7 @@ export const useSettingsStore = defineStore('settings', () => {
       bridgeEnabled: bridgeEnabled.value,
       enableSpeedLimit: enableSpeedLimit.value,
       maxDownloadSpeed: maxDownloadSpeed.value,
+      snifferFilter: snifferFilter.value,
     }));
   }, { deep: true });
 
@@ -61,5 +64,6 @@ export const useSettingsStore = defineStore('settings', () => {
     bridgeEnabled,
     enableSpeedLimit,
     maxDownloadSpeed,
+    snifferFilter,
   };
 });

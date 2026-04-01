@@ -76,6 +76,9 @@ const getSegmentColor = (seg: any) => {
   return 'pending';
 };
 
+const snifferLogs = ref<any[]>([]);
+const isSnifferActive = ref(false);
+
 const applySimulation = async (latency: number, packetLoss: number) => {
   try {
     await invoke('set_network_condition', { latency, packetLoss });
@@ -83,6 +86,32 @@ const applySimulation = async (latency: number, packetLoss: number) => {
     console.error('Failed to set simulation:', e);
   }
 };
+
+const formatTime = (ts: number) => {
+  return new Date(ts * 1000).toLocaleTimeString([], { hour12: false });
+};
+
+import { listen } from '@tauri-apps/api/event';
+import { onMounted, onUnmounted } from 'vue';
+
+let unlistenSniffer: any = null;
+
+onMounted(async () => {
+  unlistenSniffer = await listen('sniffer-hit', (event: any) => {
+    snifferLogs.value.unshift(event.payload);
+    if (snifferLogs.value.length > 50) snifferLogs.value.pop();
+  });
+  
+  try {
+    isSnifferActive.value = await invoke('get_sniffer_status');
+  } catch (e) {
+    console.error('Status check failed:', e);
+  }
+});
+
+onUnmounted(() => {
+  if (unlistenSniffer) unlistenSniffer();
+});
 
 const formatSpeed = (bps: number) => {
   if (bps === 0) return '0 B/s';
@@ -211,6 +240,25 @@ const formatSpeed = (bps: number) => {
           {{ latencyStatus.label }}
         </div>
         <p class="card-desc">Real-time Time-To-First-Byte across all active segments.</p>
+      </GlassPanel>
+      <!-- Live Sniffer Log (NEW) -->
+      <GlassPanel class="stats-card sniffer-card" v-if="isSnifferActive">
+        <div class="card-header">
+          <Activity class="card-icon blue" />
+          <h3>Live Sniffer Log</h3>
+          <div class="header-badge">WFP ACTIVE</div>
+        </div>
+        <div class="sniffer-terminal">
+          <div v-if="snifferLogs.length === 0" class="terminal-empty">
+            Waiting for packets...
+          </div>
+          <div v-for="log in snifferLogs" :key="log.timestamp + log.url" class="terminal-line">
+            <span class="t-time">[{{ formatTime(log.timestamp) }}]</span>
+            <span class="t-proc">[{{ log.process_name }}]</span>
+            <span class="t-url" :title="log.url">{{ log.url }}</span>
+          </div>
+        </div>
+        <p class="card-desc">Real-time URL interception from the kernel-mode driver.</p>
       </GlassPanel>
     </div>
 
@@ -505,6 +553,55 @@ const formatSpeed = (bps: number) => {
   border-radius: 4px;
   font-size: 0.75rem;
 }
+
+/* Sniffer Terminal */
+.sniffer-card {
+  grid-column: 1 / -1;
+  max-height: 300px;
+}
+
+.header-badge {
+  margin-left: auto;
+  font-size: 0.65rem;
+  background: var(--accent-primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.sniffer-terminal {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  height: 180px;
+  overflow-y: auto;
+  padding: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.terminal-empty {
+  opacity: 0.4;
+  text-align: center;
+  margin-top: 60px;
+  font-style: italic;
+}
+
+.terminal-line {
+  display: flex;
+  gap: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.t-time { color: var(--text-secondary); }
+.t-proc { color: var(--accent-primary); font-weight: 700; }
+.t-url { color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; }
 
 .empty-state {
   height: 50vh;

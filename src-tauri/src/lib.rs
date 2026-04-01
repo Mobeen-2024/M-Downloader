@@ -35,6 +35,12 @@ pub fn run() {
                 }
             });
 
+            // Start the Sniffer Orchestrator
+            let app_handle_for_sniffer = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                crate::engine::sniffing::orchestrator::start_sniffer_orchestrator(app_handle_for_sniffer).await;
+            });
+
             crate::engine::bridge::setup_ipc_bridge(app.handle().clone());
             Ok(())
         })
@@ -53,6 +59,7 @@ pub fn run() {
             crate::commands::system::check_dependencies,
             crate::commands::system::toggle_system_sniffing,
             crate::commands::system::get_sniffer_status,
+            crate::commands::system::simulate_sniffer_event,
             crate::commands::queue::add_to_queue,
             crate::commands::queue::start_queue_scheduler,
             crate::commands::queue::stop_queue_scheduler,
