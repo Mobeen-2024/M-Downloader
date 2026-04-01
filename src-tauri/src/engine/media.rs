@@ -135,8 +135,8 @@ impl MediaStream {
 
                 for rep in adaptation.descendants().filter(|n| n.has_tag_name("Representation")) {
                     let bandwidth = rep.attribute("bandwidth").and_then(|b| b.parse::<u64>().ok()).unwrap_or(0);
-                    let width = rep.attribute("width").and_then(|w| w.parse::<u32>().ok());
-                    let height = rep.attribute("height").and_then(|h| h.parse::<u32>().ok());
+                    let _width = rep.attribute("width").and_then(|w| w.parse::<u32>().ok());
+                    let _height = rep.attribute("height").and_then(|h| h.parse::<u32>().ok());
                     
                     let mut segments = Vec::new();
                     if let Some(st) = rep.descendants().find(|n| n.has_tag_name("SegmentTemplate")) {
@@ -235,7 +235,7 @@ impl MediaStream {
             let mime = adaptation.attribute("mimeType").unwrap_or("");
             if mime.contains("video") || adaptation.attribute("contentType") == Some("video") {
                 for rep in adaptation.descendants().filter(|n| n.has_tag_name("Representation")) {
-                    let id = rep.attribute("id").unwrap_or("unknown");
+                    let _id = rep.attribute("id").unwrap_or("unknown");
                     let bandwidth = rep.attribute("bandwidth").and_then(|b| b.parse::<u64>().ok()).unwrap_or(0);
                     let width = rep.attribute("width").and_then(|w| w.parse::<u32>().ok());
                     let height = rep.attribute("height").and_then(|h| h.parse::<u32>().ok());

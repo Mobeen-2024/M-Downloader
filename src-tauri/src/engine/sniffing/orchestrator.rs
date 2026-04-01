@@ -1,12 +1,11 @@
 use std::time::Duration;
-use std::collections::HashMap;
-use tauri::{AppHandle, Manager, Emitter};
+use tauri::{AppHandle, Emitter};
 use crate::engine::sniffing::{SNIFFER, handle::SniffedUrl};
 use crate::engine::media::MediaStream;
 use crate::types::MediaInterceptionEvent;
 use lazy_static::lazy_static;
 
-/// Global cache to prevent duplicate HUD triggers within a window.
+// Global cache to prevent duplicate HUD triggers within a window.
 lazy_static! {
     static ref RECENT_INTERCEPTS: std::sync::Mutex<std::collections::HashMap<String, u64>> = std::sync::Mutex::new(std::collections::HashMap::new());
 }

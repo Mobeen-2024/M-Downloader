@@ -17,7 +17,7 @@ pub struct CloudUploader {
 }
 
 impl CloudUploader {
-    pub fn new(config: CloudConfig, client: Client, filename: String) -> (Self, tokio::task::JoinHandle<()>) {
+    pub fn new(config: CloudConfig, _client: Client, filename: String) -> (Self, tokio::task::JoinHandle<()>) {
         let (tx, mut rx) = mpsc::channel::<Vec<u8>>(100);
         
         let handle = tokio::spawn(async move {
