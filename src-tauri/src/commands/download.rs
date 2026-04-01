@@ -205,7 +205,6 @@ async fn start_manager_orchestration(
     }
 
     // Spawn the download orchestration in a background task.
-    let app_state_arc = app_state.clone();
     // Spawn the download orchestration in a background task if NOT queued.
     // If queued, the QueueManager heartbeat will call resume_download_internal later.
     if !should_queue {

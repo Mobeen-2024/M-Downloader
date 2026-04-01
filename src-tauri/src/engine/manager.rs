@@ -303,7 +303,7 @@ impl DownloadManager {
                             let _ = persistence::save_state(&s).await;
                             
                             // ── Scheduler Pulse ────────────────────────────
-                            app_state.queue_manager.tick(app_state.clone()).await;
+                            // (Heartbeat loop in scheduler handles this now)
                         }
                         None => {
                             // No work left — this worker exits.

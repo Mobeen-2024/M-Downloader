@@ -2,7 +2,6 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use crate::engine::state::AppState;
-use crate::types::DownloadStatus;
 
 pub struct QueueManager {
     queue: Mutex<VecDeque<String>>, // Ordered list of Job IDs
@@ -36,11 +35,23 @@ impl QueueManager {
         *p = limit;
     }
 
-    pub async fn start_queue(&self, app_state: Arc<AppState>) {
+    pub async fn start_queue(&self, app_state: Arc<AppState>, self_arc: Arc<QueueManager>) {
         let mut active = self.is_active.lock().await;
+        if *active { return; }
         *active = true;
         drop(active);
-        self.tick(app_state).await;
+        
+        // Start independent heartbeat loop to drive the queue
+        tokio::spawn(async move {
+            loop {
+                {
+                    let active = self_arc.is_active.lock().await;
+                    if !*active { break; }
+                }
+                self_arc.tick(app_state.clone()).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            }
+        });
     }
 
     pub async fn stop_queue(&self) {
@@ -65,13 +76,8 @@ impl QueueManager {
         if currently_running < max {
             let mut q = self.queue.lock().await;
             if let Some(next_id) = q.pop_front() {
-                log::info!("[Scheduler] Starting next job in queue: {}", next_id);
-                let app_state_arc = app_state.clone();
-                tokio::spawn(async move {
-                    if let Err(e) = crate::commands::download::resume_download_internal(next_id, None, app_state_arc).await {
-                        log::error!("[Scheduler] Failed to auto-start job: {}", e);
-                    }
-                });
+                log::info!("[Scheduler] Signaling orchestrator to start job: {}", next_id);
+                let _ = app_state.orchestration_tx.send(next_id);
             }
         }
     }

@@ -10,7 +10,7 @@ pub async fn add_to_queue(id: String, state: State<'_, Arc<AppState>>) -> Result
 
 #[tauri::command]
 pub async fn start_queue_scheduler(state: State<'_, Arc<AppState>>) -> Result<(), String> {
-    state.queue_manager.start_queue(state.inner().clone()).await;
+    state.queue_manager.start_queue(state.inner().clone(), state.queue_manager.clone()).await;
     Ok(())
 }
 

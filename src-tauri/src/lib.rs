@@ -15,8 +15,25 @@ pub fn run() {
             let app_data_dir = app.path().app_data_dir().expect("Failed to get app data dir");
             std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data dir");
             
-            let app_state = AppState::new(app_data_dir);
-            app.manage(std::sync::Arc::new(app_state));
+            let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+            let app_state = AppState::new(app_data_dir, tx);
+            let state_arc = std::sync::Arc::new(app_state);
+            app.manage(state_arc.clone());
+
+            // ── detached Orchestration Listener ────────────────────────────────
+            // Breaking the E0391 cycle by offloading the StartJob trigger
+            let app_handle = app.handle().clone();
+            let state_for_listener = state_arc.clone();
+            tauri::async_runtime::spawn(async move {
+                while let Some(job_id) = rx.recv().await {
+                    log::info!("[Orchestrator] Detached job trigger received for: {}", job_id);
+                    let _ = crate::commands::download::resume_download_internal(
+                        job_id, 
+                        app_handle.get_webview_window("main"), 
+                        state_for_listener.clone()
+                    ).await;
+                }
+            });
 
             crate::engine::bridge::setup_ipc_bridge(app.handle().clone());
             Ok(())

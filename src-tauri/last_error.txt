@@ -1,0 +1,134 @@
+﻿cargo : warning: unused 
+import: `std::sync::Arc`
+At line:1 char:1
++ cargo check 
+--no-default-features 
+--color never 2>&1 | 
+Out-File -File ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (war  
+  ning: unused import: `   
+ std::sync::Arc`:String    
+) [], RemoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+ --> src\engine\auth.rs:3:5
+  |
+3 | use std::sync::Arc;
+  |     ^^^^^^^^^^^^^^
+  |
+  = note: 
+`#[warn(unused_imports)]` 
+(part of 
+`#[warn(unused)]`) on by 
+default
+
+warning: unused import: `cr
+ate::types::DownloadStatus`
+ --> 
+src\engine\scheduler.rs:5:5
+  |
+5 | use crate::types::Downl
+oadStatus;
+  |     ^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^
+
+warning: unused variable: 
+`app_state_arc`
+   --> src\commands\downloa
+d.rs:208:9
+    |
+208 | ...et app_state_arc 
+= ...
+    |       ^^^^^^^^^^^^^ 
+help: if this is 
+intentional, prefix it 
+with an underscore: 
+`_app_state_arc`
+    |
+    = note: `#[warn(unused_
+variables)]` (part of 
+`#[warn(unused)]`) on by 
+default
+
+warning: field `visited` 
+is never read
+  --> 
+src\engine\grabber.rs:19:5
+   |
+16 | pub struct 
+SiteGrabber {
+   |            
+----------- field in this 
+struct
+...
+19 |     visited: 
+Arc<Mutex<st...
+   |     ^^^^^^^
+   |
+   = note: 
+`#[warn(dead_code)]` (part 
+of `#[warn(unused)]`) on 
+by default
+
+warning: `mdownloader` 
+(lib) generated 4 warnings 
+(run `cargo fix --lib -p 
+mdownloader` to apply 3 
+suggestions)
+    Checking mdownloader 
+v0.2.0 (D:\WorkStation\IDM\
+src-tauri)
+error[E0061]: this 
+function takes 2 arguments 
+but 1 argument was supplied
+  --> src\bin\stress_test.r
+s:77:30
+   |
+77 |     let app_state = Ar
+c::new(app_lib::engine::sta
+te::AppState::new(std::env:
+:temp_dir()));
+   |                       
+       ^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^----------
+------------ argument #2 
+of type 
+`UnboundedSender<String>` 
+is missing
+   |
+note: associated function 
+defined here
+  --> 
+src\engine\state.rs:38:12
+   |
+38 |     pub fn 
+new(app_data_dir: PathBuf, 
+orchestration_tx: tokio::sy
+nc::mpsc::UnboundedSender<S
+tring>) -> Self {
+   |            ^^^
+help: provide the argument
+   |
+77 |     let app_state = Ar
+c::new(app_lib::engine::sta
+te::AppState::new(std::env:
+:temp_dir(), /* 
+UnboundedSender<String> 
+*/));
+   |                       
+                           
+                           
+           ++++++++++++++++
++++++++++++++++
+
+For more information about 
+this error, try `rustc 
+--explain E0061`.
+error: could not compile 
+`mdownloader` (bin 
+"stress_test") due to 1 
+previous error

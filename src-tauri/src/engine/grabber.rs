@@ -16,7 +16,6 @@ pub struct GrabbedAsset {
 pub struct SiteGrabber {
     client: reqwest::Client,
     auth_manager: Arc<AuthManager>,
-    visited: Arc<Mutex<std::collections::HashSet<String>>>,
 }
 
 impl SiteGrabber {
@@ -24,7 +23,6 @@ impl SiteGrabber {
         Self {
             client,
             auth_manager,
-            visited: Arc::new(Mutex::new(std::collections::HashSet::new())),
         }
     }
 

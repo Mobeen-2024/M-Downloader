@@ -31,10 +31,11 @@ pub struct AppState {
     pub auth_manager: Arc<AuthManager>,
     pub refresh_task_id: Arc<Mutex<Option<String>>>,
     pub bridge_connected: Arc<AtomicBool>,
+    pub orchestration_tx: tokio::sync::mpsc::UnboundedSender<String>,
 }
 
 impl AppState {
-    pub fn new(app_data_dir: PathBuf) -> Self {
+    pub fn new(app_data_dir: PathBuf, orchestration_tx: tokio::sync::mpsc::UnboundedSender<String>) -> Self {
         let client = Client::builder()
             .user_agent("Mdownloader/2.0")
             .redirect(reqwest::redirect::Policy::limited(10))
@@ -58,6 +59,7 @@ impl AppState {
             auth_manager: Arc::new(AuthManager::new(app_data_dir)),
             refresh_task_id: Arc::new(Mutex::new(None)),
             bridge_connected: Arc::new(AtomicBool::new(false)),
+            orchestration_tx,
         }
     }
 }
