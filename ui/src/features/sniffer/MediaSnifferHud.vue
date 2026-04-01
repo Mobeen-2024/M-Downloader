@@ -1,74 +1,55 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { listen } from '@tauri-apps/api/event';
-import type { UnlistenFn } from '@tauri-apps/api/event';
+import { ref, computed } from 'vue';
+import { useDownloadStore } from '@/stores/download.store';
 import { invoke } from '@tauri-apps/api/core';
 
-interface Resolution {
-  label: string;
-  video_url: string;
-  audio_url: string | null;
-}
+const store = useDownloadStore();
 
-interface MediaInterceptEvent {
-  id: string;
-  url: string;
-  filename: string | null;
-  mime: string | null;
-  resolutions: Resolution[];
-}
-
-const show = ref(false);
-const currentMedia = ref<MediaInterceptEvent | null>(null);
-const selectedResolution = ref<Resolution | null>(null);
+const currentMedia = computed(() => store.interceptedMedia[0] || null);
+const selectedResolution = ref<any>(null);
 const isAudioOnly = ref(false);
-let unlisten: UnlistenFn | null = null;
-let autoHideTimer: any = null;
 
-onMounted(async () => {
-  unlisten = await listen<MediaInterceptEvent>('media-intercepted', (event) => {
-    currentMedia.value = event.payload;
-    selectedResolution.value = event.payload.resolutions[0] || null;
-    show.value = true;
-    
-    // Auto-hide after 15 seconds if ignored
-    if (autoHideTimer) clearTimeout(autoHideTimer);
-    autoHideTimer = setTimeout(() => {
-      show.value = false;
-    }, 15000);
-  });
-});
-
-onUnmounted(() => {
-  if (unlisten) unlisten();
-  if (autoHideTimer) clearTimeout(autoHideTimer);
-});
-
-function clearTimer() {
-  if (autoHideTimer) clearTimeout(autoHideTimer);
-}
+// Auto-sync resolution selection when new media arrives
+import { watch } from 'vue';
+watch(currentMedia, (newVal) => {
+  if (newVal && newVal.resolutions) {
+    selectedResolution.value = newVal.resolutions[0];
+  }
+}, { immediate: true });
 
 async function startMediaDownload() {
   if (!currentMedia.value || !selectedResolution.value) return;
   
+  const m = currentMedia.value;
+  const res = selectedResolution.value;
+  
   try {
-    await invoke('start_download', { 
-      url: isAudioOnly.value && selectedResolution.value.audio_url 
-        ? selectedResolution.value.audio_url 
-        : selectedResolution.value.video_url,
-      cookies: null,
-      referer: null
+    const id = await invoke('start_download', { 
+      url: isAudioOnly.value && res.audio_url 
+        ? res.audio_url 
+        : res.video_url,
+      cookies: m.cookies || null,
+      referer: m.referer || m.referrer || null
     });
-    show.value = false;
+    
+    // Add to store and clear from HUD
+    store.addDownload(m.url, id as string);
+    store.clearMediaDetection(m.id);
   } catch (e) {
     console.error("Failed to start media download:", e);
+  }
+}
+
+function dismiss() {
+  if (currentMedia.value) {
+    store.clearMediaDetection(currentMedia.value.id);
   }
 }
 </script>
 
 <template>
   <transition name="slide-up">
-    <div v-if="show" class="media-hud" @mouseenter="clearTimer">
+    <div v-if="currentMedia" class="media-hud">
       <div class="hud-content">
         <div class="media-info">
           <div class="icon">
@@ -79,13 +60,13 @@ async function startMediaDownload() {
           <div class="text">
             <h4>Video Stream Detected</h4>
             <div class="meta">
-              <span class="mime">{{ currentMedia?.mime || 'Unknown Codec' }}</span>
-              <span class="file">{{ currentMedia?.filename || 'Adaptive Stream' }}</span>
+              <span class="mime">{{ currentMedia.mime || 'Unknown Codec' }}</span>
+              <span class="file">{{ currentMedia.filename || 'Adaptive Stream' }}</span>
             </div>
           </div>
         </div>
 
-        <div class="quality-selector" v-if="currentMedia?.resolutions?.length">
+        <div class="quality-selector" v-if="currentMedia.resolutions?.length">
           <label>Quality</label>
           <div class="resolutions">
             <button 
@@ -109,7 +90,7 @@ async function startMediaDownload() {
         </div>
 
         <div class="hud-actions">
-          <button class="btn-cancel" @click="show = false">Ignore</button>
+          <button class="btn-cancel" @click="dismiss">Ignore</button>
           <button class="btn-download" @click="startMediaDownload" :disabled="!selectedResolution">
             Download at {{ selectedResolution?.label || 'Original' }}
           </button>

@@ -2627,6 +2627,7 @@ name = "mdownloader"
 version = "0.2.0"
 dependencies = [
  "async-recursion",
+ "base64 0.22.1",
  "boa_engine",
  "chrono",
  "env_logger",
@@ -2650,6 +2651,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "url",
  "uuid",
  "windows-sys 0.52.0",
 ]

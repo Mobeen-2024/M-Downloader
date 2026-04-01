@@ -28,6 +28,7 @@ pub async fn download_segment(
     state: Arc<Mutex<DownloadState>>,
     cancel_token: CancellationToken,
     total_size: u64,
+    auth_manager: Arc<crate::engine::auth::AuthManager>,
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     quota_tracker: Arc<crate::engine::quota::UsageTracker>,
     simulation: Option<Arc<crate::engine::test_utils::SimulationEngine>>,
@@ -46,6 +47,7 @@ pub async fn download_segment(
             state.clone(),
             cancel_token.clone(),
             total_size,
+            auth_manager.clone(),
             shaper.clone(),
             quota_tracker.clone(),
             simulation.clone(),
@@ -74,6 +76,7 @@ async fn download_segment_attempt(
     state: Arc<Mutex<DownloadState>>,
     cancel_token: CancellationToken,
     total_size: u64,
+    auth_manager: Arc<crate::engine::auth::AuthManager>,
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     quota_tracker: Arc<crate::engine::quota::UsageTracker>,
     simulation: Option<Arc<crate::engine::test_utils::SimulationEngine>>,
@@ -97,6 +100,10 @@ async fn download_segment_attempt(
         .header(USER_AGENT, "Mdownloader/2.0");
 
     // ── Session & Integrity Headers ──────────────────────────────────────────
+    let (saved_auth, saved_cookies) = auth_manager.get_headers_for_url(&url).await;
+
+    if let Some(auth) = saved_auth { rb = rb.header("Authorization", auth); }
+    if let Some(c) = saved_cookies { rb = rb.header(COOKIE, c); }
     if let Some(c) = cookies { rb = rb.header(COOKIE, c); }
     if let Some(r) = referer { rb = rb.header(REFERER, r); }
     
@@ -265,10 +272,15 @@ pub async fn download_stream_segment(
     state: Arc<Mutex<DownloadState>>,
     segment_idx: usize,
     cancel_token: CancellationToken,
+    auth_manager: Arc<crate::engine::auth::AuthManager>,
     cookies: Option<String>,
     referer: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut rb = client.get(&url).header(USER_AGENT, "Mdownloader/2.0");
+
+    let (saved_auth, saved_cookies) = auth_manager.get_headers_for_url(&url).await;
+    if let Some(auth) = saved_auth { rb = rb.header("Authorization", auth); }
+    if let Some(c) = saved_cookies { rb = rb.header(COOKIE, c); }
     if let Some(c) = cookies { rb = rb.header(COOKIE, c); }
     if let Some(r) = referer { rb = rb.header(REFERER, r); }
 

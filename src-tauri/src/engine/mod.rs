@@ -11,4 +11,7 @@ pub mod media;
 pub mod deobfuscator;
 pub mod provisioner;
 pub mod sniffing;
+pub mod grabber;
+pub mod auth;
+pub mod scheduler;
 pub mod test_utils;

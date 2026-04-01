@@ -6,6 +6,7 @@ import type { DownloadItem, DownloadProgressEvent } from '../types/download';
 export const useDownloadStore = defineStore('downloads', () => {
   const downloads = ref<DownloadItem[]>([]);
   const bridgeConnected = ref(false);
+  const interceptedMedia = ref<any[]>([]); // New: Stores detected media streams for HUD
   
   // Load from localStorage on startup
   const saved = localStorage.getItem('mdownloader_tasks');
@@ -113,6 +114,27 @@ export const useDownloadStore = defineStore('downloads', () => {
     }
   };
 
+  const updateTaskUrl = (id: string, newUrl: string) => {
+    const index = downloads.value.findIndex(d => d.id === id);
+    if (index !== -1) {
+      downloads.value[index].url = newUrl;
+      console.log(`[Store] Task ${id} URL refreshed to: ${newUrl.substring(0, 50)}...`);
+    }
+  };
+
+  const handleMediaIntercept = (media: any) => {
+    // Add to intercepted list if not already present
+    if (!interceptedMedia.value.some(m => m.url === media.url)) {
+      interceptedMedia.value.unshift(media);
+      // Keep only last 10 detections
+      if (interceptedMedia.value.length > 10) interceptedMedia.value.pop();
+    }
+  };
+
+  const clearMediaDetection = (id: string) => {
+    interceptedMedia.value = interceptedMedia.value.filter(m => m.id !== id);
+  };
+
   const removeDownload = (id: string) => {
     downloads.value = downloads.value.filter(d => d.id !== id);
   };
@@ -166,5 +188,9 @@ export const useDownloadStore = defineStore('downloads', () => {
     add_to_queue,
     start_queue,
     stop_queue,
+    interceptedMedia,
+    updateTaskUrl,
+    handleMediaIntercept,
+    clearMediaDetection,
   };
 });

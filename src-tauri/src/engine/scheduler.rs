@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use crate::engine::state::AppState;
+use crate::types::DownloadStatus;
 
 pub struct QueueManager {
     queue: Mutex<VecDeque<String>>, // Ordered list of Job IDs

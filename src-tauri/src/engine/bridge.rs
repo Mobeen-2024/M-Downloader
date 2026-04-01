@@ -1,7 +1,6 @@
 use crate::engine::state::AppState;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
-use crate::commands::download::start_download_internal;
 use serde::Deserialize;
 use tauri::{AppHandle, Manager, Emitter};
 use tokio::io::AsyncReadExt;
@@ -143,12 +142,13 @@ pub fn setup_ipc_bridge(app: AppHandle) {
                                 continue; // Wait for user verification on the HUD
                             }
 
-                            match start_download_internal(
+                            match crate::commands::download::start_download_internal(
                                 req.url,
-                                window,
+                                Some(window),
                                 state_arc.inner().clone(),
                                 req.cookies,
                                 req.referrer,
+                                true, // Default browser capture to Queued
                             ).await {
                                 Ok(download_id) => {
                                     log::info!(

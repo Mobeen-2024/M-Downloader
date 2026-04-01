@@ -28,6 +28,16 @@ const routes = [
     name: 'Statistics',
     component: () => import('../views/StatsView.vue') 
   },
+  { 
+    path: '/sites', 
+    name: 'Sites',
+    component: () => import('../views/SitesView.vue') 
+  },
+  { 
+    path: '/grabber', 
+    name: 'Grabber',
+    component: () => import('../views/GrabberView.vue') 
+  },
 ];
 
 export const router = createRouter({

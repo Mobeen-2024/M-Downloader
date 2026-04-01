@@ -1,0 +1,121 @@
+﻿cargo :     Checking 
+mdownloader v0.2.0 (D:\Work
+Station\IDM\src-tauri)
+At line:1 char:1
++ cargo check 
+--no-default-features 
+--color never 2>&1 | 
+Out-File -File ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (     
+   Checking md...\IDM\sr   
+ c-tauri):String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+error[E0425]: cannot find 
+function, tuple struct or 
+tuple variant 
+`DeviceIoControl` in 
+module `windows_sys::Win32:
+:System::Ioctl`
+   --> src\engine\manager.r
+s:139:68
+    |
+139 |                      
+   let _ = windows_sys::Win
+32::System::Ioctl::DeviceIo
+Control(
+    |                      
+                           
+                   
+^^^^^^^^^^^^^^^ not found 
+in `windows_sys::Win32::Sys
+tem::Ioctl`
+
+error[E0425]: cannot find 
+value `FSCTL_SET_SPARSE` 
+in module `windows_sys::Win
+32::Storage::FileSystem`
+   --> src\engine\manager.r
+s:141:70
+    |
+141 | ...                  
+ windows_sys::Win32::Storag
+e::FileSystem::FSCTL_SET_SP
+ARSE,
+    |                      
+                           
+               
+^^^^^^^^^^^^^^^^ not found 
+in `windows_sys::Win32::Sto
+rage::FileSystem`
+
+warning: unused import: `cr
+ate::commands::download::st
+art_download_internal`
+ --> 
+src\engine\bridge.rs:4:5
+  |
+4 | use crate::commands::do
+wnload::start_download_inte
+rnal;
+  |     ^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^
+  |
+  = note: 
+`#[warn(unused_imports)]` 
+(part of 
+`#[warn(unused)]`) on by 
+default
+
+warning: unused import: 
+`std::sync::Arc`
+ --> src\engine\auth.rs:3:5
+  |
+3 | use std::sync::Arc;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused import: `cr
+ate::types::DownloadStatus`
+ --> 
+src\engine\scheduler.rs:5:5
+  |
+5 | use crate::types::Downl
+oadStatus;
+  |     ^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^
+
+warning: unused variable: 
+`app_state_arc`
+   --> src\commands\downloa
+d.rs:208:9
+    |
+208 |     let 
+app_state_arc = 
+app_state.clone();
+    |         
+^^^^^^^^^^^^^ help: if 
+this is intentional, 
+prefix it with an 
+underscore: 
+`_app_state_arc`
+    |
+    = note: `#[warn(unused_
+variables)]` (part of 
+`#[warn(unused)]`) on by 
+default
+
+For more information about 
+this error, try `rustc 
+--explain E0425`.
+warning: `mdownloader` 
+(lib) generated 4 warnings
+error: could not compile 
+`mdownloader` (lib) due to 
+2 previous errors; 4 
+warnings emitted

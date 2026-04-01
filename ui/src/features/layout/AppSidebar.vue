@@ -10,7 +10,9 @@ import {
   Video,
   FileCode,
   FileText,
-  Box
+  Box,
+  ShieldCheck,
+  RefreshCw
 } from 'lucide-vue-next';
 import { useDownloadStore } from '@/stores/download.store';
 
@@ -20,7 +22,9 @@ const navItems = [
   { name: 'Active', icon: Download, path: '/active', badge: () => store.activeDownloads.length },
   { name: 'Completed', icon: CheckCircle, path: '/completed' },
   { name: 'Queued', icon: Clock, path: '/queued' },
+  { name: 'Site Grabber', icon: RefreshCw, path: '/grabber' },
   { name: 'Statistics', icon: LayoutDashboard, path: '/stats' },
+  { name: 'Sites', icon: ShieldCheck, path: '/sites' },
 ];
 
 const categories = [

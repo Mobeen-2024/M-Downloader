@@ -9,6 +9,7 @@ use crate::types::DownloadStatus;
 
 use crate::engine::quota::UsageTracker;
 use crate::engine::scheduler::QueueManager;
+use crate::engine::auth::AuthManager;
 use std::path::PathBuf;
 
 pub struct DownloadHandle {
@@ -27,12 +28,13 @@ pub struct AppState {
     pub simulation_engine: crate::engine::test_utils::SimulationEngine,
     pub deobfuscator: Arc<crate::engine::deobfuscator::YouTubeDeobfuscator>,
     pub queue_manager: Arc<QueueManager>,
+    pub auth_manager: Arc<AuthManager>,
     pub refresh_task_id: Arc<Mutex<Option<String>>>,
     pub bridge_connected: Arc<AtomicBool>,
 }
 
 impl AppState {
-    pub fn new(app_dir: PathBuf) -> Self {
+    pub fn new(app_data_dir: PathBuf) -> Self {
         let client = Client::builder()
             .user_agent("Mdownloader/2.0")
             .redirect(reqwest::redirect::Policy::limited(10))
@@ -42,7 +44,7 @@ impl AppState {
             .build()
             .expect("Failed to create reqwest client");
 
-        let quota_tracker = UsageTracker::new(app_dir).expect("Failed to initialize usage tracker");
+        let quota_tracker = UsageTracker::new(app_data_dir.clone()).expect("Failed to initialize usage tracker");
 
         let deobfuscator = Arc::new(crate::engine::deobfuscator::YouTubeDeobfuscator::new().expect("Failed to initialize YouTube Deobfuscator"));
 
@@ -53,6 +55,7 @@ impl AppState {
             simulation_engine: crate::engine::test_utils::SimulationEngine::new(),
             deobfuscator,
             queue_manager: Arc::new(QueueManager::new()),
+            auth_manager: Arc::new(AuthManager::new(app_data_dir)),
             refresh_task_id: Arc::new(Mutex::new(None)),
             bridge_connected: Arc::new(AtomicBool::new(false)),
         }

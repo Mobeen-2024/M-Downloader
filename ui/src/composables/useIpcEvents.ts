@@ -22,12 +22,26 @@ export function useIpcEvents() {
       store.bridgeConnected = event.payload;
     });
 
+    const unlistenMedia = await listen<any>('media-intercepted', (event) => {
+      store.handleMediaIntercept(event.payload);
+    });
+
+    const unlistenRefresh = await listen<any>('url-refreshed', (event) => {
+      if (event.payload.id) {
+        // Since URL is refreshed internally, we might want to tell the store to update its ID's URL?
+        // Note: The backend handles the swap, this is for UI notification.
+        store.updateTaskUrl(event.payload.id, event.payload.new_url); 
+      }
+    });
+
     onUnmounted(() => {
       unlistenProgress();
       unlistenBridge();
+      unlistenMedia();
+      unlistenRefresh();
     });
 
-    return { unlistenProgress, unlistenBridge };
+    return { unlistenProgress, unlistenBridge, unlistenMedia, unlistenRefresh };
   };
 
   return { initListeners };

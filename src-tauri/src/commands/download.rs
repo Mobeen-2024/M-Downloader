@@ -18,19 +18,26 @@ pub async fn start_download(
     cookies: Option<String>,
     referer: Option<String>,
 ) -> Result<String, String> {
-    start_download_internal(url, window, state.inner().clone(), cookies, referer).await
+    start_download_internal(url, Some(window), state.inner().clone(), cookies, referer, false).await
 }
 
-/// Internal shared logic for starting a download.
-/// Used by both the Tauri command and the Browser Integration pipe listener.
 pub async fn start_download_internal(
     url: String,
-    window: tauri::WebviewWindow,
+    window: Option<tauri::WebviewWindow>,
     app_state: Arc<AppState>,
     cookies: Option<String>,
     referer: Option<String>,
+    should_queue: bool,
 ) -> Result<String, String> {
     let id = uuid::Uuid::new_v4().to_string();
+    
+    // ── Auth Fallback ────────────────────────────────────────────────────
+    let (cookies, referer) = if cookies.is_none() || referer.is_none() {
+        let (a, c) = app_state.auth_manager.get_headers_for_url(&url).await;
+        (c.or(cookies), a.or(referer)) // Use 'a' (auth/referer) from get_headers_for_url
+    } else {
+        (cookies, referer)
+    };
 
     let filename = url.split('/').last().unwrap_or("download.bin");
     let file_path = format!("downloads/{}", filename);
@@ -84,7 +91,13 @@ pub async fn start_download_internal(
             cancel_token.clone(),
             DEFAULT_WORKERS,
         );
-        return start_manager_orchestration(id, window, app_state, manager, cancel_token).await;
+
+        if should_queue {
+            app_state.queue_manager.add_job(id.clone()).await;
+            // Mark as Queued in persistence/state later in start_manager_orchestration logic
+        }
+
+        return start_manager_orchestration(id, window, app_state, manager, cancel_token, should_queue).await;
     }
 
     // Ensure the downloads directory exists.
@@ -154,16 +167,21 @@ pub async fn start_download_internal(
         s.last_modified = last_modified;
     }
 
-    start_manager_orchestration(id, window, app_state, manager, cancel_token).await
+    if should_queue {
+        app_state.queue_manager.add_job(id.clone()).await;
+    }
+
+    start_manager_orchestration(id, window, app_state, manager, cancel_token, should_queue).await
 }
 
 /// Helper to register a manager and spawn the orchestration task.
 async fn start_manager_orchestration(
     id: String,
-    window: tauri::WebviewWindow,
+    window: Option<tauri::WebviewWindow>,
     app_state: Arc<AppState>,
     manager: DownloadManager,
     cancel_token: CancellationToken,
+    should_queue: bool,
 ) -> Result<String, String> {
     let url = manager.url.clone();
     let file_path = manager.file_path.clone();
@@ -178,7 +196,7 @@ async fn start_manager_orchestration(
             DownloadHandle {
                 cancel_token: cancel_token.clone(),
                 state: state_clone,
-                status: DownloadStatus::Downloading,
+                status: if should_queue { DownloadStatus::Queued } else { DownloadStatus::Downloading },
                 url,
                 file_path,
                 max_workers,
@@ -188,9 +206,14 @@ async fn start_manager_orchestration(
 
     // Spawn the download orchestration in a background task.
     let app_state_arc = app_state.clone();
-    tokio::spawn(async move {
-        let _ = manager.start(Some(window), app_state_arc).await;
-    });
+    // Spawn the download orchestration in a background task if NOT queued.
+    // If queued, the QueueManager heartbeat will call resume_download_internal later.
+    if !should_queue {
+        let app_state_arc = app_state.clone();
+        tokio::spawn(async move {
+            let _ = manager.start(window, app_state_arc).await;
+        });
+    }
 
     Ok(id)
 }
@@ -327,9 +350,9 @@ pub async fn resume_download_internal(
         }
     }
 
-    let app_state_arc = state.inner().clone();
+    let app_state_arc = state.clone();
     tokio::spawn(async move {
-        let _ = manager.start(Some(window), app_state_arc).await;
+        let _ = manager.start(window, app_state_arc).await;
     });
 
     Ok(())

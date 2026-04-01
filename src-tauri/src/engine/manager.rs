@@ -136,9 +136,9 @@ impl DownloadManager {
                     // Mark as sparse to optimize disk usage
                     unsafe {
                         let mut bytes_returned = 0;
-                        let _ = windows_sys::Win32::System::Ioctl::DeviceIoControl(
+                        let _ = windows_sys::Win32::System::IO::DeviceIoControl(
                             handle as _,
-                            windows_sys::Win32::Storage::FileSystem::FSCTL_SET_SPARSE,
+                            windows_sys::Win32::System::Ioctl::FSCTL_SET_SPARSE,
                             std::ptr::null_mut(),
                             0,
                             std::ptr::null_mut(),
@@ -223,6 +223,7 @@ impl DownloadManager {
                                     state.clone(),
                                     cancel_token.clone(),
                                     total_size,
+                                    app_state.auth_manager.clone(),
                                     shaper.clone(),
                                     quota_tracker.clone(),
                                     Some(Arc::new(app_state.simulation_engine.clone())),
@@ -240,6 +241,7 @@ impl DownloadManager {
                                     state.clone(),
                                     idx,
                                     cancel_token.clone(),
+                                    app_state.auth_manager.clone(),
                                     cookies.clone(),
                                     referer.clone(),
                                 ).await
