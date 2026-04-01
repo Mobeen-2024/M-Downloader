@@ -56,7 +56,7 @@ impl AppState {
             quota_tracker: Arc::new(quota_tracker),
             simulation_engine: crate::engine::test_utils::SimulationEngine::new(),
             deobfuscator,
-            queue_manager: Arc::new(QueueManager::new()),
+            queue_manager: Arc::new(QueueManager::new(app_data_dir.clone())),
             auth_manager: Arc::new(AuthManager::new(app_data_dir)),
             refresh_task_id: Arc::new(Mutex::new(None)),
             bridge_connected: Arc::new(AtomicBool::new(false)),

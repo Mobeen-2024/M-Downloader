@@ -55,6 +55,7 @@ const toggleQueue = () => {
         v-for="download in store.queuedDownloads" 
         :key="download.id" 
         :download="download" 
+        is-queued-view 
       />
     </div>
   </div>

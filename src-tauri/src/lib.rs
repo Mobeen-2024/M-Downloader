@@ -46,6 +46,13 @@ pub fn run() {
             });
 
             crate::engine::bridge::setup_ipc_bridge(app.handle().clone());
+
+            // Auto-start the queue scheduler
+            let state_for_queue = state_arc.clone();
+            tauri::async_runtime::spawn(async move {
+                state_for_queue.queue_manager.start_queue(state_for_queue.clone(), state_for_queue.queue_manager.clone()).await;
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -68,6 +75,8 @@ pub fn run() {
             crate::commands::queue::start_queue_scheduler,
             crate::commands::queue::stop_queue_scheduler,
             crate::commands::queue::set_parallel_job_limit,
+            crate::commands::queue::move_queue_item_up,
+            crate::commands::queue::move_queue_item_down,
             crate::commands::auth::add_site_credential,
             crate::commands::auth::remove_site_credential,
             crate::commands::auth::get_all_site_credentials,

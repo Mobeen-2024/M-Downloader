@@ -25,3 +25,15 @@ pub async fn set_parallel_job_limit(limit: usize, state: State<'_, Arc<AppState>
     state.queue_manager.set_parallel_limit(limit).await;
     Ok(())
 }
+
+#[tauri::command]
+pub async fn move_queue_item_up(id: String, state: State<'_, Arc<AppState>>) -> Result<(), String> {
+    state.queue_manager.move_job_up(id).await;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn move_queue_item_down(id: String, state: State<'_, Arc<AppState>>) -> Result<(), String> {
+    state.queue_manager.move_job_down(id).await;
+    Ok(())
+}

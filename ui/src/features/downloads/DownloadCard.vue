@@ -9,24 +9,29 @@ import {
   FileVideo, 
   FileImage,
   FolderOpen,
-  RotateCw
+  RotateCw,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import type { DownloadItem } from '@/types/download';
 import { useFormatters } from '@/composables/useFormatters';
 import { useDownload } from '@/composables/useDownload';
+import { useDownloadStore } from '@/stores/download.store';
 import StatusBadge from '@/features/shared/components/StatusBadge.vue';
 import SegmentVisualizer from './SegmentVisualizer.vue';
 import GlassPanel from '@/features/shared/components/GlassPanel.vue';
 
 const props = defineProps<{
   download: DownloadItem;
+  isQueuedView?: boolean;
 }>();
 
 const emit = defineEmits(['refresh']);
 
 const { formatSize, formatSpeed, formatEta } = useFormatters();
 const { pauseDownload, resumeDownload, cancelDownload } = useDownload();
+const store = useDownloadStore();
 
 const fileIcon = computed(() => {
   const ext = props.download.name.split('.').pop()?.toLowerCase();
@@ -62,6 +67,16 @@ const progressPercent = computed(() => {
 
       <div class="card-actions">
         <StatusBadge :status="download.status" />
+        <div class="button-group">
+          <template v-if="isQueuedView">
+            <button class="btn-icon" title="Move Up" @click="store.move_up(download.id)">
+              <ChevronUp />
+            </button>
+            <button class="btn-icon" title="Move Down" @click="store.move_down(download.id)">
+              <ChevronDown />
+            </button>
+          </template>
+          
           <button 
             v-if="download.status === 'RefreshNeeded'" 
             class="btn-icon warning"
@@ -78,7 +93,7 @@ const progressPercent = computed(() => {
             <Pause />
           </button>
           <button 
-            v-else-if="download.status === 'Paused'" 
+            v-else-if="download.status === 'Paused' || download.status === 'Queued'" 
             class="btn-icon" 
             @click="resumeDownload(download.id)"
           >
@@ -93,6 +108,7 @@ const progressPercent = computed(() => {
           <button class="btn-icon danger" @click="cancelDownload(download.id)">
             <X />
           </button>
+        </div>
       </div>
     </div>
 

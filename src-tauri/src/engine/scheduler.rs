@@ -4,30 +4,57 @@ use tokio::sync::Mutex;
 use crate::engine::state::AppState;
 
 pub struct QueueManager {
-    queue: Mutex<VecDeque<String>>, // Ordered list of Job IDs
-    max_parallel: Mutex<usize>,
-    is_active: Mutex<bool>,
+    pub queue: Mutex<VecDeque<String>>, // Ordered list of Job IDs
+    pub max_parallel: Mutex<usize>,
+    pub is_active: Mutex<bool>,
+    pub app_data_dir: std::path::PathBuf,
 }
 
 impl QueueManager {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(app_data_dir: std::path::PathBuf) -> Self {
+        let mut qm = Self {
             queue: Mutex::new(VecDeque::new()),
             max_parallel: Mutex::new(2), // Default to 2 parallel downloads
             is_active: Mutex::new(false),
-        }
+            app_data_dir,
+        };
+        // Sync with existing disk state if available
+        let _ = qm.load_from_disk();
+        qm
     }
 
     pub async fn add_job(&self, id: String) {
         let mut q = self.queue.lock().await;
         if !q.contains(&id) {
             q.push_back(id);
+            let _ = self.save_to_disk(&*q);
         }
     }
 
     pub async fn remove_job(&self, id: &str) {
         let mut q = self.queue.lock().await;
         q.retain(|x| x != id);
+        let _ = self.save_to_disk(&*q);
+    }
+
+    pub async fn move_job_up(&self, id: String) {
+        let mut q = self.queue.lock().await;
+        if let Some(pos) = q.iter().position(|x| x == &id) {
+            if pos > 0 {
+                q.swap(pos, pos - 1);
+                let _ = self.save_to_disk(&*q);
+            }
+        }
+    }
+
+    pub async fn move_job_down(&self, id: String) {
+        let mut q = self.queue.lock().await;
+        if let Some(pos) = q.iter().position(|x| x == &id) {
+            if pos < q.len() - 1 {
+                q.swap(pos, pos + 1);
+                let _ = self.save_to_disk(&*q);
+            }
+        }
     }
 
     pub async fn set_parallel_limit(&self, limit: usize) {
@@ -76,9 +103,29 @@ impl QueueManager {
         if currently_running < max {
             let mut q = self.queue.lock().await;
             if let Some(next_id) = q.pop_front() {
-                log::info!("[Scheduler] Signaling orchestrator to start job: {}", next_id);
+                log::info!("[Scheduler] Queue Slot Available: Transitioning {} to Active", next_id);
+                // Update persistent state to "Queued" -> "Downloading" isn't strictly needed here 
+                // but the orchestrator will handle the resume logic.
                 let _ = app_state.orchestration_tx.send(next_id);
+                let _ = self.save_to_disk(&*q);
             }
         }
+    }
+
+    fn save_to_disk(&self, queue: &VecDeque<String>) -> std::io::Result<()> {
+        let path = self.app_data_dir.join("queue.json");
+        let json = serde_json::to_string(queue)?;
+        std::fs::write(path, json)
+    }
+
+    fn load_from_disk(&mut self) -> std::io::Result<()> {
+        let path = self.app_data_dir.join("queue.json");
+        if path.exists() {
+            let json = std::fs::read_to_string(path)?;
+            if let Ok(q) = serde_json::from_str::<VecDeque<String>>(&json) {
+                *self.queue.get_mut() = q;
+            }
+        }
+        Ok(())
     }
 }

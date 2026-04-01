@@ -41,6 +41,20 @@ pub async fn start_download_internal(
 
     let filename = url.split('/').last().unwrap_or("download.bin");
     let file_path = format!("downloads/{}", filename);
+
+    // ── Pre-flight Parallelism Check ─────────────────────────────────────
+    let mut should_queue = should_queue;
+    if !should_queue {
+        let max = *app_state.queue_manager.max_parallel.lock().await;
+        let active = {
+            let d = app_state.downloads.lock().await;
+            d.values().filter(|h| h.status == DownloadStatus::Downloading).count()
+        };
+        if active >= max {
+            log::info!("[Scheduler] Parallel limit reached ({}). Auto-queueing job.", max);
+            should_queue = true;
+        }
+    }
  
     // ── Step 0: Media Stream Acquisition (HLS/DASH/Direct) ────────────────
     let is_manifest = url.contains(".m3u8") || url.contains(".mpd");

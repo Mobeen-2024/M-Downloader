@@ -105,6 +105,38 @@ export const useDownloadStore = defineStore('downloads', () => {
     }
   };
 
+  const move_up = async (id: string) => {
+    const index = downloads.value.findIndex(d => d.id === id);
+    if (index > 0) {
+      // Local swap for immediate UI feedback
+      const temp = downloads.value[index];
+      downloads.value[index] = downloads.value[index - 1];
+      downloads.value[index - 1] = temp;
+      
+      try {
+        await invoke('move_queue_item_up', { id });
+      } catch (e) {
+        console.error('Failed to move item up:', e);
+      }
+    }
+  };
+
+  const move_down = async (id: string) => {
+    const index = downloads.value.findIndex(d => d.id === id);
+    if (index !== -1 && index < downloads.value.length - 1) {
+      // Local swap for immediate UI feedback
+      const temp = downloads.value[index];
+      downloads.value[index] = downloads.value[index + 1];
+      downloads.value[index + 1] = temp;
+
+      try {
+        await invoke('move_queue_item_down', { id });
+      } catch (e) {
+        console.error('Failed to move item down:', e);
+      }
+    }
+  };
+
   const updateProgress = (event: DownloadProgressEvent) => {
     const index = downloads.value.findIndex(d => d.id === event.id);
     if (index !== -1) {
@@ -200,5 +232,7 @@ export const useDownloadStore = defineStore('downloads', () => {
     handleMediaAnalyzing,
     handleMediaIntercept,
     clearMediaDetection,
+    move_up,
+    move_down,
   };
 });

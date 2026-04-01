@@ -1,0 +1,50 @@
+﻿    Checking mdownloader v0.2.0 (D:\WorkStation\IDM\src-tauri)
+warning: unused import: `windows_sys::Win32::System::IO::DeviceIoControl`
+  --> src\engine\sniffing\handle.rs:10:5
+   |
+10 | use windows_sys::Win32::System::IO::DeviceIoControl;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+System.Management.Automation.RemoteException
+warning: unused doc comment
+ --> src\engine\sniffing\orchestrator.rs:9:1
+  |
+9 | /// Global cache to prevent duplicate HUD triggers within a window.
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+  |
+  = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+  = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+System.Management.Automation.RemoteException
+warning: unused import: `std::collections::HashMap`
+ --> src\engine\sniffing\orchestrator.rs:2:5
+  |
+2 | use std::collections::HashMap;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+System.Management.Automation.RemoteException
+warning: unused import: `Manager`
+ --> src\engine\sniffing\orchestrator.rs:3:24
+  |
+3 | use tauri::{AppHandle, Manager, Emitter};
+  |                        ^^^^^^^
+System.Management.Automation.RemoteException
+warning: unused import: `tokio::sync::Mutex`
+ --> src\engine\grabber.rs:3:5
+  |
+3 | use tokio::sync::Mutex;
+  |     ^^^^^^^^^^^^^^^^^^
+System.Management.Automation.RemoteException
+error[E0616]: field `max_parallel` of struct `QueueManager` is private
+  --> src\commands\download.rs:48:44
+   |
+48 |         let max = *app_state.queue_manager.max_parallel.lock().await;
+   |                                            ^^^^^^^^^^^^ private field
+System.Management.Automation.RemoteException
+warning: unused variable: `id`
+   --> src\engine\media.rs:238:25
+    |
+238 |                     let id = rep.attribute("id").unwrap_or("unknown");
+    |                         ^^ help: if this is intentional, prefix it with an underscore: `_id`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+System.Management.Automation.RemoteException
