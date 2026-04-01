@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, onUnmounted, watch } from 'vue';
-import { X, ExternalLink, Link, AlertTriangle, Loader2 } from 'lucide-vue-next';
+import { ExternalLink, Link, AlertTriangle, CheckCircle2, Globe } from 'lucide-vue-next';
 import { listen } from '@tauri-apps/api/event';
 import { useDownload } from '@/composables/useDownload';
-import GlassPanel from '@/features/shared/components/GlassPanel.vue';
+import BaseDialog from '@/features/shared/components/BaseDialog.vue';
+import BaseButton from '@/features/shared/components/BaseButton.vue';
+import BaseInput from '@/features/shared/components/BaseInput.vue';
 
 const props = defineProps<{
   show: boolean;
@@ -57,11 +59,11 @@ onUnmounted(async () => {
 
 const handleSubmit = () => {
   if (!newUrl.value) {
-    error.value = 'Please enter a new URL';
+    error.value = 'Please enter a valid source address';
     return;
   }
   if (!newUrl.value.startsWith('http')) {
-    error.value = 'Invalid URL format';
+    error.value = 'Protocol identifier missing (e.g. https://)';
     return;
   }
   emit('refresh', newUrl.value);
@@ -74,261 +76,269 @@ const openUrl = (url: string) => {
 </script>
 
 <template>
-  <div v-if="show" class="modal-overlay" @click.self="emit('close')">
-    <GlassPanel class="modal-content">
-      <div class="modal-header">
-        <div class="header-title">
-          <Link class="header-icon" />
-          <h3>Refresh Download Address</h3>
+  <BaseDialog 
+    :show="show" 
+    title="Synchronize Transmission" 
+    size="md" 
+    @close="emit('close')"
+  >
+    <div class="modal-body">
+      <!-- Status Banner -->
+      <div v-if="!captureSuccess" class="pro-alert warn">
+        <div class="alert-icon-box">
+          <AlertTriangle :size="16" />
         </div>
-        <button class="close-btn" @click="emit('close')">
-          <X />
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <div v-if="!captureSuccess" class="alert-box warning">
-          <AlertTriangle class="alert-icon" />
-          <div class="alert-text">
-            <strong>Link Expired:</strong> The current URL for <code>{{ downloadName }}</code> is no longer valid (403 Forbidden). 
-          </div>
-        </div>
-
-        <div v-if="captureSuccess" class="alert-box success">
-          <div class="alert-text">
-            <strong>Success!</strong> New address intercepted. Resuming download...
-          </div>
-        </div>
-
-        <!-- Automated Capture State -->
-        <div v-if="isWaiting" class="capture-state pulse">
-          <Loader2 class="spinner" />
-          <div class="capture-info">
-            <h4>Waiting for link interception...</h4>
-            <p>Re-click the download button in your browser to refresh automatically.</p>
-          </div>
-        </div>
-
-        <div v-if="sourceUrl && !captureSuccess && isWaiting" class="info-group">
-          <label>Source Page</label>
-          <div class="source-link">
-            <span>{{ sourceUrl }}</span>
-            <button class="btn-sm" @click="openUrl(sourceUrl)">
-              <ExternalLink class="icon-sm" />
-              Open Page
-            </button>
-          </div>
-        </div>
-
-        <div v-if="!captureSuccess && !isWaiting" class="input-group">
-          <label for="new-url">Manual URL Entry</label>
-          <div class="input-wrapper">
-            <input 
-              id="new-url"
-              v-model="newUrl"
-              type="text" 
-              placeholder="Paste the new link here..."
-              @keyup.enter="handleSubmit"
-            />
-          </div>
-          <p v-if="error" class="error-text">{{ error }}</p>
+        <div class="alert-content">
+          <p class="alert-title">Link Identity Expired</p>
+          <p class="alert-desc">The secure token for <code>{{ downloadName }}</code> has been invalidated by the host.</p>
         </div>
       </div>
 
-      <div class="modal-footer">
-        <button class="btn-ghost" @click="emit('close')">Cancel</button>
-        <button class="btn-primary" @click="handleSubmit">
-          Update and Resume
-        </button>
+      <div v-if="captureSuccess" class="pro-alert success">
+        <div class="alert-icon-box">
+          <CheckCircle2 :size="16" />
+        </div>
+        <div class="alert-content">
+          <p class="alert-title">Identity Captured</p>
+          <p class="alert-desc">New transmission parameters intercepted. Resuming stream...</p>
+        </div>
       </div>
-    </GlassPanel>
-  </div>
+
+      <!-- Autonomous Interception Area -->
+      <div v-if="isWaiting" class="interception-zone">
+        <div class="radar-visual">
+          <div class="radar-dot"></div>
+          <div class="radar-pulse"></div>
+          <Link :size="24" class="radar-icon" />
+        </div>
+        <div class="interception-text">
+          <h4>Awaiting Extension Handshake</h4>
+          <p>Re-trigger the download link in your browser. Our bridge will capture the fresh address automatically.</p>
+        </div>
+      </div>
+
+      <!-- Manual Controls Header -->
+      <div class="manual-header" v-if="!captureSuccess">
+        <div class="h-divider"></div>
+        <span class="h-label">Traditional Fallback</span>
+        <div class="h-divider"></div>
+      </div>
+
+      <!-- Source Context -->
+      <div v-if="sourceUrl && !captureSuccess" class="context-group">
+        <label class="field-label">Original Discovery Context</label>
+        <div class="source-card">
+          <Globe :size="14" class="text-accent" />
+          <span class="source-text" :title="sourceUrl">{{ sourceUrl }}</span>
+          <BaseButton variant="glass" size="sm" @click="openUrl(sourceUrl)">
+            <ExternalLink :size="12" />
+          </BaseButton>
+        </div>
+      </div>
+
+      <!-- Manual Input -->
+      <div v-if="!captureSuccess && !isWaiting" class="input-section">
+        <label class="field-label">Manual URL Submission</label>
+        <BaseInput 
+          v-model="newUrl" 
+          placeholder="Paste high-speed link destination..." 
+          :error="error"
+          @keyup.enter="handleSubmit"
+        />
+      </div>
+    </div>
+
+    <template #footer>
+      <BaseButton variant="glass" @click="emit('close')">Cancel</BaseButton>
+      <BaseButton 
+        variant="primary" 
+        :disabled="captureSuccess || isWaiting"
+        @click="handleSubmit"
+      >
+        Synchronize Stream
+      </BaseButton>
+    </template>
+  </BaseDialog>
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Alert Banner */
+.pro-alert {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.pro-alert.warn {
+  background: rgba(245, 158, 11, 0.05);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.pro-alert.success {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.alert-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  flex-shrink: 0;
 }
 
-.modal-content {
-  width: 100%;
-  max-width: 500px;
-  padding: 24px;
+.alert-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin: 0 0 4px 0;
 }
 
-.modal-header {
+.alert-desc {
+  font-size: 0.75rem;
+  margin: 0;
+  opacity: 0.8;
+  line-height: 1.4;
+}
+
+code {
+  font-family: var(--font-mono);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+/* Interception Zone */
+.interception-zone {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--border-color);
+  border-radius: 16px;
+  padding: 32px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.header-icon {
-  color: var(--accent-primary);
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.alert-box.success {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
-}
-
-.capture-state {
-  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 20px;
-  padding: 24px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px dashed var(--border-color);
-  border-radius: 12px;
-  margin-bottom: 24px;
+  text-align: center;
 }
 
-.pulse {
-  animation: pulse-glow 2s infinite;
+.radar-visual {
+  width: 64px;
+  height: 64px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-@keyframes pulse-glow {
-  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-  70% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+.radar-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent-primary);
+  border-radius: 50%;
+  z-index: 2;
 }
 
-.spinner {
-  width: 32px;
-  height: 32px;
+.radar-pulse {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--accent-primary);
+  border-radius: 50%;
+  animation: radar-pulse 2s infinite ease-out;
+}
+
+.radar-icon {
+  position: absolute;
   color: var(--accent-primary);
-  animation: spin 1s linear infinite;
+  opacity: 0.2;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes radar-pulse {
+  0% { transform: scale(0.5); opacity: 0.8; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
 
-.capture-info h4 {
-  font-size: 0.95rem;
-  margin-bottom: 4px;
+.interception-text h4 {
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0 0 8px 0;
   color: var(--text-primary);
 }
 
-.capture-info p {
+.interception-text p {
   font-size: 0.8rem;
   color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
 }
 
-.info-group, .input-group {
-  margin-bottom: 20px;
-}
-
-label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.source-link {
+/* Manual Header */
+.manual-header {
   display: flex;
-  gap: 8px;
   align-items: center;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.8rem;
+  gap: 16px;
+  opacity: 0.4;
 }
 
-.source-link span {
+.h-divider {
   flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.h-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+/* Context Group */
+.field-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
+.source-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.source-text {
+  flex: 1;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--accent-primary);
+  font-family: var(--font-mono);
 }
 
-.btn-sm {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.input-wrapper input {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  padding: 12px;
-  border-radius: 8px;
-  color: var(--text-primary);
-  font-size: 0.9rem;
-}
-
-.help-text {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  margin-top: 8px;
-}
-
-.error-text {
+.error-msg {
   color: var(--color-error);
-  font-size: 0.8rem;
-  margin-top: 4px;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.btn-ghost {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  padding: 10px 20px;
-  cursor: pointer;
-}
-
-.btn-primary {
-  background: var(--accent-primary);
-  color: white;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 6px;
 }
 </style>

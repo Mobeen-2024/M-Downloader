@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { listen } from '@tauri-apps/api/event';
 import { useDownloadStore } from '@/stores/download.store';
 import { 
-  Zap, 
   Cpu, 
   HardDrive, 
   Activity,
   AlertCircle,
   ShieldCheck,
   History,
+  Terminal,
+  Layers,
+  Network
 } from 'lucide-vue-next';
-import GlassPanel from '@/features/shared/components/GlassPanel.vue';
+import BaseCard from '@/features/shared/components/BaseCard.vue';
+import BaseButton from '@/features/shared/components/BaseButton.vue';
 
 const store = useDownloadStore();
 
@@ -49,7 +53,6 @@ const sparklinePoints = computed(() => {
 const efficiencyIndex = computed(() => {
   const stats = metrics.value.engine_stats;
   if (!stats || stats.total_splits === 0) return 100;
-  // Penalty for retries normalized by splits
   const penalty = (stats.total_retries / (stats.total_splits + 1)) * 50;
   return Math.max(0, Math.min(100, 100 - penalty)).toFixed(1);
 });
@@ -78,6 +81,7 @@ const getSegmentColor = (seg: any) => {
 
 const snifferLogs = ref<any[]>([]);
 const isSnifferActive = ref(false);
+let unlistenSniffer: any = null;
 
 const applySimulation = async (latency: number, packetLoss: number) => {
   try {
@@ -88,13 +92,16 @@ const applySimulation = async (latency: number, packetLoss: number) => {
 };
 
 const formatTime = (ts: number) => {
-  return new Date(ts * 1000).toLocaleTimeString([], { hour12: false });
+  return new Date(ts * 1000).toLocaleTimeString([], { hour12: false, fractionalSecondDigits: 3 } as any);
 };
 
-import { listen } from '@tauri-apps/api/event';
-import { onMounted, onUnmounted } from 'vue';
-
-let unlistenSniffer: any = null;
+const formatSpeed = (bps: number) => {
+  if (bps === 0) return '0 B/s';
+  const k = 1024;
+  const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+  const i = Math.floor(Math.log(bps) / Math.log(k));
+  return parseFloat((bps / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
 
 onMounted(async () => {
   unlistenSniffer = await listen('sniffer-hit', (event: any) => {
@@ -112,481 +119,455 @@ onMounted(async () => {
 onUnmounted(() => {
   if (unlistenSniffer) unlistenSniffer();
 });
-
-const formatSpeed = (bps: number) => {
-  if (bps === 0) return '0 B/s';
-  const k = 1024;
-  const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
-  const i = Math.floor(Math.log(bps) / Math.log(k));
-  return parseFloat((bps / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
 </script>
 
 <template>
-  <div class="view-container">
+  <div class="stats-view">
     <header class="view-header">
-      <Activity class="header-icon" />
-      <div>
-        <h1>Performance Benchmarking</h1>
-        <p class="text-secondary">Real-time validation of the Mdownloader Acceleration Engine.</p>
+      <div class="header-left">
+        <h2 class="view-title">System Instrumentation</h2>
+        <p class="view-subtitle">Real-time kernel-level telemetry and engine performance analysis.</p>
+      </div>
+      <div class="header-right" v-if="isSnifferActive">
+        <div class="status-indicator">
+          <div class="pulse-dot"></div>
+          <span>WFP Driver Active</span>
+        </div>
       </div>
     </header>
 
-    <div v-if="!activeDownload" class="empty-state">
-      <Zap class="empty-icon" />
-      <h3>No Data Collected</h3>
-      <p>Start a download to see real-time performance metrics and load-balancing efficiency.</p>
+    <div v-if="!activeDownload && !snifferLogs.length" class="empty-state">
+      <BaseCard variant="glass" padding="lg" class="empty-card">
+        <Activity :size="48" class="empty-icon" />
+        <h3>Awaiting Data Packets</h3>
+        <p>No active telemetry detected. Start a transmission or browse the web to see live packet interception.</p>
+      </BaseCard>
     </div>
 
-    <div v-else class="stats-grid">
-      <!-- Throughput Stability Card (NEW) -->
-      <GlassPanel class="stats-card full-width">
+    <div v-else class="dashboard-grid">
+      <!-- Throughput Visualizer -->
+      <BaseCard variant="glass" padding="md" class="throughput-card full-width">
         <div class="card-header">
-          <History class="card-icon blue" />
-          <h3>Throughput Stability</h3>
-          <div class="header-value">{{ formatSpeed(activeDownload.speed_bps) }}</div>
+          <div class="header-main">
+            <History :size="16" class="text-accent" />
+            <h3>Throughput Stability</h3>
+          </div>
+          <div class="current-value">{{ formatSpeed(activeDownload?.speed_bps || 0) }}</div>
         </div>
-        <div class="sparkline-container">
-          <svg viewBox="0 0 100 30" preserveAspectRatio="none" class="sparkline">
+        
+        <div class="graph-container">
+          <svg viewBox="0 0 100 30" preserveAspectRatio="none" class="spark-svg">
             <defs>
-              <linearGradient id="sparkGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--accent-primary)" stop-opacity="0.5" />
+              <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--accent-primary)" stop-opacity="0.3" />
                 <stop offset="100%" stop-color="var(--accent-primary)" stop-opacity="0" />
               </linearGradient>
             </defs>
             <path
               :d="`M ${sparklinePoints} L 100,30 L 0,30 Z`"
-              fill="url(#sparkGradient)"
+              fill="url(#areaGradient)"
+              class="graph-area"
             />
             <polyline
               fill="none"
               stroke="var(--accent-primary)"
               stroke-width="1.5"
               stroke-linejoin="round"
+              stroke-linecap="round"
               :points="sparklinePoints"
+              class="graph-line"
             />
           </svg>
         </div>
-        <p class="card-desc">Real-time bandwidth consistency over the last 60 seconds.</p>
-      </GlassPanel>
-      <!-- I/O Efficiency Card -->
-      <GlassPanel class="stats-card">
-        <div class="card-header">
-          <HardDrive class="card-icon blue" />
-          <h3>Disk I/O Efficiency</h3>
+        <div class="graph-footer">
+          <span>60s Window</span>
+          <span>Adaptive Scaling</span>
         </div>
-        <div class="metric-value">{{ (metrics.io_efficiency * 100).toFixed(1) }}%</div>
-        <div class="progress-bar-mini">
-          <div class="progress-fill" :style="{ width: metrics.io_efficiency * 100 + '%' }"></div>
-        </div>
-        <p class="card-desc">Ratio of requested data vs successful disk commits. Higher is better.</p>
-      </GlassPanel>
+      </BaseCard>
 
-      <!-- Segment Latency Heatmap -->
-      <GlassPanel class="stats-card heatmap-card">
+      <!-- IO & Engine Health -->
+      <div class="stats-subgrid full-width">
+        <BaseCard variant="glass" padding="md" class="stat-mini-card">
+          <div class="mini-header">
+            <HardDrive :size="14" />
+            <span>Disk I/O Efficiency</span>
+          </div>
+          <div class="mini-value">{{ (metrics.io_efficiency * 100).toFixed(1) }}%</div>
+          <div class="pro-progress">
+            <div class="pro-fill" :style="{ width: metrics.io_efficiency * 100 + '%' }"></div>
+          </div>
+        </BaseCard>
+
+        <BaseCard variant="glass" padding="md" class="stat-mini-card">
+          <div class="mini-header">
+            <ShieldCheck :size="14" class="text-success" />
+            <span>Engine Reliability</span>
+          </div>
+          <div class="mini-value">{{ efficiencyIndex }}%</div>
+          <div class="pro-progress">
+            <div class="pro-fill success" :style="{ width: efficiencyIndex + '%' }"></div>
+          </div>
+        </BaseCard>
+
+        <BaseCard variant="glass" padding="md" class="stat-mini-card">
+          <div class="mini-header">
+            <Cpu :size="14" class="text-accent" />
+            <span>Active Workers</span>
+          </div>
+          <div class="mini-value">{{ metrics.active_workers }}</div>
+          <div class="worker-badges">
+            <div 
+              v-for="i in metrics.active_workers" 
+              :key="i" 
+              class="worker-pip active"
+            ></div>
+          </div>
+        </BaseCard>
+
+        <BaseCard variant="glass" padding="md" class="stat-mini-card">
+          <div class="mini-header">
+            <Network :size="14" />
+            <span>Latency (TTFB)</span>
+          </div>
+          <div class="mini-value">{{ metrics.avg_latency_ms }}<span class="ms">ms</span></div>
+          <div class="latency-indicator" :class="latencyStatus.class">{{ latencyStatus.label }}</div>
+        </BaseCard>
+      </div>
+
+      <!-- Latency Heatmap -->
+      <BaseCard variant="glass" padding="md" class="heatmap-card" v-if="activeDownload">
         <div class="card-header">
-          <Cpu class="card-icon pink" />
-          <h3>Latency Heatmap</h3>
+          <div class="header-main">
+            <Layers :size="16" />
+            <h3>Segment Heatmap</h3>
+          </div>
         </div>
-        <div class="segment-grid">
+        <div class="heatmap-grid">
           <div 
             v-for="(seg, idx) in activeDownload.segments" 
             :key="idx" 
-            class="segment-box"
+            class="heat-pixel"
             :class="getSegmentColor(seg)"
-            :title="`Seg ${idx}: ${seg.last_latency_ms}ms`"
+            :title="`Segment ${idx}: ${seg.last_latency_ms}ms`"
           ></div>
         </div>
         <div class="heatmap-legend">
-          <span class="legend-item"><i class="sq fast"></i> &lt;100ms</span>
-          <span class="legend-item"><i class="sq stable"></i> &lt;300ms</span>
-          <span class="legend-item"><i class="sq slow"></i> &gt;300ms</span>
-          <span class="legend-item"><i class="sq comp"></i> Done</span>
+          <div class="legend-pip fast"></div> <span>Fast</span>
+          <div class="legend-pip ok"></div> <span>Stable</span>
+          <div class="legend-pip slow"></div> <span>Slow</span>
+          <div class="legend-pip done"></div> <span>Done</span>
         </div>
-        <p class="card-desc">Real-time responsiveness of every active byte-range segment.</p>
-      </GlassPanel>
+      </BaseCard>
 
-      <!-- Engine Health Card (NEW) -->
-      <GlassPanel class="stats-card">
+      <!-- Sniffer Logs -->
+      <BaseCard variant="glass" padding="md" class="sniffer-card" :class="{ 'full-width': !activeDownload }">
         <div class="card-header">
-          <ShieldCheck class="card-icon emerald" />
-          <h3>Engine Health</h3>
+          <div class="header-main">
+            <Terminal :size="16" />
+            <h3>Live Packet Sniffer</h3>
+          </div>
+          <div class="sniffer-badge">KERNEL-MODE</div>
         </div>
-        <div class="health-metrics">
-          <div class="h-row">
-            <span>Efficiency Index</span>
-            <span class="h-val">{{ efficiencyIndex }}%</span>
+        <div class="terminal-shell">
+          <div v-if="!snifferLogs.length" class="terminal-waiting">
+            Initializing WFP buffer... awaiting outbound link request.
           </div>
-          <div class="h-row">
-            <span>Total Splits</span>
-            <span class="h-val">{{ metrics.engine_stats?.total_splits || 0 }}</span>
-          </div>
-          <div class="h-row">
-            <span>Protocol</span>
-            <span class="h-val badge">{{ metrics.engine_stats?.http_version || 'HTTP/1.1' }}</span>
+          <div v-for="(log, i) in snifferLogs" :key="i" class="terminal-line">
+            <span class="line-time">{{ formatTime(log.timestamp) }}</span>
+            <span class="line-proc">{{ log.process_name }}</span>
+            <span class="line-url">{{ log.url }}</span>
           </div>
         </div>
-        <p class="card-desc">Adaptive health score based on split success vs connection retries.</p>
-      </GlassPanel>
+      </BaseCard>
 
-      <!-- Network Latency Card -->
-      <GlassPanel class="stats-card">
+      <!-- Simulation Controls -->
+      <BaseCard variant="glass" padding="md" class="simulation-card full-width">
         <div class="card-header">
-          <Activity class="card-icon yellow" />
-          <h3>Engine Latency (TTFB)</h3>
-        </div>
-        <div class="metric-value">{{ metrics.avg_latency_ms }}<span class="unit">ms</span></div>
-        <div class="latency-status" :class="latencyStatus.class">
-          {{ latencyStatus.label }}
-        </div>
-        <p class="card-desc">Real-time Time-To-First-Byte across all active segments.</p>
-      </GlassPanel>
-      <!-- Live Sniffer Log (NEW) -->
-      <GlassPanel class="stats-card sniffer-card" v-if="isSnifferActive">
-        <div class="card-header">
-          <Activity class="card-icon blue" />
-          <h3>Live Sniffer Log</h3>
-          <div class="header-badge">WFP ACTIVE</div>
-        </div>
-        <div class="sniffer-terminal">
-          <div v-if="snifferLogs.length === 0" class="terminal-empty">
-            Waiting for packets...
-          </div>
-          <div v-for="log in snifferLogs" :key="log.timestamp + log.url" class="terminal-line">
-            <span class="t-time">[{{ formatTime(log.timestamp) }}]</span>
-            <span class="t-proc">[{{ log.process_name }}]</span>
-            <span class="t-url" :title="log.url">{{ log.url }}</span>
+          <div class="header-main">
+            <AlertCircle :size="16" class="text-warn" />
+            <h3>Adversarial Simulation</h3>
           </div>
         </div>
-        <p class="card-desc">Real-time URL interception from the kernel-mode driver.</p>
-      </GlassPanel>
-    </div>
-
-    <div v-if="activeDownload" class="simulation-panel glass-panel">
-      <div class="panel-header">
-        <AlertCircle class="panel-icon" />
-        <h3>Hostile Network Simulation</h3>
-      </div>
-      <div class="simulation-actions">
-        <button class="btn-simulation" @click="applySimulation(500, 0.0)">Simulate 500ms Latency</button>
-        <button class="btn-simulation" @click="applySimulation(0, 0.1)">Simulate 10% Packet Loss</button>
-        <button class="btn-simulation" @click="applySimulation(200, 0.05)">High Jitter (Mixed)</button>
-        <button class="btn-simulation reset" @click="applySimulation(0, 0.0)">Reset Conditions</button>
-      </div>
-      <p class="help-text">Use these tools to validate how the engine re-segments files under stress.</p>
+        <div class="simulation-actions">
+          <BaseButton variant="glass" size="sm" @click="applySimulation(500, 0)">Simulate Latency (500ms)</BaseButton>
+          <BaseButton variant="glass" size="sm" @click="applySimulation(0, 0.1)">Simulate Loss (10%)</BaseButton>
+          <BaseButton variant="glass" size="sm" @click="applySimulation(250, 0.05)">High Jitter (Mixed)</BaseButton>
+          <div class="spacer"></div>
+          <BaseButton variant="danger" size="sm" @click="applySimulation(0, 0)">Reset Environment</BaseButton>
+        </div>
+      </BaseCard>
     </div>
   </div>
 </template>
 
 <style scoped>
-.view-container {
+.stats-view {
   height: 100%;
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
   overflow-y: auto;
-  padding: 32px;
-  padding-bottom: 80px;
 }
 
 .view-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  margin-bottom: 40px;
 }
 
-.header-icon {
-  width: 48px;
-  height: 48px;
-  color: var(--accent-primary);
+.view-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 4px;
 }
 
-.stats-grid {
+.view-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #10b981;
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 24px;
-  margin-bottom: 40px;
 }
 
-.stats-card {
-  padding: 24px;
+.full-width {
+  grid-column: span 2;
 }
 
 .card-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.card-icon { width: 20px; height: 20px; }
-.card-icon.blue { color: var(--accent-primary); }
-.card-icon.pink { color: #ec4899; }
-.card-icon.yellow { color: #f59e0b; }
-
-.metric-value {
-  font-size: 2.5rem;
-  font-weight: 800;
-  margin-bottom: 12px;
-  background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.unit {
-  font-size: 1rem;
-  margin-left: 4px;
-  color: var(--text-secondary);
-  -webkit-text-fill-color: var(--text-secondary);
-}
-
-.progress-bar-mini {
-  height: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
-  margin-bottom: 16px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--accent-primary);
-}
-
-.worker-dots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 16px;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.dot.active {
-  background: #ec4899;
-  box-shadow: 0 0 8px rgba(236, 72, 153, 0.4);
-}
-
-.dot.primary {
-  background: var(--accent-primary);
-  box-shadow: 0 0 10px var(--accent-primary);
-}
-
-.dot.auxiliary {
-  background: #ec4899;
-  opacity: 0.8;
-  animation: pulse 2s infinite alternate;
-}
-
-@keyframes pulse {
-  from { opacity: 0.6; transform: scale(0.9); }
-  to { opacity: 1.0; transform: scale(1.1); }
-}
-
-.latency-status {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.05);
-  transition: all 0.3s ease;
-}
-
-.latency-status.idle { color: var(--text-secondary); }
-.latency-status.ultra { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.latency-status.ok { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
-.latency-status.warn { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-.latency-status.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
-/* Heatmap Styles */
-.heatmap-card {
-  min-height: 240px;
-}
-
-.segment-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12px, 1fr));
-  gap: 4px;
-  max-height: 120px;
-  overflow-y: auto;
-  margin-bottom: 20px;
-  padding-right: 4px;
-}
-
-.segment-box {
-  aspect-ratio: 1;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.05);
-  transition: all 0.3s ease;
-}
-
-.segment-box.active-fast { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
-.segment-box.active-stable { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
-.segment-box.active-slow { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
-.segment-box.active-idle { background: var(--accent-primary); }
-.segment-box.completed { background: rgba(255, 255, 255, 0.2); }
-.segment-box.failed { background: #7f1d1d; border: 1px solid #ef4444; }
-.segment-box.pending { background: rgba(255, 255, 255, 0.05); }
-
-.heatmap-legend {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-}
-
-.legend-item { display: flex; align-items: center; gap: 4px; }
-.sq { width: 8px; height: 8px; border-radius: 1px; }
-.sq.fast { background: #10b981; }
-.sq.stable { background: #f59e0b; }
-.sq.slow { background: #ef4444; }
-.sq.comp { background: rgba(255, 255, 255, 0.2); }
-
-.card-desc {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-.simulation-panel {
-  padding: 32px;
-  background: rgba(20, 20, 20, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   margin-bottom: 24px;
 }
 
-.panel-icon { color: #f59e0b; }
-
-.simulation-actions {
+.header-main {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
 }
 
-.btn-simulation {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 12px 20px;
-  border-radius: 12px;
-  color: var(--text-primary);
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition-smooth);
-}
-
-.btn-simulation:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.btn-simulation.reset {
-  background: var(--accent-primary);
-  border: none;
-}
-
-.help-text {
-  font-size: 0.85rem;
+.header-main h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--text-secondary);
 }
 
-.full-width {
-  grid-column: 1 / -1;
-}
-
-.header-value {
-  margin-left: auto;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 700;
+.current-value {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 800;
   color: var(--accent-primary);
-  font-size: 1.1rem;
 }
 
-.sparkline-container {
-  height: 80px;
+/* Sparkline */
+.graph-container {
+  height: 100px;
   width: 100%;
-  margin: 15px 0;
-  position: relative;
+  margin-bottom: 12px;
 }
 
-.sparkline {
+.spark-svg {
   width: 100%;
   height: 100%;
   overflow: visible;
 }
 
-.health-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 15px;
+.graph-line {
+  filter: drop-shadow(0 0 4px var(--accent-primary));
 }
 
-.h-row {
+.graph-footer {
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+/* Subgrid Metrics */
+.stats-subgrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.stat-mini-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mini-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.mini-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.ms { font-size: 0.7rem; color: var(--text-secondary); margin-left: 2px; }
+
+.pro-progress {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+  margin-top: 4px;
+}
+
+.pro-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 2px;
+}
+
+.pro-fill.success { background: #10b981; }
+
+.worker-badges {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.worker-pip {
+  width: 10px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1px;
+}
+
+.worker-pip.active {
+  background: var(--accent-primary);
+  box-shadow: 0 0 5px var(--accent-primary);
+}
+
+.latency-indicator {
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.latency-indicator.ultra { color: #10b981; }
+.latency-indicator.ok { color: #22c55e; }
+.latency-indicator.warn { color: #f59e0b; }
+.latency-indicator.error { color: #ef4444; }
+
+/* Heatmap */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14px, 1fr));
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+.heat-pixel {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.2s;
+}
+
+.heat-pixel.active-fast { background: #10b981; }
+.heat-pixel.active-stable { background: #f59e0b; }
+.heat-pixel.active-slow { background: #ef4444; }
+.heat-pixel.active-idle { background: var(--accent-primary); }
+.heat-pixel.completed { background: rgba(255, 255, 255, 0.2); }
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
   color: var(--text-secondary);
 }
 
-.h-val {
-  color: var(--text-primary);
-  font-weight: 700;
-}
+.legend-pip { width: 8px; height: 8px; border-radius: 1px; }
+.legend-pip.fast { background: #10b981; }
+.legend-pip.ok { background: #f59e0b; }
+.legend-pip.slow { background: #ef4444; }
+.legend-pip.done { background: rgba(255, 255, 255, 0.2); }
 
-.h-val.badge {
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--accent-primary);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-}
-
-/* Sniffer Terminal */
+/* Sniffer */
 .sniffer-card {
-  grid-column: 1 / -1;
-  max-height: 300px;
-}
-
-.header-badge {
-  margin-left: auto;
-  font-size: 0.65rem;
-  background: var(--accent-primary);
-  color: white;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-}
-
-.sniffer-terminal {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  height: 180px;
-  overflow-y: auto;
-  padding: 12px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
-.terminal-empty {
-  opacity: 0.4;
+.sniffer-badge {
+  font-size: 0.6rem;
+  font-weight: 900;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.terminal-shell {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  height: 200px;
+  overflow-y: auto;
+  padding: 16px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.terminal-waiting {
+  opacity: 0.3;
   text-align: center;
   margin-top: 60px;
   font-style: italic;
@@ -594,29 +575,45 @@ const formatSpeed = (bps: number) => {
 
 .terminal-line {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   white-space: nowrap;
-  overflow: hidden;
 }
 
-.t-time { color: var(--text-secondary); }
-.t-proc { color: var(--accent-primary); font-weight: 700; }
-.t-url { color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; }
+.line-time { color: var(--text-secondary); opacity: 0.6; }
+.line-proc { color: var(--accent-primary); font-weight: 700; }
+.line-url { color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; }
 
+/* Simulation */
+.simulation-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.spacer { flex: 1; }
+
+/* Empty State */
 .empty-state {
-  height: 50vh;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-card {
+  max-width: 500px;
+  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: var(--text-secondary);
+  gap: 16px;
 }
 
-.empty-icon {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 24px;
-  opacity: 0.2;
+.empty-icon { color: var(--text-secondary); opacity: 0.2; }
+
+/* Custom Scrollbar */
+.terminal-shell::-webkit-scrollbar,
+.stats-view::-webkit-scrollbar {
+  width: 6px;
 }
 </style>

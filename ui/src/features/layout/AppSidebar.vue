@@ -12,7 +12,8 @@ import {
   FileText,
   Box,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  HardDrive
 } from 'lucide-vue-next';
 import { useDownloadStore } from '@/stores/download.store';
 
@@ -38,198 +39,285 @@ const categories = [
 </script>
 
 <template>
-  <aside class="sidebar glass-panel">
-    <div class="logo">
-      <LayoutDashboard class="logo-icon" />
-      <h2 class="logo-text">Mdownloader</h2>
-    </div>
-
-    <div class="sidebar-section">
-      <h3 class="section-title">Status</h3>
-      <nav class="nav-list">
-        <router-link 
-          v-for="item in navItems" 
-          :key="item.path"
-          :to="item.path"
-          class="nav-item"
-          active-class="active"
-        >
-          <component :is="item.icon" class="nav-icon" />
-          <span class="nav-label">{{ item.name }}</span>
-          <span v-if="item.badge && item.badge() > 0" class="badge">
-            {{ item.badge() }}
-          </span>
-        </router-link>
-      </nav>
-    </div>
-
-    <div class="sidebar-section">
-      <h3 class="section-title">Categories</h3>
-      <nav class="nav-list">
-        <div 
-          v-for="cat in categories" 
-          :key="cat.name"
-          class="nav-item category-item"
-        >
-          <component :is="cat.icon" class="nav-icon" />
-          <span class="nav-label">{{ cat.name }}</span>
-          <span v-if="cat.count() > 0" class="count-badge">
-            {{ cat.count() }}
-          </span>
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-group">
+        <div class="logo-icon-wrapper">
+          <Download :size="24" class="logo-icon" />
         </div>
-      </nav>
+        <div class="logo-text-group">
+          <h1>Mdownloader</h1>
+          <span class="version-tag">v2.1 PRO</span>
+        </div>
+      </div>
     </div>
 
-    <nav class="nav-list settings-nav">
-      <router-link to="/settings" class="nav-item" active-class="active">
-        <Settings class="nav-icon" />
-        <span class="nav-label">Settings</span>
-      </router-link>
-    </nav>
+    <div class="sidebar-content">
+      <div class="nav-section">
+        <div class="section-header">Main Engine</div>
+        <div class="nav-grid">
+          <router-link 
+            v-for="item in navItems" 
+            :key="item.path"
+            :to="item.path"
+            class="sidebar-link"
+            active-class="is-active"
+          >
+            <div class="link-left">
+              <component :is="item.icon" :size="18" class="link-icon" />
+              <span class="link-label">{{ item.name }}</span>
+            </div>
+            <div v-if="item.badge && item.badge() > 0" class="numeric-badge">
+              {{ item.badge() }}
+            </div>
+          </router-link>
+        </div>
+      </div>
+
+      <div class="nav-section">
+        <div class="section-header">Asset Categories</div>
+        <div class="nav-grid">
+          <div 
+            v-for="cat in categories" 
+            :key="cat.name"
+            class="sidebar-link category-link"
+          >
+            <div class="link-left">
+              <component :is="cat.icon" :size="18" class="link-icon" />
+              <span class="link-label">{{ cat.name }}</span>
+            </div>
+            <span v-if="cat.count() > 0" class="count-text">{{ cat.count() }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="sidebar-footer">
-      <div class="version-info">
-        <span class="text-secondary">v1.0.0 Master</span>
+      <div class="storage-card">
+        <div class="storage-info">
+          <div class="info-top">
+            <HardDrive :size="14" class="text-secondary" />
+            <span>Local Storage</span>
+          </div>
+          <span class="usage-text">84% Used</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" style="width: 84%"></div>
+        </div>
       </div>
+
+      <router-link to="/settings" class="settings-trigger" active-class="is-active">
+        <Settings :size="18" />
+        <span>System Preferences</span>
+      </router-link>
     </div>
   </aside>
 </template>
 
 <style scoped>
 .sidebar {
-  width: 260px;
+  width: 280px;
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
-  border-radius: 0;
-  border-left: none;
-  border-top: none;
-  border-bottom: none;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  position: relative;
+  z-index: 10;
 }
 
-.logo {
+.sidebar-header {
+  padding: 32px 24px;
+}
+
+.logo-group {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 12px;
-  margin-bottom: 40px;
+  gap: 14px;
 }
 
-.logo-icon {
-  color: var(--accent-primary);
-  width: 28px;
-  height: 28px;
+.logo-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.2);
 }
 
-.logo-text {
-  font-size: 1.25rem;
+.logo-text-group h1 {
+  font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, var(--text-primary), var(--accent-primary));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 4px;
 }
 
-.sidebar-section {
-  margin-bottom: 30px;
-}
-
-.section-title {
-  font-size: 0.7rem;
+.version-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
   text-transform: uppercase;
+  color: var(--accent-primary);
   letter-spacing: 0.05em;
-  color: var(--text-secondary);
+  padding: 2px 6px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 4px;
+}
+
+.sidebar-content {
+  flex: 1;
   padding: 0 16px;
-  margin-bottom: 12px;
-  opacity: 0.6;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 
-.category-item {
-  cursor: pointer;
-}
-
-.count-badge {
-  margin-left: auto;
-  font-size: 0.75rem;
+.section-header {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 800;
   color: var(--text-secondary);
-  font-weight: 600;
+  letter-spacing: 0.1em;
+  padding: 0 12px;
+  margin-bottom: 12px;
+  opacity: 0.5;
 }
 
-.settings-nav {
-  margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.nav-list {
+.nav-grid {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.nav-item {
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  transform: translateX(2px);
+}
+
+.sidebar-link.is-active {
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.link-left {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition: var(--transition-smooth);
-  font-weight: 500;
-  border: 1px solid transparent;
 }
 
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
+.link-icon {
+  opacity: 0.7;
 }
 
-.nav-item.active {
-  background: rgba(59, 130, 246, 0.1);
+.is-active .link-icon {
+  opacity: 1;
   color: var(--accent-primary);
-  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
-.nav-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.badge {
-  margin-left: auto;
+.numeric-badge {
   background: var(--accent-primary);
   color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
   padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+  border-radius: 20px;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+}
+
+.count-text {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  font-weight: 600;
 }
 
 .sidebar-footer {
-  margin-top: auto;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 16px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.flex { display: flex; }
-.justify-between { justify-content: space-between; }
-.text-xs { font-size: 0.75rem; }
-.mb-1 { margin-bottom: 4px; }
+.storage-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  padding: 14px;
+  border-radius: 12px;
+}
 
-.progress-bar-mini {
+.storage-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.info-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.usage-text {
+  color: var(--text-primary);
+}
+
+.progress-bar-container {
   height: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 2px;
   overflow: hidden;
 }
 
-.progress-fill {
+.progress-bar-fill {
   height: 100%;
-  background: var(--accent-primary);
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+}
+
+.settings-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.settings-trigger:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+}
+
+.settings-trigger.is-active {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-color);
+  color: var(--accent-primary);
 }
 </style>

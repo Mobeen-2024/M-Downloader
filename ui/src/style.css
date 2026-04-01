@@ -28,6 +28,7 @@
   --radius-md: 16px;
   --radius-lg: 24px;
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   --font-mono: 'JetBrains Mono', monospace;
 
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -115,8 +116,8 @@ body::before {
 
 /* Custom Scrollbar - "Stealth" Glow Implementation */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -124,14 +125,52 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 20px;
+  border: 1px solid transparent;
+  background-clip: content-box;
   transition: var(--transition-smooth);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary);
-  box-shadow: 0 0 10px var(--accent-primary);
+  background: rgba(255, 255, 255, 0.08);
+  background-clip: content-box;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  background-clip: content-box;
+}
+
+/* Global FLIP Transitions */
+.list-move-move, .grid-move-move {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.list-move-enter-active, .list-move-leave-active,
+.grid-move-enter-active, .grid-move-leave-active {
+  transition: all 0.4s ease;
+}
+
+.list-move-enter-from, .list-move-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.grid-move-enter-from, .grid-move-leave-to {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+}
+
+.list-move-leave-active, .grid-move-leave-active {
+  position: absolute;
+}
+
+/* Glass Panels */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
 }
 
 /* Global Transitions */

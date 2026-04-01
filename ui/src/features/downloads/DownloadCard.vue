@@ -20,7 +20,8 @@ import { useDownload } from '@/composables/useDownload';
 import { useDownloadStore } from '@/stores/download.store';
 import StatusBadge from '@/features/shared/components/StatusBadge.vue';
 import SegmentVisualizer from './SegmentVisualizer.vue';
-import GlassPanel from '@/features/shared/components/GlassPanel.vue';
+import BaseCard from '@/features/shared/components/BaseCard.vue';
+import BaseButton from '@/features/shared/components/BaseButton.vue';
 
 const props = defineProps<{
   download: DownloadItem;
@@ -49,262 +50,257 @@ const progressPercent = computed(() => {
 </script>
 
 <template>
-  <GlassPanel class="download-card">
-    <div class="card-header">
-      <div class="file-identity">
-        <div class="icon-box">
-          <component :is="fileIcon" class="file-icon" />
-        </div>
-        <div class="file-meta">
-          <h4 class="file-name" :title="download.name">{{ download.name }}</h4>
-          <div class="file-sub-meta">
-            <span>{{ formatSize(download.total) }}</span>
-            <span class="dot"></span>
-            <span class="text-secondary">{{ download.url }}</span>
-          </div>
+  <BaseCard variant="glass" padding="md" hoverable class="download-card">
+    <div class="card-layout">
+      <!-- Icon Section -->
+      <div class="icon-section">
+        <div class="icon-wrapper">
+          <component :is="fileIcon" :size="24" />
         </div>
       </div>
 
-      <div class="card-actions">
-        <StatusBadge :status="download.status" />
-        <div class="button-group">
-          <template v-if="isQueuedView">
-            <button class="btn-icon" title="Move Up" @click="store.move_up(download.id)">
-              <ChevronUp />
-            </button>
-            <button class="btn-icon" title="Move Down" @click="store.move_down(download.id)">
-              <ChevronDown />
-            </button>
-          </template>
+      <!-- Main Content Section -->
+      <div class="content-section">
+        <div class="header-row">
+          <div class="title-area">
+            <h4 class="file-name" :title="download.name">{{ download.name }}</h4>
+            <div class="metadata-row">
+              <span class="size">{{ formatSize(download.total) }}</span>
+              <span class="divider"></span>
+              <span class="url" :title="download.url">{{ download.url }}</span>
+            </div>
+          </div>
           
-          <button 
-            v-if="download.status === 'RefreshNeeded'" 
-            class="btn-icon warning"
-            title="Refresh Download Link (Expired)"
-            @click="$emit('refresh', download)"
-          >
-            <RotateCw />
-          </button>
-          <button 
-            v-if="download.status === 'Downloading'" 
-            class="btn-icon" 
-            @click="pauseDownload(download.id)"
-          >
-            <Pause />
-          </button>
-          <button 
-            v-else-if="download.status === 'Paused' || download.status === 'Queued'" 
-            class="btn-icon" 
-            @click="resumeDownload(download.id)"
-          >
-            <Play />
-          </button>
-          <button 
-            v-if="download.status === 'Completed'" 
-            class="btn-icon success"
-          >
-            <FolderOpen />
-          </button>
-          <button class="btn-icon danger" @click="cancelDownload(download.id)">
-            <X />
-          </button>
-        </div>
-      </div>
-    </div>
+          <div class="actions-area">
+            <StatusBadge :status="download.status" />
+            <div class="button-group">
+              <template v-if="isQueuedView">
+                <BaseButton variant="glass" size="icon" title="Move Up" @click="store.move_up(download.id)">
+                  <ChevronUp :size="16" />
+                </BaseButton>
+                <BaseButton variant="glass" size="icon" title="Move Down" @click="store.move_down(download.id)">
+                  <ChevronDown :size="16" />
+                </BaseButton>
+              </template>
+              
+              <BaseButton 
+                v-if="download.status === 'RefreshNeeded'" 
+                variant="danger" 
+                size="icon"
+                title="Refresh Link"
+                @click="$emit('refresh', download)"
+              >
+                <RotateCw :size="16" />
+              </BaseButton>
 
-    <div class="card-body">
-      <div class="progress-info">
-        <div class="progress-labels">
-          <div class="speed-meta">
-            <span class="speed">{{ formatSpeed(download.speed_bps) }}</span>
-            <span class="percentage">{{ progressPercent.toFixed(1) }}%</span>
+              <BaseButton 
+                v-if="download.status === 'Downloading'" 
+                variant="glass" 
+                size="icon"
+                @click="pauseDownload(download.id)"
+              >
+                <Pause :size="16" />
+              </BaseButton>
+
+              <BaseButton 
+                v-else-if="download.status === 'Paused' || download.status === 'Queued'" 
+                variant="glass" 
+                size="icon"
+                @click="resumeDownload(download.id)"
+              >
+                <Play :size="16" />
+              </BaseButton>
+
+              <BaseButton 
+                v-if="download.status === 'Completed'" 
+                variant="glass" 
+                size="icon"
+                class="success-text"
+              >
+                <FolderOpen :size="16" />
+              </BaseButton>
+
+              <BaseButton variant="danger" size="icon" @click="cancelDownload(download.id)">
+                <X :size="16" />
+              </BaseButton>
+            </div>
           </div>
-          <span class="eta">ETA: {{ formatEta(download.downloaded, download.total, download.speed_bps) }}</span>
         </div>
-        
-        <!-- Professional Segmented Visualization (Pink & Blue) -->
-        <SegmentVisualizer 
-          :segments="download.segments" 
-          :total="download.total" 
-          class="main-visualizer"
-        />
 
-        <div class="download-stats text-secondary">
-          <span>{{ formatSize(download.downloaded) }} of {{ formatSize(download.total) }}</span>
+        <div class="progress-section">
+          <div class="stats-row">
+            <div class="main-stats">
+              <span class="speed">{{ formatSpeed(download.speed_bps) }}</span>
+              <span class="percentage">{{ progressPercent.toFixed(1) }}%</span>
+            </div>
+            <span class="eta" v-if="download.status === 'Downloading'">
+              {{ formatEta(download.downloaded, download.total, download.speed_bps) }}
+            </span>
+          </div>
+
+          <SegmentVisualizer 
+            :segments="download.segments" 
+            :total="download.total" 
+            class="visualizer"
+          />
+
+          <div class="details-row">
+            <span class="transferred">{{ formatSize(download.downloaded) }} / {{ formatSize(download.total) }}</span>
+            <span class="segments-count" v-if="download.segments?.length">
+              {{ download.segments.length }} segments
+            </span>
+          </div>
         </div>
       </div>
     </div>
-  </GlassPanel>
+  </BaseCard>
 </template>
 
 <style scoped>
 .download-card {
-  padding: 20px;
-  margin-bottom: 16px;
-  transition: transform 0.2s;
+  margin-bottom: 2px;
 }
 
-.download-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(59, 130, 246, 0.3);
-}
-
-.card-header {
+.card-layout {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
+  gap: 20px;
 }
 
-.file-identity {
-  display: flex;
-  gap: 16px;
-  flex: 1;
-  min-width: 0;
+.icon-section {
+  flex-shrink: 0;
 }
 
-.icon-box {
-  width: 48px;
-  height: 48px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
+.icon-wrapper {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--accent-primary);
-  flex-shrink: 0;
+  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.02);
 }
 
-.file-icon {
-  width: 24px;
-  height: 24px;
+.content-section {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.file-meta {
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.title-area {
+  flex: 1;
   min-width: 0;
 }
 
 .file-name {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
+  color: var(--text-primary);
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.file-sub-meta {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+.metadata-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
 }
 
-.dot {
+.divider {
   width: 3px;
   height: 3px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
 }
 
-.card-actions {
+.url {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.6;
+}
+
+.actions-area {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 12px;
+  gap: 10px;
 }
 
 .button-group {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
-.btn-icon {
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-icon :deep(svg) {
-  width: 16px;
-  height: 16px;
-}
-
-.btn-icon:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-}
-
-.btn-icon.danger:hover {
-  color: var(--color-error);
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.btn-icon.success:hover {
-  color: var(--color-downloading);
-  border-color: rgba(16, 185, 129, 0.3);
-}
-
-.card-body {
+.progress-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.progress-info {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.main-visualizer {
-  height: 16px !important;
-  border-radius: 4px;
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
-}
-
-.progress-labels {
+.stats-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.main-stats {
+  display: flex;
+  gap: 12px;
 }
 
 .speed {
   color: var(--accent-primary);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
+}
+
+.percentage {
+  color: var(--text-primary);
 }
 
 .eta {
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
-.progress-bar-container {
-  height: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
+.visualizer {
+  height: 14px !important;
+  border-radius: 6px;
   overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent-primary), #60a5fa);
-  transition: width 0.3s ease;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+.details-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  opacity: 0.8;
 }
 
-.text-secondary {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.success-text {
+  color: var(--color-downloading) !important;
+}
+
+.success-text:hover {
+  background: rgba(16, 185, 129, 0.1) !important;
 }
 </style>

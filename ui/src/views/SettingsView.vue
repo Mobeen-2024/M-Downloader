@@ -1,16 +1,26 @@
 <script setup lang="ts">
 import { useSettingsStore } from '@/stores/settings.store';
-import { Settings, Cpu, Folder, Palette, Activity, Link2, Clipboard, MoveHorizontal, Cloud } from 'lucide-vue-next';
-import GlassPanel from '@/features/shared/components/GlassPanel.vue';
+import {
+  Cpu,
+  Folder,
+  Palette,
+  Activity,
+  Cloud,
+  Zap,
+  Info
+} from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import BaseCard from '@/features/shared/components/BaseCard.vue';
+import BaseInput from '@/features/shared/components/BaseInput.vue';
+import BaseToggle from '@/features/shared/components/BaseToggle.vue';
 
 const settings = useSettingsStore();
 
 const themes = [
-  { name: 'Blue', value: 'blue', color: '#3b82f6' },
-  { name: 'Purple', value: 'purple', color: '#8b5cf6' },
-  { name: 'Green', value: 'green', color: '#10b981' },
+  { name: 'Classic Blue', value: 'blue', color: '#3b82f6' },
+  { name: 'Hyper Purple', value: 'purple', color: '#8b5cf6' },
+  { name: 'Emerald Green', value: 'green', color: '#10b981' },
 ];
 
 const snifferActive = ref(false);
@@ -47,324 +57,285 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="view-container">
-    <div class="settings-header">
-      <Settings class="header-icon" />
-      <div>
-        <h3>Application Settings</h3>
-        <p>Configure mdownloader for your ideal workflow.</p>
+  <div class="settings-view">
+    <header class="view-header">
+      <div class="header-left">
+        <h2 class="view-title">Control Center</h2>
+        <p class="view-subtitle">Customize your industrial acceleration engine and system orchestration.</p>
       </div>
-    </div>
+      <div class="header-right">
+        <div class="version-badge">Mdownloader Pro v0.2.0</div>
+      </div>
+    </header>
 
     <div class="settings-grid">
-      <GlassPanel class="settings-card">
+      <!-- Performance Section -->
+      <BaseCard variant="glass" padding="lg" class="settings-card">
         <div class="card-title">
-          <Cpu :size="20" class="text-accent" />
-          <h4>Performance</h4>
+          <Cpu :size="18" class="text-accent" />
+          <h3>Engine Performance</h3>
         </div>
-        <div class="setting-item">
-          <label>Max Connections Per Download</label>
-          <div class="flex items-center gap-4">
-            <input 
-              type="range" 
-              min="1" 
-              max="32" 
-              v-model.number="settings.maxConnections" 
-              class="range-input"
-            />
-            <span class="value-badge">{{ settings.maxConnections }}</span>
-          </div>
-          <p class="helper-text">Higher values increase speed but use more system resources.</p>
-        </div>
-      </GlassPanel>
 
-      <GlassPanel class="settings-card">
-        <div class="card-title">
-          <Folder :size="20" class="text-accent" />
-          <h4>Storage</h4>
-        </div>
-        <div class="setting-item">
-          <label>Default Download Directory</label>
-          <div class="input-wrapper disabled">
-            <input type="text" :value="settings.downloadDir" disabled />
+        <div class="setting-block">
+          <div class="block-header">
+            <span class="label">Byte-Range Segment Limit</span>
+            <span class="value">{{ settings.maxConnections }} Units</span>
           </div>
-          <p class="helper-text">Currently using the standard downloads folder.</p>
+          <div class="range-wrapper">
+            <input type="range" v-model.number="settings.maxConnections" min="1" max="32" step="1" class="pro-range" />
+          </div>
+          <p class="helper">Maximum concurrent connections per transmission. Industrial standard is 8-16.</p>
         </div>
-      </GlassPanel>
 
-      <GlassPanel class="settings-card">
-        <div class="card-title">
-          <Palette :size="20" class="text-accent" />
-          <h4>Appearance</h4>
-        </div>
-        <div class="setting-item">
-          <label>Accent Color</label>
-          <div class="theme-picker">
-            <button 
-              v-for="theme in themes" 
-              :key="theme.value"
-              class="theme-btn"
-              :class="{ active: settings.themeAccent === theme.value }"
-              @click="settings.themeAccent = theme.value"
-              :style="{ '--theme-color': theme.color }"
-            >
-              <div class="color-preview"></div>
-              <span>{{ theme.name }}</span>
-            </button>
-          </div>
-        </div>
-      </GlassPanel>
+        <div class="divider"></div>
 
-      <GlassPanel class="settings-card">
-        <div class="card-title">
-          <Link2 :size="20" class="text-accent" />
-          <h4>Integrations</h4>
-        </div>
-        <div class="setting-item">
-          <div class="setting-row">
-            <label>Browser Extension Bridge</label>
-            <button 
-              class="toggle-btn"
-              :class="{ active: settings.bridgeEnabled }"
-              @click="settings.bridgeEnabled = !settings.bridgeEnabled"
-            >
-              <div class="toggle-slider"></div>
-            </button>
-          </div>
-          <p class="helper-text">Enable high-performance communication with browser extensions via named pipes.</p>
-        </div>
-        <div class="setting-divider"></div>
-        <div class="setting-item">
-          <div class="setting-row">
-            <div class="flex flex-col">
-              <div class="flex items-center gap-2">
-                <Clipboard :size="16" class="text-accent" />
-                <label>Clipboard Monitoring</label>
-              </div>
-              <p class="helper-text">Detect download URLs in the system clipboard.</p>
+        <div class="setting-block">
+          <div class="block-row">
+            <div class="text-group">
+              <span class="label">Dynamic Speed Limit</span>
+              <p class="helper">Enable Token Bucket rate-limiting for all active worker threads.</p>
             </div>
-            <button 
-              class="toggle-btn"
-              :class="{ active: settings.monitorClipboard }"
-              @click="settings.monitorClipboard = !settings.monitorClipboard"
-            >
-              <div class="toggle-slider"></div>
-            </button>
+            <BaseToggle v-model="settings.enableSpeedLimit" />
           </div>
-        </div>
-      </GlassPanel>
 
-      <GlassPanel class="settings-card">
-        <div class="card-title">
-          <Activity :size="20" class="text-accent" />
-          <h4>Advanced Networking</h4>
+          <Transition name="expand">
+            <div v-if="settings.enableSpeedLimit" class="limit-controls">
+              <div class="block-header">
+                <span class="label">Bandwidth Cap</span>
+                <span class="value">{{ (settings.maxDownloadSpeed / 1024).toFixed(1) }} MB/s</span>
+              </div>
+              <input type="range" v-model.number="settings.maxDownloadSpeed" min="100" max="102400" step="100" class="pro-range" />
+            </div>
+          </Transition>
         </div>
-        <div class="setting-item">
-          <div class="setting-row">
-            <label>System-Wide Sniffing (WFP)</label>
-            <button 
-              class="toggle-btn"
-              :class="{ active: snifferActive }"
-              @click="toggleSniffer"
-            >
-              <div class="toggle-slider"></div>
-            </button>
+      </BaseCard>
+
+      <!-- Networking Section -->
+      <BaseCard variant="glass" padding="lg" class="settings-card">
+        <div class="card-title">
+          <Activity :size="18" class="text-accent" />
+          <h3>Networking & Sniffing</h3>
+        </div>
+
+        <div class="setting-block">
+          <div class="block-row">
+            <div class="text-group">
+              <span class="label">Interception Bridge (WFP)</span>
+              <p class="helper">Kernel-mode driver for non-browser media interception.</p>
+            </div>
+            <BaseToggle :model-value="snifferActive" @update:model-value="toggleSniffer" />
           </div>
-          <p class="helper-text">Enable kernel-mode sniffing to intercept media from non-browser applications. Requires Driver Installation.</p>
-          
-          <div v-if="snifferActive" class="sniffer-rules mt-4">
-            <label class="text-xs uppercase opacity-60 font-bold mb-2 block">Interception Rules (Extensions)</label>
-            <div class="ext-tags">
-              <span v-for="ext in settings.snifferFilter" :key="ext" class="ext-tag">
-                .{{ ext }}
-                <button @click="removeExt(ext)" class="remove-tag">&times;</button>
-              </span>
-              <div class="add-ext-box">
-                <input 
-                  type="text" 
-                  v-model="newExt" 
-                  placeholder="add..." 
-                  @keyup.enter="addExt"
-                />
+
+          <Transition name="expand">
+            <div v-if="snifferActive" class="sniffer-rules">
+              <span class="sub-label">Target File Extensions</span>
+              <div class="tag-field">
+                <div v-for="ext in settings.snifferFilter" :key="ext" class="pro-tag">
+                  .{{ ext }}
+                  <button @click="removeExt(ext)" class="tag-remove">&times;</button>
+                </div>
+                <div class="add-tag">
+                  <input v-model="newExt" placeholder="ext..." @keyup.enter="addExt" />
+                </div>
               </div>
             </div>
-            <p class="helper-text mt-2">Only files matching these extensions will be intercepted by the WFP engine.</p>
-          </div>
+          </Transition>
 
-          <div v-if="snifferError" class="status-error mt-2">
+          <div v-if="snifferError" class="pro-alert error">
             {{ snifferError }}
           </div>
         </div>
-      </GlassPanel>
 
-      <GlassPanel class="settings-card">
-        <div class="card-title">
-          <MoveHorizontal :size="20" class="text-accent" />
-          <h4>Bandwidth Management</h4>
-        </div>
-        <div class="setting-item">
-          <div class="setting-row">
-            <div class="flex flex-col">
-              <label>Global Speed Limiter</label>
-              <p class="helper-text">Restrict total download bandwidth.</p>
+        <div class="divider"></div>
+
+        <div class="setting-block">
+          <div class="block-row">
+            <div class="text-group">
+              <span class="label">Clipboard Sentinel</span>
+              <p class="helper">Automatically detect transmission links in the system buffer.</p>
             </div>
-            <button 
-              class="toggle-btn"
-              :class="{ active: settings.enableSpeedLimit }"
-              @click="settings.enableSpeedLimit = !settings.enableSpeedLimit"
+            <BaseToggle v-model="settings.monitorClipboard" />
+          </div>
+        </div>
+      </BaseCard>
+
+      <!-- Cloud/Storage → This section was previously complex, refactoring carefully -->
+      <BaseCard variant="glass" padding="lg" class="settings-card">
+        <div class="card-title">
+          <Cloud :size="18" class="text-accent" />
+          <h3>Cloud Ecosystem</h3>
+        </div>
+
+        <div class="setting-block">
+          <div class="block-row">
+            <div class="text-group">
+              <span class="label">Direct Cloud Sync</span>
+              <p class="helper">Stream verified payloads directly to your remote storage providers.</p>
+            </div>
+            <BaseToggle v-model="settings.cloudConfig.enabled" />
+          </div>
+
+          <Transition name="expand">
+            <div v-if="settings.cloudConfig.enabled" class="cloud-form">
+              <div class="input-stack">
+                <div class="i-field">
+                  <label>Service Provider</label>
+                  <BaseInput v-model="settings.cloudConfig.provider" placeholder="Google Drive, Dropbox, etc." />
+                </div>
+                <div class="i-field">
+                  <label>Integration Key (Bearer)</label>
+                  <BaseInput v-model="settings.cloudApiKey" type="password" placeholder="••••••••••••••••" />
+                </div>
+                <div class="i-field">
+                  <label>Vault Fragment (Folder ID)</label>
+                  <BaseInput v-model="settings.cloudConfig.target_folder_id" placeholder="Folder hash identifier..." />
+                </div>
+              </div>
+            </div>
+          </Transition>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="setting-block">
+          <span class="label">Storage Root</span>
+          <div class="storage-path">
+            <Folder :size="14" />
+            <span>{{ settings.downloadDir }}</span>
+          </div>
+          <p class="helper">Configured in system environment. Relocation requires administrative rights.</p>
+        </div>
+      </BaseCard>
+
+      <!-- Visuals & Identity -->
+      <BaseCard variant="glass" padding="lg" class="settings-card">
+        <div class="card-title">
+          <Palette :size="18" class="text-accent" />
+          <h3>Identity & Aesthetic</h3>
+        </div>
+
+        <div class="setting-block">
+          <span class="label">Interface Accent</span>
+          <div class="theme-grid">
+            <button
+              v-for="theme in themes"
+              :key="theme.value"
+              class="theme-orb"
+              :class="{ 'is-active': settings.themeAccent === theme.value }"
+              @click="settings.themeAccent = theme.value"
+              :style="{ '--orb-color': theme.color }"
+              :title="theme.name"
             >
-              <div class="toggle-slider"></div>
+              <div class="orb-inner"></div>
+              <span class="orb-name">{{ theme.name }}</span>
             </button>
           </div>
-          
-          <div class="setting-divider"></div>
-          
-          <div class="setting-item" :class="{ disabled: !settings.enableSpeedLimit }">
-            <label>Max Download Speed</label>
-            <div class="flex items-center gap-4">
-              <input 
-                type="range" 
-                min="100" 
-                max="102400" 
-                step="100"
-                v-model.number="settings.maxDownloadSpeed" 
-                class="range-input"
-                :disabled="!settings.enableSpeedLimit"
-              />
-              <span class="value-badge">{{ (settings.maxDownloadSpeed / 1024).toFixed(1) }} MB/s</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="setting-block">
+          <div class="block-row">
+            <div class="text-group">
+              <span class="label">Chrome Extension Bridge</span>
+              <p class="helper">Maintain a persistent IPC pipe for seamless browser integration.</p>
             </div>
-            <p class="helper-text">Applies a Token Bucket rate-limit to all active workers.</p>
+            <BaseToggle v-model="settings.bridgeEnabled" />
           </div>
         </div>
-      </GlassPanel>
+      </BaseCard>
 
-      <GlassPanel class="settings-card">
+      <!-- Roadmap Footer (Refined) -->
+      <BaseCard variant="glass" padding="lg" class="roadmap-card full-width">
         <div class="card-title">
-          <Cloud :size="20" class="text-accent" />
-          <h4>Cloud Infrastructure</h4>
+          <Zap :size="18" class="text-accent" />
+          <h3>Innovation Pipeline</h3>
         </div>
-        <div class="setting-item">
-          <div class="setting-row">
-            <div class="flex flex-col">
-              <label>Real-time Cloud Sync</label>
-              <p class="helper-text">Bridge downloads directly to your cloud storage.</p>
-            </div>
-            <button 
-              class="toggle-btn"
-              :class="{ active: settings.cloudConfig.enabled }"
-              @click="settings.cloudConfig.enabled = !settings.cloudConfig.enabled"
-            >
-              <div class="toggle-slider"></div>
-            </button>
-          </div>
-          
-          <div class="setting-divider"></div>
-
-          <div class="setting-item" :class="{ disabled: !settings.cloudConfig.enabled }">
-            <label>Cloud Provider</label>
-            <div class="input-wrapper">
-              <input type="text" v-model="settings.cloudConfig.provider" placeholder="e.g. Google Drive" />
+        <div class="roadmap-flex">
+          <div class="r-item active">
+            <div class="r-idx">01</div>
+            <div>
+              <p class="r-title">QUIC Transport Protocol</p>
+              <p class="r-desc">Eliminating head-of-line blocking for multi-threaded stream parity.</p>
             </div>
           </div>
-
-          <div class="setting-item" :class="{ disabled: !settings.cloudConfig.enabled }">
-            <label>API Key / Bearer Token</label>
-            <div class="input-wrapper">
-              <input type="password" v-model="settings.cloudApiKey" placeholder="••••••••••••••••" />
+          <div class="r-item active">
+            <div class="r-idx">02</div>
+            <div>
+              <p class="r-title">Cloud Direct-Memory</p>
+              <p class="r-desc">Direct-to-Cloud parallel fetching without locally caching large buffers.</p>
             </div>
           </div>
-
-          <div class="setting-item" :class="{ disabled: !settings.cloudConfig.enabled }">
-            <label>Target Folder ID</label>
-            <div class="input-wrapper">
-              <input type="text" v-model="settings.cloudConfig.target_folder_id" placeholder="Folder hash..." />
+          <div class="r-item pending">
+            <div class="r-idx">03</div>
+            <div>
+              <p class="r-title">WFP Deobfuscation</p>
+              <p class="r-desc">Intercepting adaptive stream fragments before they reach the browser runtime.</p>
             </div>
           </div>
         </div>
-      </GlassPanel>
-
-      <GlassPanel class="settings-card roadmap-card">
-        <div class="card-title">
-          <Activity :size="20" class="text-accent" />
-          <h4>Next-Gen Roadmap</h4>
-        </div>
-        <div class="roadmap-items">
-          <div class="roadmap-item">
-            <div class="roadmap-dot active"></div>
-            <div class="roadmap-content">
-              <h5>HTTP/3 (QUIC) Support</h5>
-              <p>Eliminating head-of-line blocking for multi-threaded acceleration. (Ready)</p>
-            </div>
-          </div>
-          <div class="roadmap-item">
-            <div class="roadmap-dot active"></div>
-            <div class="roadmap-content">
-              <h5>Cloud Stream Proxying</h5>
-              <p>Direct-to-Cloud (Google Drive/Dropbox) parallel fetching and uploading. (Active)</p>
-            </div>
-          </div>
-          <div class="roadmap-item">
-            <div class="roadmap-dot active"></div>
-            <div class="roadmap-content">
-              <h5>WFP Stealth Sniffing</h5>
-              <p>Institutional-grade media detection with kernel-mode traffic interception. (Ready)</p>
-            </div>
-          </div>
-        </div>
-      </GlassPanel>
+      </BaseCard>
     </div>
 
-    <div class="conclusion-box">
-      <p>
-        Building Mdownloader is an intensive undertaking across networking, filesystem optimization, and browser internals. 
-        By utilizing dynamic segmentation and robust deobfuscation, we maximize network utility while providing a 
-        silent, resilient user experience.
-      </p>
-      <div class="version-badge">Mdownloader v0.2.0 Modernization Suite</div>
-    </div>
+    <footer class="view-footer">
+      <div class="info-banner">
+        <Info :size="14" />
+        <p>Building <strong>Mdownloader</strong> represents a significant engineering effort in concurrent networking and kernel-level interception. We appreciate your use of this high-performance suite.</p>
+      </div>
+    </footer>
   </div>
 </template>
 
 <style scoped>
-.view-container {
+.settings-view {
   height: 100%;
-  overflow-y: auto;
-  padding: 32px;
-  padding-bottom: 80px;
-}
-
-.settings-header {
+  padding: 32px 40px;
   display: flex;
+  flex-direction: column;
+  gap: 32px;
+  overflow-y: auto;
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  margin-bottom: 40px;
 }
 
-.header-icon {
-  width: 48px;
-  height: 48px;
-  color: var(--accent-primary);
-  opacity: 0.8;
-}
-
-.settings-header h3 {
-  font-size: 1.8rem;
+.view-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 
-.settings-header p {
+.view-subtitle {
+  font-size: 0.9rem;
   color: var(--text-secondary);
 }
 
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 24px;
-  max-width: 1200px;
+.version-badge {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
 }
 
-.settings-card {
-  padding: 24px;
+/* Grid Layout */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.full-width {
+  grid-column: span 2;
 }
 
 .card-title {
@@ -372,201 +343,108 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   margin-bottom: 24px;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 16px;
 }
 
-.card-title h4 {
-  font-size: 1.1rem;
-  font-weight: 700;
+.card-title h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.setting-item {
+.setting-block {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.setting-row {
+.block-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
 }
 
-.setting-item label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+.block-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
-.helper-text {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-style: italic;
-  line-height: 1.4;
-}
-
-.setting-divider {
-  height: 1px;
-  background: var(--border-color);
-  margin: 16px 0;
-  opacity: 0.5;
-}
-
-.range-input {
-  flex: 1;
-  accent-color: var(--accent-primary);
-}
-
-.value-badge {
-  background: var(--accent-primary);
-  color: white;
-  padding: 4px 12px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-family: var(--font-mono, monospace);
-  min-width: 40px;
-  text-align: center;
-}
-
-.input-wrapper.disabled {
-  opacity: 0.6;
-}
-
-.input-wrapper input {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 10px 16px;
-  border-radius: 8px;
-  outline: none;
-}
-
-/* Toggle Styles */
-.toggle-btn {
-  width: 44px;
-  height: 24px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--border-color);
-  padding: 2px;
-  cursor: pointer;
-  transition: var(--transition-smooth);
-  position: relative;
-}
-
-.toggle-btn.active {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-}
-
-.toggle-slider {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: white;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.toggle-btn.active .toggle-slider {
-  transform: translateX(20px);
-}
-
-.status-error {
-  font-size: 0.8rem;
-  color: var(--color-error);
-  padding: 8px 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border-left: 3px solid var(--color-error);
-  border-radius: 4px;
-}
-
-.roadmap-items {
+.text-group {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 4px;
 }
 
-.roadmap-item {
-  display: flex;
-  gap: 16px;
+.label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-.roadmap-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  margin-top: 6px;
-  flex-shrink: 0;
-  border: 2px solid var(--border-color);
+.sub-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  margin-bottom: 8px;
+  display: block;
 }
 
-.roadmap-dot.active {
-  background: var(--accent-primary);
-  box-shadow: 0 0 10px var(--accent-primary);
-  border-color: rgba(255, 255, 255, 0.2);
+.value {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: var(--accent-primary);
+  font-size: 0.9rem;
 }
 
-.roadmap-content h5 {
-  font-size: 0.95rem;
-  margin-bottom: 4px;
-}
-
-.roadmap-content p {
+.helper {
   font-size: 0.75rem;
   color: var(--text-secondary);
   line-height: 1.4;
 }
 
-.conclusion-box {
-  margin-top: 60px;
-  padding: 40px;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 20px;
-  border: 1px solid var(--border-color);
-  max-width: 800px;
-  text-align: center;
-}
-
-.conclusion-box p {
-  font-size: 0.9rem;
-  line-height: 1.8;
-  color: var(--text-secondary);
-  margin-bottom: 24px;
-  opacity: 0.8;
-}
-
-.version-badge {
-  display: inline-block;
-  padding: 8px 24px;
-  background: var(--accent-primary);
-  color: white;
-  border-radius: 50px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.disabled {
+.divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 12px 0;
   opacity: 0.5;
-  pointer-events: none;
 }
 
-/* Sniffer Rules */
-.ext-tags {
+/* Range Input Styling */
+.pro-range {
+  width: 100%;
+  accent-color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.05);
+  height: 6px;
+  border-radius: 3px;
+}
+
+.limit-controls {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Tag Management */
+.tag-field {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.02);
   padding: 12px;
   border-radius: 12px;
   border: 1px solid var(--border-color);
 }
 
-.ext-tag {
+.pro-tag {
   background: var(--accent-primary);
   color: white;
   padding: 4px 10px;
@@ -575,12 +453,13 @@ onMounted(async () => {
   font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
-.remove-tag {
-  background: rgba(0, 0, 0, 0.2);
+.tag-remove {
   border: none;
+  background: rgba(0, 0, 0, 0.2);
   color: white;
   width: 16px;
   height: 16px;
@@ -592,7 +471,7 @@ onMounted(async () => {
   justify-content: center;
 }
 
-.add-ext-box input {
+.add-tag input {
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--border-color);
@@ -603,10 +482,153 @@ onMounted(async () => {
   padding: 2px 4px;
 }
 
-.setting-row {
+/* Cloud Form */
+.input-stack {
+  margin-top: 16px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
 }
 
+.i-field label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* Storage Path Display */
+.storage-path {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent-primary);
+}
+
+/* Theme Orbs */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.theme-orb {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.theme-orb:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.theme-orb.is-active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--orb-color);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+}
+
+.orb-inner {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--orb-color);
+}
+
+.orb-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.theme-orb.is-active .orb-name {
+  color: var(--text-primary);
+}
+
+/* Roadmap Grid */
+.roadmap-flex {
+  display: flex;
+  gap: 32px;
+}
+
+.r-item {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+}
+
+.r-idx {
+  font-size: 1.5rem;
+  font-weight: 900;
+  opacity: 0.05;
+  font-family: var(--font-mono);
+}
+
+.r-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.r-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.r-item.pending { opacity: 0.4; }
+
+/* Status Alert */
+.pro-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pro-alert.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* Transitions */
+.expand-enter-active, .expand-leave-active { transition: all 0.3s ease; max-height: 500px; overflow: hidden; }
+.expand-enter-from, .expand-leave-to { opacity: 0; max-height: 0; transform: translateY(-10px); }
+
+/* Footer */
+.view-footer {
+  margin-top: auto;
+}
+
+.info-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
 </style>

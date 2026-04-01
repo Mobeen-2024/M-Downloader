@@ -6,8 +6,7 @@ use tokio_util::sync::CancellationToken;
 use futures_util::StreamExt;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::engine::segmenter::DownloadState;
-use crate::types::SegmentState;
+use crate::engine::segmenter::{DownloadState, SegmentState, SegmentInfo};
 
 /// Downloads a single byte-range segment and writes it to the correct offset in the file.
 ///
@@ -109,10 +108,10 @@ async fn download_segment_attempt(
     if let Some(c) = saved_cookies { rb = rb.header(COOKIE, c); }
     if let Some(c) = cookies { rb = rb.header(COOKIE, c); }
     if let Some(r) = referer { rb = rb.header(REFERER, r); }
-    
+
     // Inject If-Range using ETag (recommended) or Last-Modified timestamp.
-    if let Some(e) = etag { 
-        rb = rb.header(IF_RANGE, e); 
+    if let Some(e) = etag {
+        rb = rb.header(IF_RANGE, e);
     } else if let Some(lm) = last_modified {
         rb = rb.header(IF_RANGE, lm);
     }
@@ -130,7 +129,7 @@ async fn download_segment_attempt(
             // Alpha = 0.2 for smooth telemetry
             s.last_latency_ms = ((latency as f64 * 0.2) + (s.last_latency_ms as f64 * 0.8)) as u64;
         }
-        
+
         // Record per-segment latency for the Heatmap
         if let Some(seg) = s.segments.get_mut(segment_idx) {
             seg.last_latency_ms = latency;
@@ -151,7 +150,7 @@ async fn download_segment_attempt(
     let status = response.status();
 
     // ── Protocol Integrity Check ──────────────────────────────────────
-    // If the server returns 200 OK instead of 206 Partial Content, but 
+    // If the server returns 200 OK instead of 206 Partial Content, but
     // we have multiple segments, it's a protocol mismatch or a file change.
     {
         let mut s = state.lock().await;
@@ -159,11 +158,11 @@ async fn download_segment_attempt(
             log::warn!("Server returned 200 OK during range request. Falling back to single-stream compatibility mode.");
             s.is_fallback = true;
             // Force re-segmentation: one active segment covering the entire remaining file.
-            s.segments = vec![crate::types::SegmentInfo {
+            s.segments = vec![SegmentInfo {
                 start: 0,
                 end: s.total_size.saturating_sub(1),
                 downloaded: 0,
-                state: crate::types::SegmentState::Active,
+                state: SegmentState::Active,
                 retry_count: 0,
                 last_latency_ms: 0,
             }];
@@ -174,10 +173,10 @@ async fn download_segment_attempt(
     // Open the pre-allocated file for writing.
     let file = OpenOptions::new().write(true).open(file_path).await?;
     let mut writer = BufWriter::with_capacity(64 * 1024, file);
-    
+
     // If the server returns 200 OK (full file) instead of a range, reset the write pointer.
     let final_start = if status == reqwest::StatusCode::OK && initial_end < total_size { 0 } else { start };
-    
+
     writer.seek(std::io::SeekFrom::Start(final_start)).await?;
 
     let mut stream = response.bytes_stream();
@@ -222,7 +221,7 @@ async fn download_segment_attempt(
         if let Some(ref tx) = cloud_tx {
             let _ = tx.send(data[..bytes_to_write].to_vec()).await;
         }
-        
+
         // ── Bandwidth Governance: Traffic Shaper ───────────────────────────
         if let Some(ref bucket) = shaper {
             if let Some(delay) = bucket.consume(bytes_to_write as i64) {
@@ -301,7 +300,7 @@ pub async fn download_stream_segment(
             return Ok(());
         }
         let data = chunk_result?;
-        
+
         // ── Bandwidth Governance: Traffic Shaper ───────────────────────────
         if let Some(ref bucket) = shaper {
             if let Some(delay) = bucket.consume(data.len() as i64) {

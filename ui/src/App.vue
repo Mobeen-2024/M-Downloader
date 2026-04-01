@@ -5,6 +5,7 @@ import AppSidebar from '@/features/layout/AppSidebar.vue';
 import AppTopBar from '@/features/layout/AppTopBar.vue';
 import MediaSnifferHud from '@/features/sniffer/MediaSnifferHud.vue';
 import NewDownloadModal from '@/features/shared/modals/NewDownloadModal.vue';
+import ToastProvider from '@/features/shared/components/ToastProvider.vue';
 import { useIpcEvents } from '@/composables/useIpcEvents';
 import { useSettingsStore } from '@/stores/settings.store';
 
@@ -25,6 +26,7 @@ onMounted(() => {
 <template>
   <div id="app" class="app-shell">
     <TitleBar />
+    <ToastProvider />
     <MediaSnifferHud />
     
     <div class="app-body">
@@ -35,7 +37,7 @@ onMounted(() => {
         
         <div class="page-content">
           <router-view v-slot="{ Component }">
-            <transition name="fade" mode="out-in">
+            <transition name="page-fade" mode="out-in">
               <component :is="Component" />
             </transition>
           </router-view>
@@ -58,12 +60,13 @@ onMounted(() => {
   height: 100vh;
   background: var(--bg-primary);
   overflow: hidden;
+  position: relative;
 }
 
 .app-body {
   display: flex;
   flex: 1;
-  min-height: 0; /* Important for flex child scrolling */
+  min-height: 0;
 }
 
 .main-content {
@@ -72,6 +75,7 @@ onMounted(() => {
   flex-direction: column;
   min-width: 0;
   position: relative;
+  background: radial-gradient(circle at 50% -20%, rgba(59, 130, 246, 0.03) 0%, transparent 70%);
 }
 
 .page-content {
@@ -79,23 +83,23 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
   position: relative;
+  padding: 0;
 }
 
-/* Page Transitions */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+/* Professional Page Transitions */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.fade-enter-from {
+.page-fade-enter-from {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(10px) scale(0.99);
 }
 
-.fade-leave-to {
+.page-fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-10px) scale(1.01);
 }
 </style>

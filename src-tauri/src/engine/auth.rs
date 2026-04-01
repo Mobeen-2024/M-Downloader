@@ -37,7 +37,7 @@ impl AuthManager {
                 if let Ok(data) = serde_json::from_str::<Vec<LegacyCred>>(&content) {
                     let mut needs_migration_save = false;
                     for site in data {
-                        let mut final_site = SiteCredential {
+                        let final_site = SiteCredential {
                             domain: site.domain.clone(),
                             username: site.username.clone(),
                             password: None,

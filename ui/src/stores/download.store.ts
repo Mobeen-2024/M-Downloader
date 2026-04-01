@@ -234,5 +234,8 @@ export const useDownloadStore = defineStore('downloads', () => {
     clearMediaDetection,
     move_up,
     move_down,
+    clear_completed: () => {
+      downloads.value = downloads.value.filter(d => d.status !== 'Completed');
+    },
   };
 });

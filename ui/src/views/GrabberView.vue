@@ -1,520 +1,358 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useGrabberStore } from '@/stores/grabber.store';
-import { 
-  Search, 
-  Loader2, 
-  CheckCircle2, 
-  Download, 
-  Box, 
-  Video, 
-  Image as ImageIcon, 
-  Music, 
-  FileText,
-  FileArchive,
-  RefreshCw
-} from 'lucide-vue-next';
+import { ref, onMounted } from 'vue';
+import { Globe, Download, ListVideo, Film, Music, Search } from 'lucide-vue-next';
+import BaseButton from '@/features/shared/components/BaseButton.vue';
+import BaseInput from '@/features/shared/components/BaseInput.vue';
+import BaseDialog from '@/features/shared/components/BaseDialog.vue';
+import BaseSkeleton from '@/features/shared/components/BaseSkeleton.vue';
 
-const store = useGrabberStore();
-const urlInput = ref('');
-const filterCategory = ref('All');
+const url = ref('');
+const isScanning = ref(false);
+const mediaResults = ref<any[]>([]);
 
-const crawlDepth = ref(0);
-const strictDomain = ref(true);
+// Phase 2: Managed Modal State
+const showCaptureModal = ref(false);
+const activeMediaItem = ref<any>(null);
 
-const filteredAssets = computed(() => {
-  if (filterCategory.value === 'All') return store.assets;
-  return store.assets.filter(a => a.category === filterCategory.value);
+// Phase 2: Async View Initialization (Skeleton Loaders)
+const isViewLoading = ref(true);
+
+onMounted(() => {
+  // Defer view rendering to emulate component hydration
+  setTimeout(() => {
+    isViewLoading.value = false;
+  }, 800);
 });
 
-const handleCrawl = async () => {
-  if (!urlInput.value) return;
-  await store.startCrawl(urlInput.value, crawlDepth.value, strictDomain.value);
+const handleScan = () => {
+  if (!url.value) return;
+  isScanning.value = true;
+  mediaResults.value = [];
+
+  // Emulate network payload sniffing
+  setTimeout(() => {
+    isScanning.value = false;
+    mediaResults.value = [
+      { id: 1, title: 'Network Stream [1080p]', type: 'video', size: '145.2 MB', ext: 'mp4' },
+      { id: 2, title: 'Background Audio Track', type: 'audio', size: '3.1 MB', ext: 'mp3' },
+      { id: 3, title: 'Asset Resource [4K]', type: 'video', size: '2.4 GB', ext: 'mkv' },
+      { id: 4, title: 'Compressed Archive', type: 'file', size: '840 KB', ext: 'zip' }
+    ];
+  }, 2000);
 };
 
-const handleBulkAdd = async () => {
-  await store.bulkAddSelected(true); // Add to queue by default
-};
-
-const formatSize = (bytes: number) => {
-  if (bytes === 0) return 'Unknown';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-const categories = ['All', 'Video', 'Images', 'Music', 'Programs', 'Compressed', 'General'];
-
-const getCategoryIcon = (cat: string) => {
-  switch (cat) {
-    case 'Video': return Video;
-    case 'Images': return ImageIcon;
-    case 'Music': return Music;
-    case 'Programs': return Box;
-    case 'Compressed': return FileArchive;
-    case 'Documents': return FileText;
-    default: return FileText;
-  }
+const openCaptureConfig = (item: any) => {
+  activeMediaItem.value = item;
+  showCaptureModal.value = true;
 };
 </script>
 
 <template>
   <div class="grabber-view">
-    <header class="page-header glass-panel">
-      <div class="header-content">
-        <div class="title-section">
-          <div class="icon-box pulse">
-            <RefreshCw :size="24" />
-          </div>
-          <div class="text-info">
-            <h1>Universal Site Grabber</h1>
-            <p>Crawl domains and bulk-add assets to the Industrial Queue</p>
-          </div>
-        </div>
-
-        <div class="search-bar">
-          <input 
-            v-model="urlInput" 
-            type="text" 
-            placeholder="Enter Target URL (e.g. https://archive.org/...)" 
-            @keyup.enter="handleCrawl"
-            class="url-input"
-          />
-          <div class="crawl-options">
-            <div class="option-group" :class="{ disabled: crawlDepth === 0 }">
-              <label>Domain Lock</label>
-              <input type="checkbox" v-model="strictDomain" :disabled="crawlDepth === 0" />
-            </div>
-            <div class="option-group">
-              <label>Depth</label>
-              <input type="number" v-model="crawlDepth" min="0" max="3" />
-            </div>
-          </div>
-          <button @click="handleCrawl" :disabled="store.isCrawling" class="btn-primary">
-            <template v-if="store.isCrawling">
-              <Loader2 class="animate-spin" :size="18" />
-              Crawling...
-            </template>
-            <template v-else>
-              <Search :size="18" />
-              Grab Assets
-            </template>
-          </button>
+    <header class="view-header">
+      <div class="header-left">
+        <h2 class="view-title">Site Grabber</h2>
+        <p class="view-subtitle">Extract media, documents, and assets directly from websites.</p>
+      </div>
+      <div class="header-right">
+        <div class="header-orb">
+          <Globe :size="20" class="text-accent" />
         </div>
       </div>
     </header>
 
-    <div class="content-area">
-      <aside class="sidebar glass-panel">
-        <div class="sidebar-section">
-          <h3>Filter Type</h3>
-          <div class="category-list">
-            <button 
-              v-for="cat in categories" 
-              :key="cat"
-              class="cat-btn"
-              :class="{ active: filterCategory === cat }"
-              @click="filterCategory = cat"
-            >
-              <component :is="getCategoryIcon(cat)" :size="16" v-if="cat !== 'All'" />
-              <CheckCircle2 :size="16" v-else />
-              {{ cat }}
-            </button>
+    <!-- Phase 2: Initialization Skeletons -->
+    <div v-if="isViewLoading" class="skeleton-container">
+      <BaseSkeleton height="64px" borderRadius="12px" class="mb-6" />
+      <div class="skeleton-grid">
+        <BaseSkeleton v-for="i in 4" :key="i" height="90px" borderRadius="12px" />
+      </div>
+    </div>
+
+    <!-- Main Interface -->
+    <div v-else class="content-body">
+      <div class="search-section glass-panel">
+        <BaseInput
+          v-model="url"
+          placeholder="Enter website URL to scan (e.g., https://example.com/video)"
+          @keyup.enter="handleScan"
+          class="url-input"
+        />
+        <BaseButton variant="primary" :loading="isScanning" @click="handleScan" class="scan-btn">
+          <template #icon-left v-if="!isScanning"><Search :size="16" /></template>
+          Scan Content
+        </BaseButton>
+      </div>
+
+      <div class="results-container">
+        <div v-if="isScanning" class="scanning-state">
+          <div class="scanning-visual">
+            <div class="radar-ping"></div>
+            <Search :size="32" class="scanning-icon" />
+          </div>
+          <p>Analyzing page structure and parsing network requests...</p>
+        </div>
+
+        <div v-else-if="mediaResults.length === 0" class="empty-state">
+          <div class="empty-visual">
+            <div class="visual-glow"></div>
+            <ListVideo :size="48" class="visual-icon" />
+          </div>
+          <div class="empty-text">
+            <h3>Engine Standby</h3>
+            <p>Enter a target URL above to start the extraction process.</p>
           </div>
         </div>
 
-        <div class="sidebar-section selection-summary">
-          <h3>Selection</h3>
-          <div class="stats-card">
-            <div class="stat-item">
-              <span>Selected:</span>
-              <strong>{{ store.selectedAssets.length }}</strong>
+        <TransitionGroup v-else name="grid-move" tag="div" class="media-grid">
+          <div v-for="item in mediaResults" :key="item.id" class="media-card glass-panel">
+            <div class="media-icon-wrapper">
+              <Film v-if="item.type === 'video'" class="text-accent" />
+              <Music v-else-if="item.type === 'audio'" class="text-accent" />
+              <Download v-else class="text-secondary" />
             </div>
-            <div class="stat-item">
-              <span>Total Found:</span>
-              <strong>{{ store.assets.length }}</strong>
+            <div class="media-info">
+              <h4>{{ item.title }}</h4>
+              <span class="meta">{{ item.ext.toUpperCase() }} • {{ item.size }}</span>
+            </div>
+            <div class="media-actions">
+              <BaseButton variant="glass" size="sm" @click="openCaptureConfig(item)">
+                <template #icon-left><Download :size="14" /></template>
+                Capture
+              </BaseButton>
+            </div>
+          </div>
+        </TransitionGroup>
+      </div>
+    </div>
+
+    <!-- Phase 2: Managed BaseDialog -->
+    <BaseDialog
+      :show="showCaptureModal"
+      title="Configure Capture"
+      size="md"
+      @close="showCaptureModal = false"
+    >
+      <div class="modal-body">
+        <p class="modal-desc">Adjust processing parameters for <strong class="text-accent">{{ activeMediaItem?.title }}</strong> before initialization.</p>
+
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label>Priority level</label>
+            <div class="custom-select-wrapper">
+              <select class="custom-select">
+                <option>High (Accelerated)</option>
+                <option selected>Standard (Balanced)</option>
+                <option>Low (Background)</option>
+              </select>
             </div>
           </div>
           
-          <div class="selection-actions">
-            <button @click="store.selectAll(true)" class="btn-ghost">Select All</button>
-            <button @click="store.selectAll(false)" class="btn-ghost">Deselect All</button>
+          <div class="setting-item">
+            <label>Auto-Start</label>
+            <div class="toggle-mock">
+              <div class="toggle-track active">
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
           </div>
-
-          <button 
-            @click="handleBulkAdd" 
-            :disabled="!store.selectedAssets.length" 
-            class="btn-bulk-add"
-          >
-            <Download :size="18" />
-            Add to Queue
-          </button>
         </div>
-      </aside>
-
-      <main class="assets-main glass-panel">
-        <div v-if="!store.assets.length && !store.isCrawling" class="empty-state">
-          <RefreshCw :size="48" class="pulse opacity-10" />
-          <p>No assets identified. Enter a URL to begin crawling.</p>
-        </div>
-
-        <div v-else-if="store.isCrawling" class="loading-state">
-          <Loader2 class="animate-spin" :size="48" />
-          <p>Crawling target domain and resolving file metadata...</p>
-        </div>
-
-        <div v-else class="assets-table-container">
-          <table class="assets-table">
-            <thead>
-              <tr>
-                <th width="40"></th>
-                <th>File Name</th>
-                <th>Category</th>
-                <th>File Size</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="asset in filteredAssets" :key="asset.url" @click="store.toggleSelection(asset.url)">
-                <td>
-                  <input type="checkbox" :checked="asset.selected" @click.stop="store.toggleSelection(asset.url)" />
-                </td>
-                <td class="file-name">
-                  <component :is="getCategoryIcon(asset.category)" :size="16" class="type-icon" />
-                  {{ asset.filename }}
-                </td>
-                <td class="category">{{ asset.category }}</td>
-                <td class="size">{{ formatSize(asset.size) }}</td>
-                <td class="status">
-                  <span class="badge">Identified</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </main>
-    </div>
+      </div>
+      <template #footer>
+        <BaseButton variant="glass" @click="showCaptureModal = false">Cancel</BaseButton>
+        <BaseButton variant="primary" @click="showCaptureModal = false">Initialize Payload</BaseButton>
+      </template>
+    </BaseDialog>
   </div>
 </template>
 
 <style scoped>
 .grabber-view {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
   height: 100%;
-}
-
-.page-header {
-  padding: 24px;
-  border-radius: 20px;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 32px;
-}
-
-.title-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.icon-box {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: var(--accent-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
-}
-
-.text-info h1 {
-  font-size: 1.5rem;
-  font-weight: 800;
-  margin: 0;
-  color: var(--text-primary);
-}
-
-.text-info p {
-  font-size: 0.85rem;
-  margin: 4px 0 0;
-  color: var(--text-secondary);
-}
-
-.search-bar {
-  flex: 1;
-  max-width: 600px;
-  display: flex;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 8px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.search-bar .url-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-primary);
-  font-size: 0.95rem;
-  padding: 0 12px;
-}
-
-.crawl-options {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 0 12px;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.option-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.option-group.disabled {
-  opacity: 0.3;
-}
-
-.option-group input[type="number"] {
-  width: 40px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--accent-primary);
-  border-radius: 6px;
-  padding: 4px;
-  text-align: center;
-  font-weight: 700;
-}
-
-.btn-primary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--accent-primary);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary:disabled {
-  opacity: 0.7;
-}
-
-.content-area {
-  flex: 1;
-  display: flex;
-  gap: 24px;
-  min-height: 0;
-}
-
-.sidebar {
-  width: 280px;
-  padding: 24px;
-  border-radius: 20px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
-}
-
-.sidebar-section h3 {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  letter-spacing: 0.1em;
-  margin-bottom: 16px;
-}
-
-.category-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.cat-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-weight: 600;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.cat-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-}
-
-.cat-btn.active {
-  background: var(--accent-primary);
-  color: white;
-}
-
-.stats-card {
-  background: rgba(255, 255, 255, 0.03);
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 16px;
-}
-
-.stat-item {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.85rem;
-  margin-bottom: 8px;
-}
-
-.selection-actions {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.btn-ghost {
-  flex: 1;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  padding: 8px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.btn-bulk-add {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 14px;
-  background: #10b981;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-}
-
-.assets-main {
-  flex: 1;
-  border-radius: 20px;
-  padding: 0;
+  padding: 32px 40px;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
-.empty-state, .loading-state {
-  flex: 1;
+.view-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 32px;
+}
+
+.view-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.view-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.header-orb {
+  width: 44px;
+  height: 44px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 12px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
-.assets-table-container {
+.search-section {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
+}
+
+.url-input { flex: 1; }
+
+.results-container {
   flex: 1;
   overflow-y: auto;
+  padding-right: 8px;
 }
 
-.assets-table {
-  width: 100%;
-  border-collapse: collapse;
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 16px;
+  max-width: 1400px;
 }
 
-.assets-table th {
-  text-align: left;
-  padding: 16px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.assets-table td {
-  padding: 16px;
-  font-size: 0.9rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
-  cursor: pointer;
-}
-
-.assets-table tr:hover {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.file-name {
+.media-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-weight: 600;
+  padding: 16px 20px;
+  border-radius: var(--radius-md);
+  gap: 16px;
+  transition: var(--transition-smooth);
+}
+
+.media-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-glass);
+}
+
+.media-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.media-info { flex: 1; }
+.media-info h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 2px; }
+.meta { font-size: 0.75rem; color: var(--text-secondary); opacity: 0.8; }
+
+/* Initialization States */
+.scanning-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  gap: 20px;
+  color: var(--text-secondary);
+}
+
+.scanning-visual {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radar-ping {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--accent-primary);
+  border-radius: 50%;
+  animation: radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes radar-ping {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 0;
+  gap: 24px;
+}
+
+.empty-visual {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.visual-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.visual-icon { color: var(--text-secondary); opacity: 0.2; }
+
+
+
+/* Modal Styles */
+.modal-body { display: flex; flex-direction: column; gap: 24px; }
+.modal-desc { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; }
+.settings-grid { display: grid; gap: 20px; }
+.setting-item { display: flex; flex-direction: column; gap: 10px; }
+.setting-item label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); opacity: 0.7; }
+
+.custom-select-wrapper { position: relative; }
+.custom-select {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
   color: var(--text-primary);
+  appearance: none;
+  font-family: inherit;
+  font-size: 0.9rem;
 }
 
-.type-icon {
-  color: var(--accent-primary);
-}
+.toggle-mock { width: 44px; height: 24px; }
+.toggle-track { width: 100%; height: 100%; background: rgba(255,255,255,0.05); border-radius: 12px; position: relative; border: 1px solid var(--border-color); }
+.toggle-track.active { background: var(--accent-primary); border-color: transparent; }
+.toggle-thumb { width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 2px; right: 2px; transition: transform 0.2s; }
 
-.badge {
-  padding: 4px 8px;
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--accent-primary);
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
+/* Skeletons */
+.skeleton-container { padding: 0 4px; }
+.skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px; }
+.mb-6 { margin-bottom: 24px; }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.opacity-10 { opacity: 0.1; }
-
-.pulse {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.95); opacity: 0.8; }
-  100% { transform: scale(1); }
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 0.8; }
 }
 </style>
