@@ -161,7 +161,7 @@ impl DownloadManager {
             let state = self.state.clone();
             let cancel_token = self.cancel_token.clone();
             let window_clone = window.clone();
-            let shaper = self.shaper.clone();
+            let shaper = app_state.global_shaper.clone();
             let quota_tracker = app_state.quota_tracker.clone();
 
             let cookies = self.cookies.clone();
@@ -224,7 +224,7 @@ impl DownloadManager {
                                     cancel_token.clone(),
                                     total_size,
                                     app_state.auth_manager.clone(),
-                                    shaper.clone(),
+                                    Some(shaper.clone()),
                                     quota_tracker.clone(),
                                     Some(Arc::new(app_state.simulation_engine.clone())),
                                     cookies.clone(),
@@ -242,6 +242,7 @@ impl DownloadManager {
                                     idx,
                                     cancel_token.clone(),
                                     app_state.auth_manager.clone(),
+                                    Some(shaper.clone()),
                                     cookies.clone(),
                                     referer.clone(),
                                 ).await

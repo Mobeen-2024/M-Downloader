@@ -32,6 +32,7 @@ pub struct AppState {
     pub refresh_task_id: Arc<Mutex<Option<String>>>,
     pub bridge_connected: Arc<AtomicBool>,
     pub orchestration_tx: tokio::sync::mpsc::UnboundedSender<String>,
+    pub global_shaper: Arc<crate::engine::shaper::TokenBucket>,
 }
 
 impl AppState {
@@ -60,6 +61,7 @@ impl AppState {
             refresh_task_id: Arc::new(Mutex::new(None)),
             bridge_connected: Arc::new(AtomicBool::new(false)),
             orchestration_tx,
+            global_shaper: Arc::new(crate::engine::shaper::TokenBucket::new(1024 * 1024 * 1024)), // Default 1 Gbps (unlimited)
         }
     }
 }

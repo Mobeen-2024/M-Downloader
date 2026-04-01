@@ -216,28 +216,6 @@ async fn download_segment_attempt(
         write_pos += bytes_to_write as u64;
         
         // ── Bandwidth Governance: Traffic Shaper ───────────────────────────
-        let speed_limit = {
-            let s = state.lock().await;
-            s.speed_limit_bps
-        };
-
-        if let Some(limit) = speed_limit {
-            if limit > 0 {
-                // Approximate throttling: Wait if we're exceeding our share
-                // Shared limit across workers — each worker gets (limit / active_workers)
-                let active_workers = {
-                    let s = state.lock().await;
-                    s.segments.iter().filter(|seg| seg.state == crate::types::SegmentState::Active).count().max(1)
-                };
-                let worker_limit = limit / active_workers as u64;
-                let sleep_ms = (bytes_to_write as u64 * 1000) / worker_limit;
-                if sleep_ms > 0 {
-                    tokio::time::sleep(std::time::Duration::from_millis(sleep_ms.min(100))).await;
-                }
-            }
-        }
-
-        // ── Bandwidth Governance: Traffic Shaping ───────────────────────────
         if let Some(ref bucket) = shaper {
             if let Some(delay) = bucket.consume(bytes_to_write as i64) {
                 tokio::time::sleep(delay).await;
@@ -289,6 +267,7 @@ pub async fn download_stream_segment(
     segment_idx: usize,
     cancel_token: CancellationToken,
     auth_manager: Arc<crate::engine::auth::AuthManager>,
+    shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     cookies: Option<String>,
     referer: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -313,6 +292,14 @@ pub async fn download_stream_segment(
             return Ok(());
         }
         let data = chunk_result?;
+        
+        // ── Bandwidth Governance: Traffic Shaper ───────────────────────────
+        if let Some(ref bucket) = shaper {
+            if let Some(delay) = bucket.consume(data.len() as i64) {
+                tokio::time::sleep(delay).await;
+            }
+        }
+
         file.write_all(&data).await?;
     }
 

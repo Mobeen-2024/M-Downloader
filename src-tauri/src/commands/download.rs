@@ -227,6 +227,11 @@ pub async fn set_speed_limit(
     if let Some(handle) = d_map.get(&id) {
         let mut s = handle.state.lock().await;
         s.speed_limit_bps = limit;
+        if let Some(l) = limit {
+            state.global_shaper.set_rate(l);
+        } else {
+            state.global_shaper.set_rate(1024 * 1024 * 1024); // Reset to 1 Gbps
+        }
     }
     Ok(())
 }
@@ -365,14 +370,16 @@ pub async fn update_download_settings(
 ) -> Result<(), String> {
     let downloads = state.downloads.lock().await;
     let speed_limit = if enable_speed_limit {
-        Some(max_speed_kbps * 1024)
+        max_speed_kbps * 1024
     } else {
-        None
+        1024 * 1024 * 1024 // 1 Gbps (unlimited)
     };
+
+    state.global_shaper.set_rate(speed_limit);
 
     for handle in downloads.values() {
         let mut s = handle.state.lock().await;
-        s.speed_limit_bps = speed_limit;
+        s.speed_limit_bps = if enable_speed_limit { Some(speed_limit) } else { None };
     }
     
     Ok(())
