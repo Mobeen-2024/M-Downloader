@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useSettingsStore } from '@/stores/settings.store';
-import { Settings, Cpu, Folder, Palette, Activity, Link2, Clipboard } from 'lucide-vue-next';
+import { Settings, Cpu, Folder, Palette, Activity, Link2, Clipboard, MoveHorizontal } from 'lucide-vue-next';
 import GlassPanel from '@/features/shared/components/GlassPanel.vue';
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
@@ -162,6 +162,47 @@ onMounted(async () => {
           <p class="helper-text">Enable kernel-mode sniffing to intercept media from non-browser applications. Requires Driver Installation.</p>
           <div v-if="snifferError" class="status-error mt-2">
             {{ snifferError }}
+          </div>
+        </div>
+      </GlassPanel>
+
+      <GlassPanel class="settings-card">
+        <div class="card-title">
+          <MoveHorizontal :size="20" class="text-accent" />
+          <h4>Bandwidth Management</h4>
+        </div>
+        <div class="setting-item">
+          <div class="setting-row">
+            <div class="flex flex-col">
+              <label>Global Speed Limiter</label>
+              <p class="helper-text">Restrict total download bandwidth.</p>
+            </div>
+            <button 
+              class="toggle-btn"
+              :class="{ active: settings.enableSpeedLimit }"
+              @click="settings.enableSpeedLimit = !settings.enableSpeedLimit"
+            >
+              <div class="toggle-slider"></div>
+            </button>
+          </div>
+          
+          <div class="setting-divider"></div>
+          
+          <div class="setting-item" :class="{ disabled: !settings.enableSpeedLimit }">
+            <label>Max Download Speed</label>
+            <div class="flex items-center gap-4">
+              <input 
+                type="range" 
+                min="100" 
+                max="102400" 
+                step="100"
+                v-model.number="settings.maxDownloadSpeed" 
+                class="range-input"
+                :disabled="!settings.enableSpeedLimit"
+              />
+              <span class="value-badge">{{ (settings.maxDownloadSpeed / 1024).toFixed(1) }} MB/s</span>
+            </div>
+            <p class="helper-text">Applies a Token Bucket rate-limit to all active workers.</p>
           </div>
         </div>
       </GlassPanel>
@@ -431,4 +472,16 @@ onMounted(async () => {
   text-transform: uppercase;
   letter-spacing: 1px;
 }
+
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 </style>

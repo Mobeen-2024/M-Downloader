@@ -27,6 +27,7 @@ pub fn run() {
             crate::commands::download::cancel_download,
             crate::commands::download::resume_download,
             crate::commands::download::set_speed_limit,
+            crate::commands::download::update_download_settings,
             crate::commands::reliability::update_download_url,
             crate::commands::reliability::start_refresh_mode,
             crate::commands::reliability::cancel_refresh_mode,

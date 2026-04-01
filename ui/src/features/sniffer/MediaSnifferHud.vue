@@ -4,20 +4,31 @@ import { listen } from '@tauri-apps/api/event';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 
+interface Resolution {
+  label: string;
+  video_url: string;
+  audio_url: string | null;
+}
+
 interface MediaInterceptEvent {
-  url: String;
-  filename: String | null;
-  mime: String | null;
+  id: string;
+  url: string;
+  filename: string | null;
+  mime: string | null;
+  resolutions: Resolution[];
 }
 
 const show = ref(false);
 const currentMedia = ref<MediaInterceptEvent | null>(null);
+const selectedResolution = ref<Resolution | null>(null);
+const isAudioOnly = ref(false);
 let unlisten: UnlistenFn | null = null;
 let autoHideTimer: any = null;
 
 onMounted(async () => {
   unlisten = await listen<MediaInterceptEvent>('media-intercepted', (event) => {
     currentMedia.value = event.payload;
+    selectedResolution.value = event.payload.resolutions[0] || null;
     show.value = true;
     
     // Auto-hide after 15 seconds if ignored
@@ -38,11 +49,13 @@ function clearTimer() {
 }
 
 async function startMediaDownload() {
-  if (!currentMedia.value) return;
+  if (!currentMedia.value || !selectedResolution.value) return;
   
   try {
     await invoke('start_download', { 
-      url: currentMedia.value.url,
+      url: isAudioOnly.value && selectedResolution.value.audio_url 
+        ? selectedResolution.value.audio_url 
+        : selectedResolution.value.video_url,
       cookies: null,
       referer: null
     });
@@ -65,13 +78,40 @@ async function startMediaDownload() {
           </div>
           <div class="text">
             <h4>Video Stream Detected</h4>
-            <p>{{ currentMedia?.filename || 'Adaptive Stream (HLS/DASH)' }}</p>
+            <div class="meta">
+              <span class="mime">{{ currentMedia?.mime || 'Unknown Codec' }}</span>
+              <span class="file">{{ currentMedia?.filename || 'Adaptive Stream' }}</span>
+            </div>
           </div>
         </div>
+
+        <div class="quality-selector" v-if="currentMedia?.resolutions?.length">
+          <label>Quality</label>
+          <div class="resolutions">
+            <button 
+              v-for="res in currentMedia.resolutions" 
+              :key="res.label"
+              class="res-btn"
+              :class="{ active: selectedResolution?.label === res.label }"
+              @click="selectedResolution = res"
+            >
+              {{ res.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="options">
+          <label class="checkbox-container">
+            <input type="checkbox" v-model="isAudioOnly" :disabled="!selectedResolution?.audio_url" />
+            <span class="checkmark"></span>
+            Extract Audio Only
+          </label>
+        </div>
+
         <div class="hud-actions">
           <button class="btn-cancel" @click="show = false">Ignore</button>
-          <button class="btn-download" @click="startMediaDownload">
-            Download this Video
+          <button class="btn-download" @click="startMediaDownload" :disabled="!selectedResolution">
+            Download at {{ selectedResolution?.label || 'Original' }}
           </button>
         </div>
       </div>
@@ -164,6 +204,87 @@ async function startMediaDownload() {
   border-radius: 8px;
   cursor: pointer;
 }
+
+.quality-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quality-selector label, .options label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.resolutions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.res-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.res-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
+}
+
+.options {
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-container input { display: none; }
+.checkmark {
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  position: relative;
+}
+
+.checkbox-container input:checked + .checkmark {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.checkbox-container input:checked + .checkmark::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.meta { display: flex; flex-direction: column; gap: 2px; }
+.mime { font-size: 0.6rem; color: var(--accent-primary); font-weight: 700; }
+.file { font-size: 0.85rem; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
 
 .pulse {
   animation: pulse 1.5s infinite;

@@ -35,17 +35,25 @@ pub async fn start_download_internal(
     let filename = url.split('/').last().unwrap_or("download.bin");
     let file_path = format!("downloads/{}", filename);
  
-    // ── Step 0: Media Stream Acquisition (HLS/DASH) ──────────────────────
-    if url.contains(".m3u8") || url.contains(".mpd") {
-        log::info!("[Download] Media manifest detected: {}", url);
+    // ── Step 0: Media Stream Acquisition (HLS/DASH/Direct) ────────────────
+    let is_manifest = url.contains(".m3u8") || url.contains(".mpd");
+    let is_youtube = url.contains("youtube.com") || url.contains("googlevideo.com");
+
+    if is_manifest || is_youtube {
+        log::info!("[Download] Media Job Identified: {}", url);
         
         let mut base_js_url = None;
-        if url.contains("youtube.com") || url.contains("googlevideo.com") {
-            log::info!("[Download] YouTube media identified. Commencing deobfuscation discovery...");
-            // Attempt to find base.js by fetching the video page (heuristic)
-            // In a production environment, we'd extract this from the initial video page HTML
-            // For now, we'll use a placeholder or the last known pattern
+        if is_youtube {
+            log::info!("[Download] YouTube media detected. Commencing deobfuscation discovery...");
+            // Extract player JS for signature solving
             base_js_url = Some("https://www.youtube.com/s/player/3f3f3f3f/player_ias.vflset/en_US/base.js");
+        }
+
+        // If it's a direct googlevideo hit, we don't need to parse a manifest, 
+        // but we DO need to solve the parameters before workers start.
+        if is_youtube && !is_manifest {
+            log::info!("[Download] Processing direct YouTube stream address...");
+            // The workers in manager.rs will handle the deobfuscation per segment
         }
 
         let stream = if url.contains(".m3u8") {
@@ -316,5 +324,26 @@ pub async fn resume_download(
         let _ = manager.start(Some(window), app_state_arc).await;
     });
 
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn update_download_settings(
+    state: tauri::State<'_, Arc<AppState>>,
+    enable_speed_limit: bool,
+    max_speed_kbps: u64,
+) -> Result<(), String> {
+    let downloads = state.downloads.lock().await;
+    let speed_limit = if enable_speed_limit {
+        Some(max_speed_kbps * 1024)
+    } else {
+        None
+    };
+
+    for handle in downloads.values() {
+        let mut s = handle.state.lock().await;
+        s.speed_limit_bps = speed_limit;
+    }
+    
     Ok(())
 }

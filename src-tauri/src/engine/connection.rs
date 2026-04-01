@@ -194,10 +194,26 @@ async fn download_segment_attempt(
         writer.write_all(&data[..bytes_to_write]).await?;
         write_pos += bytes_to_write as u64;
         
-        // Update I/O commits
-        {
-            let mut s = state.lock().await;
-            s.io_commits += 1;
+        // ── Bandwidth Governance: Traffic Shaper ───────────────────────────
+        let speed_limit = {
+            let s = state.lock().await;
+            s.speed_limit_bps
+        };
+
+        if let Some(limit) = speed_limit {
+            if limit > 0 {
+                // Approximate throttling: Wait if we're exceeding our share
+                // Shared limit across workers — each worker gets (limit / active_workers)
+                let active_workers = {
+                    let s = state.lock().await;
+                    s.segments.iter().filter(|seg| seg.state == crate::types::SegmentState::Active).count().max(1)
+                };
+                let worker_limit = limit / active_workers as u64;
+                let sleep_ms = (bytes_to_write as u64 * 1000) / worker_limit;
+                if sleep_ms > 0 {
+                    tokio::time::sleep(std::time::Duration::from_millis(sleep_ms.min(100))).await;
+                }
+            }
         }
 
         // ── Bandwidth Governance: Traffic Shaping ───────────────────────────

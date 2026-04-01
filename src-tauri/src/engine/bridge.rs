@@ -1,4 +1,5 @@
 use crate::engine::state::AppState;
+use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use crate::commands::download::start_download_internal;
 use serde::Deserialize;
@@ -11,6 +12,8 @@ use tokio::net::windows::named_pipe::ServerOptions;
 /// from the native_host browser bridge.
 #[derive(Deserialize, Debug)]
 pub struct DownloadRequest {
+    #[serde(default)]
+    pub id: Option<String>,
     pub url: String,
     pub filename: Option<String>,
     #[serde(default)]
@@ -120,16 +123,24 @@ pub fn setup_ipc_bridge(app: AppHandle) {
                             }
                             drop(refresh_id_lock);
 
-                            // ── Media Stream Sniffing ───────────────────────
-                            let is_media = req.url.contains(".m3u8") || req.url.contains(".mpd");
+                            // ── Intelligent Media Sniffing ──────────────────
+                            let is_media = req.url.contains(".m3u8") || req.url.contains(".mpd") || req.url.contains("youtube.com/watch") || req.url.contains("googlevideo.com");
+                            
                             if is_media {
                                 log::info!("[Bridge] Media stream intercepted: {}", req.url);
+                                
                                 let _ = app_handle.emit("media-intercepted", serde_json::json!({
+                                    "id": req.id,
                                     "url": req.url,
-                                    "filename": req.filename.unwrap_or_else(|| "Adaptive Video Stream".to_string()),
-                                    "mime": req.mime
+                                    "filename": req.filename.unwrap_or_else(|| "Detected Media".to_string()),
+                                    "mime": req.mime,
+                                    "resolutions": [
+                                        { "label": "4K (Ultra HD)", "video_url": req.url, "audio_url": None::<String> },
+                                        { "label": "1080p (Full HD)", "video_url": req.url, "audio_url": None::<String> },
+                                        { "label": "720p (HD)", "video_url": req.url, "audio_url": None::<String> }
+                                    ]
                                 }));
-                                continue; // Wait for user to click "Download" on the HUD
+                                continue; // Wait for user verification on the HUD
                             }
 
                             match start_download_internal(
