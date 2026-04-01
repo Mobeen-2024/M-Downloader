@@ -118,10 +118,15 @@ async fn download_segment_attempt(
     let response = rb.send().await?;
     let latency = start_time.elapsed().as_millis() as u64;
 
-    // Update global latency in state
+    // Update global latency in state using Exponential Moving Average (EMA)
     {
         let mut s = state.lock().await;
-        s.last_latency_ms = latency;
+        if s.last_latency_ms == 0 {
+            s.last_latency_ms = latency;
+        } else {
+            // Alpha = 0.2 for smooth telemetry
+            s.last_latency_ms = ((latency as f64 * 0.2) + (s.last_latency_ms as f64 * 0.8)) as u64;
+        }
     }
 
     if !response.status().is_success() {
@@ -233,9 +238,11 @@ async fn download_segment_attempt(
         // ── Persistent Usage Tracking ───────────────────────────────────────
         quota_tracker.log_bytes(bytes_to_write as u64).await;
 
-        // Update the segment's downloaded counter in shared state.
+        // Update the segment's downloaded counter and I/O metrics in shared state.
         {
             let mut s = state.lock().await;
+            s.network_read_count += 1;
+            s.disk_write_success_count += 1;
             if let Some(seg) = s.segments.get_mut(segment_idx) {
                 seg.downloaded = write_pos - seg.start;
             }

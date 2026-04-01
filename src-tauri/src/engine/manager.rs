@@ -281,7 +281,7 @@ impl DownloadManager {
                                 let metrics = {
                                     let s_inner = state.lock().await;
                                     crate::types::DownloadMetrics {
-                                        io_efficiency: 0.99, 
+                                        io_efficiency: (s_inner.disk_write_success_count as f64 / s_inner.network_read_count.max(1) as f64),
                                         active_workers: s_inner.segments.iter().filter(|seg| seg.state == crate::types::SegmentState::Active).count(),
                                         avg_latency_ms: s_inner.last_latency_ms,
                                     }

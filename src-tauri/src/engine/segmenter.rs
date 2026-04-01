@@ -16,6 +16,8 @@ pub struct DownloadState {
     pub last_modified: Option<String>,
     pub last_latency_ms: u64,
     pub io_commits: u64,
+    pub network_read_count: u64,
+    pub disk_write_success_count: u64,
 }
 
 impl DownloadState {
@@ -43,6 +45,8 @@ impl DownloadState {
             last_modified: None,
             last_latency_ms: 0,
             io_commits: 0,
+            network_read_count: 0,
+            disk_write_success_count: 0,
         }
     }
 
@@ -76,6 +80,8 @@ impl DownloadState {
             last_modified: None,
             last_latency_ms: 0,
             io_commits: 0,
+            network_read_count: 0,
+            disk_write_success_count: 0,
         }
     }
 

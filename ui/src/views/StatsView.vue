@@ -87,7 +87,11 @@ const applySimulation = async (latency: number, packetLoss: number) => {
             v-for="n in 32" 
             :key="n" 
             class="dot"
-            :class="{ active: n <= metrics.active_workers }"
+            :class="{ 
+              active: n <= metrics.active_workers,
+              primary: n === 1 && metrics.active_workers > 0,
+              auxiliary: n > 1 && n <= metrics.active_workers
+            }"
           ></div>
         </div>
         <p class="card-desc">Number of active threads performing "In-Half Division".</p>
@@ -214,6 +218,22 @@ const applySimulation = async (latency: number, packetLoss: number) => {
 .dot.active {
   background: #ec4899;
   box-shadow: 0 0 8px rgba(236, 72, 153, 0.4);
+}
+
+.dot.primary {
+  background: var(--accent-primary);
+  box-shadow: 0 0 10px var(--accent-primary);
+}
+
+.dot.auxiliary {
+  background: #ec4899;
+  opacity: 0.8;
+  animation: pulse 2s infinite alternate;
+}
+
+@keyframes pulse {
+  from { opacity: 0.6; transform: scale(0.9); }
+  to { opacity: 1.0; transform: scale(1.1); }
 }
 
 .latency-status {
