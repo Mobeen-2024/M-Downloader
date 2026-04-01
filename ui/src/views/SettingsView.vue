@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useSettingsStore } from '@/stores/settings.store';
+import { useUIStore } from '@/stores/ui.store';
+import { animate, spring } from 'motion';
 import {
   Cpu,
   Folder,
@@ -16,6 +18,7 @@ import BaseInput from '@/features/shared/components/BaseInput.vue';
 import BaseToggle from '@/features/shared/components/BaseToggle.vue';
 
 const settings = useSettingsStore();
+const uiStore = useUIStore();
 
 const themes = [
   { name: 'Classic Blue', value: 'blue', color: '#3b82f6' },
@@ -25,6 +28,18 @@ const themes = [
 
 const snifferActive = ref(false);
 const snifferError = ref<string | null>(null);
+
+const handleThemeChange = (theme: any, event: MouseEvent) => {
+  settings.themeAccent = theme.value;
+  uiStore.success(`Accent synchronization complete: ${theme.name}`);
+  
+  // Phase 6: Bouncy orbital transition
+  const target = event.currentTarget as HTMLElement;
+  (animate as any)(target, 
+    { scale: [1, 1.2, 1] },
+    { easing: spring({ stiffness: 500, damping: 15 }) }
+  );
+};
 
 const toggleSniffer = async () => {
   try {
@@ -222,7 +237,7 @@ onMounted(async () => {
               :key="theme.value"
               class="theme-orb"
               :class="{ 'is-active': settings.themeAccent === theme.value }"
-              @click="settings.themeAccent = theme.value"
+              @click="handleThemeChange(theme, $event)"
               :style="{ '--orb-color': theme.color }"
               :title="theme.name"
             >
@@ -246,7 +261,7 @@ onMounted(async () => {
       </BaseCard>
 
       <!-- Roadmap Footer (Refined) -->
-      <BaseCard variant="glass" padding="lg" class="roadmap-card full-width">
+      <BaseCard variant="glass" padding="lg" class="roadmap-card full-width shimmer-effect">
         <div class="card-title">
           <Zap :size="18" class="text-accent" />
           <h3>Innovation Pipeline</h3>
@@ -411,6 +426,33 @@ onMounted(async () => {
   background: var(--border-color);
   margin: 12px 0;
   opacity: 0.5;
+}
+
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-effect::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 45%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 55%
+  );
+  animation: roadmap-shimmer 6s infinite linear;
+  pointer-events: none;
+}
+
+@keyframes roadmap-shimmer {
+  0% { transform: translate(-30%, -30%); }
+  100% { transform: translate(30%, 30%); }
 }
 
 /* Range Input Styling */

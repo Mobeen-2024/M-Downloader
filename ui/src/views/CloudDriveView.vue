@@ -3,11 +3,17 @@ import { ref, onMounted } from 'vue';
 import { Folder, File, RefreshCw, Download, HardDrive, ShieldAlert } from 'lucide-vue-next';
 import BaseButton from '@/features/shared/components/BaseButton.vue';
 import BaseSkeleton from '@/features/shared/components/BaseSkeleton.vue';
+import BaseBreadcrumb from '@/features/shared/components/BaseBreadcrumb.vue';
 import StatusBadge from '@/features/shared/components/StatusBadge.vue';
+import { animate, stagger, spring } from 'motion';
 
 const isLoading = ref(true);
 const driveFiles = ref<any[]>([]);
 const isConnected = ref(false); // Mock connection state
+const currentPath = ref<{ label: string, id: string }[]>([
+  { label: 'My Drive', id: 'root' }
+]);
+const fileListRef = ref<HTMLElement | null>(null);
 
 onMounted(() => {
   // Initialization delay to show skeletons
@@ -41,7 +47,31 @@ const fetchDriveFiles = async () => {
     console.error('Error fetching drive files:', error);
   } finally {
     isLoading.value = false;
+    
+    // Phase 6: File list stagger
+    setTimeout(() => {
+      if (fileListRef.value) {
+        (animate as any)(
+          ".file-item",
+          { opacity: [0, 1], x: [-20, 0] },
+          { delay: stagger(0.05), easing: spring({ stiffness: 300, damping: 30 }) } as any
+        );
+      }
+    }, 50);
   }
+};
+
+const handleNavigate = (item: any) => {
+  // Mock folder navigation
+  if (item.id === 'root') {
+    currentPath.value = [{ label: 'My Drive', id: 'root' }];
+  } else {
+    // Add to path if not already there
+    if (!currentPath.value.find(p => p.id === item.id)) {
+      currentPath.value.push({ label: item.name || item.label, id: item.id });
+    }
+  }
+  fetchDriveFiles();
 };
 
 const toggleConnection = () => {
@@ -71,6 +101,12 @@ const refreshDrive = () => {
         </BaseButton>
       </div>
     </header>
+
+    <BaseBreadcrumb 
+      v-if="isConnected" 
+      :items="currentPath" 
+      @navigate="handleNavigate"
+    />
 
     <!-- Managed Skeleton Loaders -->
     <div v-if="isLoading" class="skeleton-container">
@@ -114,7 +150,7 @@ const refreshDrive = () => {
       </div>
 
       <!-- File List -->
-      <TransitionGroup v-else name="list-move" tag="div" class="file-list">
+      <TransitionGroup v-else name="list-move" tag="div" class="file-list" ref="fileListRef">
         <div v-for="file in driveFiles" :key="file.id" class="file-item glass-panel">
           <div class="file-icon-wrapper" :class="{ 'is-folder': file.type === 'folder' }">
             <Folder v-if="file.type === 'folder'" :size="20" />
@@ -127,7 +163,7 @@ const refreshDrive = () => {
           </div>
 
           <div class="file-actions">
-            <StatusBadge v-if="file.type === 'folder'" status="Queued" text="Navigate" />
+            <StatusBadge v-if="file.type === 'folder'" status="Queued" text="Navigate" @click="handleNavigate(file)" class="cursor-pointer" />
             <BaseButton v-else variant="glass" size="sm">
               <template #icon-left><Download :size="14" /></template>
               Capture
@@ -205,6 +241,8 @@ const refreshDrive = () => {
 .file-details { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .file-name { font-weight: 600; font-size: 0.95rem; }
 .file-meta { font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; }
+
+.cursor-pointer { cursor: pointer; }
 
 /* States */
 .empty-state {

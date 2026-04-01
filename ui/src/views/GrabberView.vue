@@ -5,6 +5,8 @@ import BaseButton from '@/features/shared/components/BaseButton.vue';
 import BaseInput from '@/features/shared/components/BaseInput.vue';
 import BaseDialog from '@/features/shared/components/BaseDialog.vue';
 import BaseSkeleton from '@/features/shared/components/BaseSkeleton.vue';
+import BaseToggle from '@/features/shared/components/BaseToggle.vue';
+import { animate, stagger, spring } from 'motion';
 
 const url = ref('');
 const isScanning = ref(false);
@@ -13,6 +15,9 @@ const mediaResults = ref<any[]>([]);
 // Phase 2: Managed Modal State
 const showCaptureModal = ref(false);
 const activeMediaItem = ref<any>(null);
+const autoStart = ref(true);
+const gridRef = ref<HTMLElement | null>(null);
+const radarRef = ref<HTMLElement | null>(null);
 
 // Phase 2: Async View Initialization (Skeleton Loaders)
 const isViewLoading = ref(true);
@@ -29,6 +34,14 @@ const handleScan = () => {
   isScanning.value = true;
   mediaResults.value = [];
 
+  // Phase 6: Radar Animation
+  if (radarRef.value) {
+    (animate as any)(radarRef.value, 
+      { scale: [1, 1.5], opacity: [0.5, 0] },
+      { duration: 1.5, repeat: Infinity, easing: "ease-out" }
+    );
+  }
+
   // Emulate network payload sniffing
   setTimeout(() => {
     isScanning.value = false;
@@ -38,6 +51,17 @@ const handleScan = () => {
       { id: 3, title: 'Asset Resource [4K]', type: 'video', size: '2.4 GB', ext: 'mkv' },
       { id: 4, title: 'Compressed Archive', type: 'file', size: '840 KB', ext: 'zip' }
     ];
+
+    // Phase 6: Results stagger
+    setTimeout(() => {
+      if (gridRef.value) {
+        (animate as any)(
+          ".media-card",
+          { opacity: [0, 1], y: [20, 0] },
+          { delay: stagger(0.05), easing: spring({ stiffness: 300, damping: 30 }) } as any
+        );
+      }
+    }, 50);
   }, 2000);
 };
 
@@ -87,10 +111,11 @@ const openCaptureConfig = (item: any) => {
       <div class="results-container">
         <div v-if="isScanning" class="scanning-state">
           <div class="scanning-visual">
-            <div class="radar-ping"></div>
+            <div ref="radarRef" class="radar-ping"></div>
+            <div class="photon-ring"></div>
             <Search :size="32" class="scanning-icon" />
           </div>
-          <p>Analyzing page structure and parsing network requests...</p>
+          <p class="scanning-text">Analyzing page structure and parsing network requests...</p>
         </div>
 
         <div v-else-if="mediaResults.length === 0" class="empty-state">
@@ -104,7 +129,7 @@ const openCaptureConfig = (item: any) => {
           </div>
         </div>
 
-        <TransitionGroup v-else name="grid-move" tag="div" class="media-grid">
+        <TransitionGroup v-else name="grid-move" tag="div" class="media-grid" ref="gridRef">
           <div v-for="item in mediaResults" :key="item.id" class="media-card glass-panel">
             <div class="media-icon-wrapper">
               <Film v-if="item.type === 'video'" class="text-accent" />
@@ -149,12 +174,8 @@ const openCaptureConfig = (item: any) => {
           </div>
           
           <div class="setting-item">
-            <label>Auto-Start</label>
-            <div class="toggle-mock">
-              <div class="toggle-track active">
-                <div class="toggle-thumb"></div>
-              </div>
-            </div>
+            <label>Auto-Start Transmission</label>
+            <BaseToggle v-model="autoStart" label="Begin processing immediately after initialization" />
           </div>
         </div>
       </div>
@@ -284,12 +305,23 @@ const openCaptureConfig = (item: any) => {
   inset: 0;
   border: 2px solid var(--accent-primary);
   border-radius: 50%;
-  animation: radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  pointer-events: none;
 }
 
-@keyframes radar-ping {
-  0% { transform: scale(0.5); opacity: 1; }
-  100% { transform: scale(1.5); opacity: 0; }
+.photon-ring {
+  position: absolute;
+  inset: -10px;
+  border: 1px dashed var(--accent-primary);
+  border-radius: 50%;
+  opacity: 0.2;
+  animation: spin 8s linear infinite;
+}
+
+.scanning-text {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent-primary);
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
 }
 
 .empty-state {

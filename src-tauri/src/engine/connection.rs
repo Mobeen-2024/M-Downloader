@@ -6,7 +6,8 @@ use tokio_util::sync::CancellationToken;
 use futures_util::StreamExt;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::engine::segmenter::{DownloadState, SegmentState, SegmentInfo};
+use crate::engine::segmenter::DownloadState;
+use crate::types::{SegmentState, SegmentInfo};
 
 /// Downloads a single byte-range segment and writes it to the correct offset in the file.
 ///
