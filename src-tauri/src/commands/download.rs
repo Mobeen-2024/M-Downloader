@@ -39,8 +39,8 @@ pub async fn start_download_internal(
         (cookies, referer)
     };
 
-    let filename = url.split('/').last().unwrap_or("download.bin");
-    let file_path = format!("downloads/{}", filename);
+    let mut filename = url.split('/').last().unwrap_or("download.bin").to_string();
+    let mut file_path = format!("downloads/{}", filename);
 
     // ── Pre-flight Parallelism Check ─────────────────────────────────────
     let mut should_queue = should_queue;
@@ -58,47 +58,107 @@ pub async fn start_download_internal(
  
     // ── Step 0: Media Stream Acquisition (HLS/DASH/Direct) ────────────────
     let is_manifest = url.contains(".m3u8") || url.contains(".mpd");
-    let is_youtube = url.contains("youtube.com") || url.contains("googlevideo.com");
+    let is_youtube_media = url.contains("googlevideo.com");
+    let is_youtube_page = url.contains("youtube.com/watch") || url.contains("youtu.be");
 
-    if is_manifest || is_youtube {
+    if is_manifest || is_youtube_media || is_youtube_page {
         log::info!("[Download] Media Job Identified: {}", url);
         
+        let mut base_js_url_val = String::new();
         let mut base_js_url = None;
-        if is_youtube {
+        let mut youtube_html_cache = String::new();
+
+        // --- 1. Resolve YouTube Page to Manifest URL ---
+        let mut actual_url = url.clone();
+        if is_youtube_page {
+            log::info!("[Download] Fetching YouTube HTML to extract manifest...");
+            match app_state.client.get(&actual_url).send().await {
+                Ok(res) => {
+                    if let Ok(html) = res.text().await {
+                        youtube_html_cache = html.clone();
+                        // Extract dashManifestUrl from ytInitialPlayerResponse
+                        let re = regex::Regex::new(r#""dashManifestUrl"\s*:\s*"([^"]+)""#).unwrap();
+                        if let Some(caps) = re.captures(&html) {
+                            actual_url = caps[1].replace("\\/", "/");
+                            log::info!("[Download] Successfully extracted YouTube DASH manifest");
+                            
+                            // Extract title to prevent invalid filename characters from the base URL ('?si=...')
+                            let title_re = regex::Regex::new(r#"<title>(.*?)</title>"#).unwrap();
+                            if let Some(title_caps) = title_re.captures(&html) {
+                                let raw_title = title_caps[1].replace(" - YouTube", "");
+                                // Remove invalid Windows filename characters
+                                let clean_title = raw_title.replace(['<', '>', ':', '"', '/', '\\', '|', '?', '*'], "");
+                                filename = format!("{}.mp4", clean_title.trim());
+                                file_path = format!("downloads/{}", filename);
+                            } else {
+                                filename = "youtube_video.mp4".to_string();
+                                file_path = format!("downloads/{}", filename);
+                            }
+
+                        } else {
+                            // Fallback if no DASH manifest is provided (e.g. progressive streams only). Let it drop to error or retry.
+                            return Err("Could not locate a DASH manifest (dashManifestUrl) in the provided YouTube video page. Ensure the video is public and accessible.".to_string());
+                        }
+
+                        // Try to extract dynamic base.js
+                        let js_re = regex::Regex::new(r#"(/s/player/[a-zA-Z0-9_-]+/player_ias\.vflset/[a-zA-Z0-9_-]+/base\.js)"#).unwrap();
+                        if let Some(js_caps) = js_re.captures(&html) {
+                            base_js_url_val = format!("https://www.youtube.com{}", &js_caps[1]);
+                        }
+                    } else {
+                        return Err("Failed to read YouTube HTML response payload.".to_string());
+                    }
+                }
+                Err(e) => return Err(format!("Failed to retrieve YouTube page: {}", e)),
+            }
+        }
+
+        if is_youtube_media || is_youtube_page {
             log::info!("[Download] YouTube media detected. Commencing deobfuscation discovery...");
-            // Extract player JS for signature solving
-            base_js_url = Some("https://www.youtube.com/s/player/3f3f3f3f/player_ias.vflset/en_US/base.js");
+            if base_js_url_val.is_empty() {
+                base_js_url_val = "https://www.youtube.com/s/player/3f3f3f3f/player_ias.vflset/en_US/base.js".to_string();
+            }
+            base_js_url = Some(base_js_url_val.as_str());
         }
 
         // If it's a direct googlevideo hit, we don't need to parse a manifest, 
         // but we DO need to solve the parameters before workers start.
-        if is_youtube && !is_manifest {
+        if is_youtube_media && !is_manifest && !is_youtube_page {
             log::info!("[Download] Processing direct YouTube stream address...");
             // The workers in manager.rs will handle the deobfuscation per segment
         }
 
-        let stream = if url.contains(".m3u8") {
-            crate::engine::media::MediaStream::from_hls(&app_state.client, &url).await
+        let stream = if actual_url.contains(".m3u8") {
+            crate::engine::media::MediaStream::from_hls(&app_state.client, &actual_url).await
                 .map_err(|e| format!("HLS Parse Error: {}", e))?
-        } else {
+        } else if actual_url.contains(".mpd") || (is_youtube_media && !actual_url.contains("youtube.com")) {
             crate::engine::media::MediaStream::from_dash(
                 &app_state.client, 
-                &url, 
+                &actual_url, 
                 Some(&app_state.deobfuscator),
                 base_js_url.as_deref()
             ).await
                 .map_err(|e| format!("DASH Parse Error: {}", e))?
+        } else if is_youtube_page && !youtube_html_cache.is_empty() {
+            crate::engine::media::MediaStream::from_youtube_html(
+                &youtube_html_cache, 
+                Some(&app_state.deobfuscator),
+                base_js_url.as_deref()
+            ).await
+                .map_err(|e| format!("YouTube Format Extraction Error: {}", e))?
+        } else {
+            return Err("Unsupported direct proxy media URL format.".into());
         };
 
         let metadata = crate::types::MediaJobMetadata {
             tracks: stream.tracks,
-            master_url: url.clone(),
+            master_url: actual_url.clone(),
         };
 
         let cancel_token = CancellationToken::new();
         let mut manager = DownloadManager::new_stream(
             id.clone(),
-            url.clone(),
+            actual_url.clone(),
             file_path.clone(),
             metadata,
             app_state.client.clone(),

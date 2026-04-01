@@ -263,6 +263,127 @@ impl MediaStream {
         resolutions.sort_by(|a, b| b.bandwidth.cmp(&a.bandwidth));
         Ok(resolutions)
     }
+
+    /// Parses a YouTube HTML page and returns all streams (both progressive and adaptive) 
+    /// from the embeded ytInitialPlayerResponse payload.
+    pub async fn from_youtube_html(
+        html: &str, 
+        deobfuscator: Option<&YouTubeDeobfuscator>,
+        base_js_url: Option<&str>
+    ) -> Result<Self, String> {
+        let start_pattern = "ytInitialPlayerResponse = ";
+        let json_str = if let Some(start_idx) = html.find(start_pattern) {
+            let offset = start_idx + start_pattern.len();
+            if let Some(end_idx) = html[offset..].find(";</script>") {
+                &html[offset..offset+end_idx]
+            } else {
+                return Err("Could not find end of ytInitialPlayerResponse".into());
+            }
+        } else {
+            return Err("ytInitialPlayerResponse not found in HTML".into());
+        };
+
+        let v: serde_json::Value = serde_json::from_str(json_str)
+            .map_err(|e| format!("JSON Parse Error: {}", e))?;
+
+        let mut tracks = Vec::new();
+
+        if let Some(streaming_data) = v.get("streamingData") {
+            // Progressive formats
+            if let Some(formats) = streaming_data.get("formats").and_then(|f| f.as_array()) {
+                for format in formats {
+                    if let Some(track) = Self::parse_youtube_format(format, deobfuscator, base_js_url).await {
+                        tracks.push(track);
+                    }
+                }
+            }
+            // Adaptive formats (DAB/DASH)
+            if let Some(formats) = streaming_data.get("adaptiveFormats").and_then(|f| f.as_array()) {
+                for format in formats {
+                    if let Some(track) = Self::parse_youtube_format(format, deobfuscator, base_js_url).await {
+                        tracks.push(track);
+                    }
+                }
+            }
+        }
+
+        if tracks.is_empty() {
+            return Err("No playable streams found in YouTube page".into());
+        }
+
+        Ok(Self { tracks, master_url: "youtube_video".into() })
+    }
+
+    async fn parse_youtube_format(
+        format: &serde_json::Value,
+        deobfuscator: Option<&YouTubeDeobfuscator>,
+        base_js_url: Option<&str>
+    ) -> Option<MediaTrack> {
+        let mime_type = format.get("mimeType").and_then(|s| s.as_str()).unwrap_or("").to_string();
+        let itag = format.get("itag").and_then(|i| i.as_u64()).unwrap_or(0);
+        let quality_label = format.get("qualityLabel").and_then(|s| s.as_str()).unwrap_or("");
+        let bitrate = format.get("bitrate").and_then(|b| b.as_u64()).unwrap_or(0);
+        
+        let mut name = format!("itag {} - {}", itag, mime_type.split(';').next().unwrap_or(&mime_type));
+        if !quality_label.is_empty() {
+            name = format!("{} ({} bps)", quality_label, bitrate);
+        } else {
+            name = format!("{} ({} bps)", name, bitrate);
+        }
+
+        let mut url = format.get("url").and_then(|s| s.as_str()).unwrap_or("").to_string();
+
+        if url.is_empty() {
+            if let Some(cipher) = format.get("signatureCipher").and_then(|s| s.as_str()) {
+                url = Self::solve_youtube_cipher(cipher, deobfuscator, base_js_url).await;
+            }
+        }
+
+        if url.is_empty() { return None; }
+
+        // Also solve 'n' param if present in the final url
+        if let (Some(deob), Some(b_js)) = (deobfuscator, base_js_url) {
+            if let Some(n_param) = extract_query_param(&url, "n") {
+                if let Ok(sn) = deob.solve_n(&n_param, b_js).await {
+                    url = replace_query_param(&url, "n", &sn);
+                }
+            }
+        }
+
+        Some(MediaTrack {
+            name,
+            segments: vec![url],
+            mime_type: Some(mime_type),
+        })
+    }
+
+    async fn solve_youtube_cipher(
+        cipher: &str,
+        deobfuscator: Option<&YouTubeDeobfuscator>,
+        base_js_url: Option<&str>
+    ) -> String {
+        let parsed = url::form_urlencoded::parse(cipher.as_bytes());
+        let mut s_val = String::new();
+        let mut url_val = String::new();
+        let mut sp_val = "sig".to_string();
+
+        for (k, v) in parsed {
+            if k == "s" { s_val = v.into_owned(); }
+            else if k == "url" { url_val = v.into_owned(); }
+            else if k == "sp" { sp_val = v.into_owned(); }
+        }
+
+        let mut final_url = url_val;
+
+        if let (Some(deob), Some(b_js)) = (deobfuscator, base_js_url) {
+            if let Ok(sig) = deob.solve_signature(&s_val, b_js).await {
+                let encoded_sig = url::form_urlencoded::byte_serialize(sig.as_bytes()).collect::<String>();
+                final_url = format!("{}&{}={}", final_url, sp_val, encoded_sig);
+            }
+        }
+        
+        final_url
+    }
 }
 
 /// Helper to extract query parameter from URL

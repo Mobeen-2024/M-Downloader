@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { Globe, Download, ListVideo, Film, Music, Search } from 'lucide-vue-next';
+import { ref, onMounted, computed } from 'vue';
+import { Globe, Download, ListVideo, Film, Music, Search, CheckSquare, Square } from 'lucide-vue-next';
 import BaseButton from '@/features/shared/components/BaseButton.vue';
 import BaseInput from '@/features/shared/components/BaseInput.vue';
 import BaseDialog from '@/features/shared/components/BaseDialog.vue';
 import BaseSkeleton from '@/features/shared/components/BaseSkeleton.vue';
 import BaseToggle from '@/features/shared/components/BaseToggle.vue';
 import { animate, stagger, spring } from 'motion';
+import { useGrabberStore } from '@/stores/grabber.store';
+
+const grabberStore = useGrabberStore();
 
 const url = ref('');
-const isScanning = ref(false);
-const mediaResults = ref<any[]>([]);
 
 // Phase 2: Managed Modal State
 const showCaptureModal = ref(false);
 const activeMediaItem = ref<any>(null);
 const autoStart = ref(true);
 const gridRef = ref<HTMLElement | null>(null);
-const radarRef = ref<HTMLElement | null>(null);
 
 // Phase 2: Async View Initialization (Skeleton Loaders)
 const isViewLoading = ref(true);
@@ -29,45 +29,46 @@ onMounted(() => {
   }, 800);
 });
 
-const handleScan = () => {
+const handleScan = async () => {
   if (!url.value) return;
-  isScanning.value = true;
-  mediaResults.value = [];
 
-  // Phase 6: Radar Animation
-  if (radarRef.value) {
-    (animate as any)(radarRef.value, 
-      { scale: [1, 1.5], opacity: [0.5, 0] },
-      { duration: 1.5, repeat: Infinity, easing: "ease-out" }
-    );
-  }
+  await grabberStore.startCrawl(url.value, 0, false);
 
-  // Emulate network payload sniffing
-  setTimeout(() => {
-    isScanning.value = false;
-    mediaResults.value = [
-      { id: 1, title: 'Network Stream [1080p]', type: 'video', size: '145.2 MB', ext: 'mp4' },
-      { id: 2, title: 'Background Audio Track', type: 'audio', size: '3.1 MB', ext: 'mp3' },
-      { id: 3, title: 'Asset Resource [4K]', type: 'video', size: '2.4 GB', ext: 'mkv' },
-      { id: 4, title: 'Compressed Archive', type: 'file', size: '840 KB', ext: 'zip' }
-    ];
-
-    // Phase 6: Results stagger
+  // Phase 6: Results stagger
+  if (grabberStore.assets.length > 0 && gridRef.value) {
     setTimeout(() => {
-      if (gridRef.value) {
-        (animate as any)(
-          ".media-card",
-          { opacity: [0, 1], y: [20, 0] },
-          { delay: stagger(0.05), easing: spring({ stiffness: 300, damping: 30 }) } as any
-        );
-      }
+      (animate as any)(
+        ".media-card",
+        { opacity: [0, 1], y: [20, 0] },
+        { delay: stagger(0.05), easing: spring({ stiffness: 300, damping: 30 }) } as any
+      );
     }, 50);
-  }, 2000);
+  }
 };
 
 const openCaptureConfig = (item: any) => {
   activeMediaItem.value = item;
   showCaptureModal.value = true;
+};
+
+const formatSize = (bytes: number) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const allSelected = computed(() => {
+    return grabberStore.assets.length > 0 && grabberStore.selectedAssets.length === grabberStore.assets.length;
+});
+
+const toggleSelectAll = () => {
+    grabberStore.selectAll(!allSelected.value);
+};
+
+const handleBulkDownload = () => {
+    grabberStore.bulkAddSelected(true);
 };
 </script>
 
@@ -102,23 +103,23 @@ const openCaptureConfig = (item: any) => {
           @keyup.enter="handleScan"
           class="url-input"
         />
-        <BaseButton variant="primary" :loading="isScanning" @click="handleScan" class="scan-btn">
-          <template #icon-left v-if="!isScanning"><Search :size="16" /></template>
+        <BaseButton variant="primary" :loading="grabberStore.isCrawling" @click="handleScan" class="scan-btn">
+          <template #icon-left v-if="!grabberStore.isCrawling"><Search :size="16" /></template>
           Scan Content
         </BaseButton>
       </div>
 
       <div class="results-container">
-        <div v-if="isScanning" class="scanning-state">
+        <div v-if="grabberStore.isCrawling" class="scanning-state">
           <div class="scanning-visual">
-            <div ref="radarRef" class="radar-ping"></div>
+            <div class="radar-ping"></div>
             <div class="photon-ring"></div>
             <Search :size="32" class="scanning-icon" />
           </div>
           <p class="scanning-text">Analyzing page structure and parsing network requests...</p>
         </div>
 
-        <div v-else-if="mediaResults.length === 0" class="empty-state">
+        <div v-else-if="grabberStore.assets.length === 0" class="empty-state">
           <div class="empty-visual">
             <div class="visual-glow"></div>
             <ListVideo :size="48" class="visual-icon" />
@@ -129,25 +130,57 @@ const openCaptureConfig = (item: any) => {
           </div>
         </div>
 
-        <TransitionGroup v-else name="grid-move" tag="div" class="media-grid" ref="gridRef">
-          <div v-for="item in mediaResults" :key="item.id" class="media-card glass-panel">
-            <div class="media-icon-wrapper">
-              <Film v-if="item.type === 'video'" class="text-accent" />
-              <Music v-else-if="item.type === 'audio'" class="text-accent" />
-              <Download v-else class="text-secondary" />
-            </div>
-            <div class="media-info">
-              <h4>{{ item.title }}</h4>
-              <span class="meta">{{ item.ext.toUpperCase() }} • {{ item.size }}</span>
-            </div>
-            <div class="media-actions">
-              <BaseButton variant="glass" size="sm" @click="openCaptureConfig(item)">
-                <template #icon-left><Download :size="14" /></template>
-                Capture
-              </BaseButton>
-            </div>
+        <div v-else class="results-content">
+          <div class="results-toolbar">
+            <BaseButton variant="glass" size="sm" @click="toggleSelectAll">
+              <template #icon-left>
+                  <CheckSquare v-if="allSelected" :size="16" class="text-accent" />
+                  <Square v-else :size="16" class="text-secondary" />
+              </template>
+              {{ allSelected ? 'Deselect All' : 'Select All' }}
+            </BaseButton>
+            <div class="toolbar-spacer"></div>
+            <BaseButton 
+              variant="primary" 
+              size="sm" 
+              :disabled="grabberStore.selectedAssets.length === 0"
+              @click="handleBulkDownload"
+            >
+              <template #icon-left><Download :size="16" /></template>
+              Download Selected ({{ grabberStore.selectedAssets.length }})
+            </BaseButton>
           </div>
-        </TransitionGroup>
+
+          <TransitionGroup name="grid-move" tag="div" class="media-grid" ref="gridRef">
+            <div 
+              v-for="item in grabberStore.assets" 
+              :key="item.url" 
+              class="media-card glass-panel"
+              :class="{ 'is-selected': item.selected }"
+              @click="grabberStore.toggleSelection(item.url)"
+            >
+              <div class="media-checkbox">
+                 <CheckSquare v-if="item.selected" :size="18" class="text-accent" />
+                 <Square v-else :size="18" class="text-secondary" />
+              </div>
+              <div class="media-icon-wrapper">
+                <Film v-if="item.category === 'video'" class="text-accent" />
+                <Music v-else-if="item.category === 'audio'" class="text-accent" />
+                <Download v-else class="text-secondary" />
+              </div>
+              <div class="media-info">
+                <h4 :title="item.filename" class="truncate-title">{{ item.filename }}</h4>
+                <span class="meta">{{ item.mime }} • {{ formatSize(item.size) }}</span>
+              </div>
+              <div class="media-actions" @click.stop>
+                <BaseButton variant="glass" size="sm" @click="openCaptureConfig(item)">
+                  <template #icon-left><Download :size="14" /></template>
+                  Options
+                </BaseButton>
+              </div>
+            </div>
+          </TransitionGroup>
+        </div>
       </div>
     </div>
 
@@ -250,6 +283,15 @@ const openCaptureConfig = (item: any) => {
   max-width: 1400px;
 }
 
+.results-toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 4px;
+}
+
+.toolbar-spacer { flex: 1; }
+
 .media-card {
   display: flex;
   align-items: center;
@@ -257,6 +299,26 @@ const openCaptureConfig = (item: any) => {
   border-radius: var(--radius-md);
   gap: 16px;
   transition: var(--transition-smooth);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.media-card.is-selected {
+  background: rgba(59, 130, 246, 0.05);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.media-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.truncate-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
 .media-card:hover {
@@ -306,6 +368,7 @@ const openCaptureConfig = (item: any) => {
   border: 2px solid var(--accent-primary);
   border-radius: 50%;
   pointer-events: none;
+  animation: radarPing 1.5s ease-out infinite;
 }
 
 .photon-ring {
@@ -386,5 +449,10 @@ const openCaptureConfig = (item: any) => {
 @keyframes breathe {
   0%, 100% { transform: scale(1); opacity: 0.5; }
   50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes radarPing {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
 </style>

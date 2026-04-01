@@ -1,0 +1,1 @@
+fn main() { let html = std::fs::read_to_string("yt.html").unwrap(); let re = regex::Regex::new(r#"ytInitialPlayerResponse\s*=\s*(\{.*?\});"#).unwrap(); if let Some(caps) = re.captures(&html) { println!("Found json len: {}", caps[1].len()); let _v: serde_json::Value = serde_json::from_str(&caps[1]).unwrap(); println!("Parsed OK"); } }
