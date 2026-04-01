@@ -55,6 +55,7 @@ pub struct SegmentInfo {
     pub downloaded: u64,
     pub state: SegmentState,
     pub retry_count: u8,
+    pub last_latency_ms: u64,
 }
 
 impl SegmentInfo {
@@ -69,10 +70,18 @@ impl SegmentInfo {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct EngineEventStats {
+    pub total_splits: u64,
+    pub total_retries: u64,
+    pub http_version: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DownloadMetrics {
     pub io_efficiency: f64,
     pub active_workers: usize,
     pub avg_latency_ms: u64,
+    pub engine_stats: Option<EngineEventStats>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

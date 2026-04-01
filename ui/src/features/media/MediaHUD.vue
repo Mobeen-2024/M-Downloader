@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useDownloadStore } from '@/stores/download.store';
-import { Video, Zap, Download, X, Play } from 'lucide-vue-next';
+import { Video, Zap, Download, X } from 'lucide-vue-next';
 import { invoke } from '@tauri-apps/api/core';
 
 const store = useDownloadStore();

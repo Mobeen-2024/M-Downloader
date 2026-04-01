@@ -18,6 +18,9 @@ pub struct DownloadState {
     pub io_commits: u64,
     pub network_read_count: u64,
     pub disk_write_success_count: u64,
+    pub total_splits: u64,
+    pub total_retries: u64,
+    pub http_version: String,
 }
 
 impl DownloadState {
@@ -29,6 +32,7 @@ impl DownloadState {
             downloaded: 0,
             state: SegmentState::Pending,
             retry_count: 0,
+            last_latency_ms: 0,
         };
 
         Self {
@@ -47,6 +51,9 @@ impl DownloadState {
             io_commits: 0,
             network_read_count: 0,
             disk_write_success_count: 0,
+            total_splits: 0,
+            total_retries: 0,
+            http_version: "HTTP/1.1".to_string(),
         }
     }
 
@@ -62,6 +69,7 @@ impl DownloadState {
                     downloaded: 0,
                     state: SegmentState::Pending,
                     retry_count: 0,
+                    last_latency_ms: 0,
                 });
             }
         }
@@ -82,6 +90,9 @@ impl DownloadState {
             io_commits: 0,
             network_read_count: 0,
             disk_write_success_count: 0,
+            total_splits: 0,
+            total_retries: 0,
+            http_version: "HTTP/1.1".to_string(),
         }
     }
 
@@ -144,11 +155,13 @@ impl DownloadState {
                 downloaded: 0,
                 state: SegmentState::Active,
                 retry_count: 0,
+                last_latency_ms: 0,
             };
 
             // Update original segment to end at split point
             self.segments[idx].end = split_point;
             self.segments.push(new_seg);
+            self.total_splits += 1;
             
             return Some(self.segments.len() - 1);
         }
@@ -160,6 +173,7 @@ impl DownloadState {
         if let Some(seg) = self.segments.get_mut(idx) {
             seg.state = SegmentState::Failed;
             seg.retry_count += 1;
+            self.total_retries += 1;
         }
     }
 

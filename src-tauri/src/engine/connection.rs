@@ -127,6 +127,14 @@ async fn download_segment_attempt(
             // Alpha = 0.2 for smooth telemetry
             s.last_latency_ms = ((latency as f64 * 0.2) + (s.last_latency_ms as f64 * 0.8)) as u64;
         }
+        
+        // Record per-segment latency for the Heatmap
+        if let Some(seg) = s.segments.get_mut(segment_idx) {
+            seg.last_latency_ms = latency;
+        }
+
+        // Record Negotiated Protocol (HTTP/1.1, HTTP/2, HTTP/3)
+        s.http_version = format!("{:?}", response.version());
     }
 
     if !response.status().is_success() {
@@ -154,6 +162,7 @@ async fn download_segment_attempt(
                 downloaded: 0,
                 state: crate::types::SegmentState::Active,
                 retry_count: 0,
+                last_latency_ms: 0,
             }];
             // The current worker will now finish the whole file starting from 0.
         }
@@ -174,7 +183,7 @@ async fn download_segment_attempt(
     while let Some(chunk_result) = tokio::time::timeout(std::time::Duration::from_secs(30), stream.next()).await? {
         // ── Performance Validation: Simulation Hook ───────────────────────
         if let Some(ref sim) = simulation {
-            sim.apply().await;
+            sim.apply().await?;
         }
 
         // Honour cancellation (pause or cancel).

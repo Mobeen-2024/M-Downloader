@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
-import { computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useDownloadStore } from '@/stores/download.store';
 import { 
   Zap, 
   Cpu, 
   HardDrive, 
   Activity,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck,
+  History,
 } from 'lucide-vue-next';
 import GlassPanel from '@/features/shared/components/GlassPanel.vue';
 
@@ -18,13 +20,38 @@ const activeDownload = computed(() => {
 });
 
 const metrics = computed(() => {
-  if (!activeDownload.value?.metrics) return {
+  return activeDownload.value?.metrics || {
     io_efficiency: 0,
     active_workers: 0,
-    avg_latency_ms: 0
+    avg_latency_ms: 0,
+    engine_stats: { total_splits: 0, total_retries: 0, http_version: 'HTTP/1.1' }
   };
-  
-  return activeDownload.value.metrics;
+});
+
+const speedHistory = ref<number[]>(new Array(60).fill(0));
+watch(() => activeDownload.value?.speed_bps, (newSpeed) => {
+  if (newSpeed !== undefined) {
+    speedHistory.value.push(newSpeed);
+    if (speedHistory.value.length > 60) speedHistory.value.shift();
+  }
+});
+
+const sparklinePoints = computed(() => {
+  if (!speedHistory.value.length) return '';
+  const max = Math.max(...speedHistory.value, 1024 * 1024); // Min 1MB/s scale
+  return speedHistory.value.map((s, i) => {
+    const x = (i / 59) * 100;
+    const y = 30 - (s / max) * 30;
+    return `${x},${y}`;
+  }).join(' ');
+});
+
+const efficiencyIndex = computed(() => {
+  const stats = metrics.value.engine_stats;
+  if (!stats || stats.total_splits === 0) return 100;
+  // Penalty for retries normalized by splits
+  const penalty = (stats.total_retries / (stats.total_splits + 1)) * 50;
+  return Math.max(0, Math.min(100, 100 - penalty)).toFixed(1);
 });
 
 const latencyStatus = computed(() => {
@@ -36,12 +63,33 @@ const latencyStatus = computed(() => {
   return { label: 'Severe Latency', class: 'error' };
 });
 
+const getSegmentColor = (seg: any) => {
+  if (seg.state === 'Completed') return 'completed';
+  if (seg.state === 'Active') {
+    const lat = seg.last_latency_ms;
+    if (lat === 0) return 'active-idle';
+    if (lat < 100) return 'active-fast';
+    if (lat < 300) return 'active-stable';
+    return 'active-slow';
+  }
+  if (seg.state === 'Failed') return 'failed';
+  return 'pending';
+};
+
 const applySimulation = async (latency: number, packetLoss: number) => {
   try {
     await invoke('set_network_condition', { latency, packetLoss });
   } catch (e) {
     console.error('Failed to set simulation:', e);
   }
+};
+
+const formatSpeed = (bps: number) => {
+  if (bps === 0) return '0 B/s';
+  const k = 1024;
+  const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+  const i = Math.floor(Math.log(bps) / Math.log(k));
+  return parseFloat((bps / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 </script>
 
@@ -62,6 +110,36 @@ const applySimulation = async (latency: number, packetLoss: number) => {
     </div>
 
     <div v-else class="stats-grid">
+      <!-- Throughput Stability Card (NEW) -->
+      <GlassPanel class="stats-card full-width">
+        <div class="card-header">
+          <History class="card-icon blue" />
+          <h3>Throughput Stability</h3>
+          <div class="header-value">{{ formatSpeed(activeDownload.speed_bps) }}</div>
+        </div>
+        <div class="sparkline-container">
+          <svg viewBox="0 0 100 30" preserveAspectRatio="none" class="sparkline">
+            <defs>
+              <linearGradient id="sparkGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--accent-primary)" stop-opacity="0.5" />
+                <stop offset="100%" stop-color="var(--accent-primary)" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            <path
+              :d="`M ${sparklinePoints} L 100,30 L 0,30 Z`"
+              fill="url(#sparkGradient)"
+            />
+            <polyline
+              fill="none"
+              stroke="var(--accent-primary)"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+              :points="sparklinePoints"
+            />
+          </svg>
+        </div>
+        <p class="card-desc">Real-time bandwidth consistency over the last 60 seconds.</p>
+      </GlassPanel>
       <!-- I/O Efficiency Card -->
       <GlassPanel class="stats-card">
         <div class="card-header">
@@ -75,26 +153,51 @@ const applySimulation = async (latency: number, packetLoss: number) => {
         <p class="card-desc">Ratio of requested data vs successful disk commits. Higher is better.</p>
       </GlassPanel>
 
-      <!-- Worker Engagement Card -->
-      <GlassPanel class="stats-card">
+      <!-- Segment Latency Heatmap -->
+      <GlassPanel class="stats-card heatmap-card">
         <div class="card-header">
           <Cpu class="card-icon pink" />
-          <h3>Worker Engagement</h3>
+          <h3>Latency Heatmap</h3>
         </div>
-        <div class="metric-value">{{ metrics.active_workers }} / 32</div>
-        <div class="worker-dots">
+        <div class="segment-grid">
           <div 
-            v-for="n in 32" 
-            :key="n" 
-            class="dot"
-            :class="{ 
-              active: n <= metrics.active_workers,
-              primary: n === 1 && metrics.active_workers > 0,
-              auxiliary: n > 1 && n <= metrics.active_workers
-            }"
+            v-for="(seg, idx) in activeDownload.segments" 
+            :key="idx" 
+            class="segment-box"
+            :class="getSegmentColor(seg)"
+            :title="`Seg ${idx}: ${seg.last_latency_ms}ms`"
           ></div>
         </div>
-        <p class="card-desc">Number of active threads performing "In-Half Division".</p>
+        <div class="heatmap-legend">
+          <span class="legend-item"><i class="sq fast"></i> &lt;100ms</span>
+          <span class="legend-item"><i class="sq stable"></i> &lt;300ms</span>
+          <span class="legend-item"><i class="sq slow"></i> &gt;300ms</span>
+          <span class="legend-item"><i class="sq comp"></i> Done</span>
+        </div>
+        <p class="card-desc">Real-time responsiveness of every active byte-range segment.</p>
+      </GlassPanel>
+
+      <!-- Engine Health Card (NEW) -->
+      <GlassPanel class="stats-card">
+        <div class="card-header">
+          <ShieldCheck class="card-icon emerald" />
+          <h3>Engine Health</h3>
+        </div>
+        <div class="health-metrics">
+          <div class="h-row">
+            <span>Efficiency Index</span>
+            <span class="h-val">{{ efficiencyIndex }}%</span>
+          </div>
+          <div class="h-row">
+            <span>Total Splits</span>
+            <span class="h-val">{{ metrics.engine_stats?.total_splits || 0 }}</span>
+          </div>
+          <div class="h-row">
+            <span>Protocol</span>
+            <span class="h-val badge">{{ metrics.engine_stats?.http_version || 'HTTP/1.1' }}</span>
+          </div>
+        </div>
+        <p class="card-desc">Adaptive health score based on split success vs connection retries.</p>
       </GlassPanel>
 
       <!-- Network Latency Card -->
@@ -252,6 +355,51 @@ const applySimulation = async (latency: number, packetLoss: number) => {
 .latency-status.warn { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 .latency-status.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
+/* Heatmap Styles */
+.heatmap-card {
+  min-height: 240px;
+}
+
+.segment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12px, 1fr));
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  padding-right: 4px;
+}
+
+.segment-box {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.segment-box.active-fast { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+.segment-box.active-stable { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
+.segment-box.active-slow { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+.segment-box.active-idle { background: var(--accent-primary); }
+.segment-box.completed { background: rgba(255, 255, 255, 0.2); }
+.segment-box.failed { background: #7f1d1d; border: 1px solid #ef4444; }
+.segment-box.pending { background: rgba(255, 255, 255, 0.05); }
+
+.heatmap-legend {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.sq { width: 8px; height: 8px; border-radius: 1px; }
+.sq.fast { background: #10b981; }
+.sq.stable { background: #f59e0b; }
+.sq.slow { background: #ef4444; }
+.sq.comp { background: rgba(255, 255, 255, 0.2); }
+
 .card-desc {
   font-size: 0.8rem;
   color: var(--text-secondary);
@@ -304,6 +452,58 @@ const applySimulation = async (latency: number, packetLoss: number) => {
 .help-text {
   font-size: 0.85rem;
   color: var(--text-secondary);
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.header-value {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--accent-primary);
+  font-size: 1.1rem;
+}
+
+.sparkline-container {
+  height: 80px;
+  width: 100%;
+  margin: 15px 0;
+  position: relative;
+}
+
+.sparkline {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.health-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.h-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.h-val {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.h-val.badge {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent-primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
 }
 
 .empty-state {

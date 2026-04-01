@@ -284,6 +284,11 @@ impl DownloadManager {
                                         io_efficiency: (s_inner.disk_write_success_count as f64 / s_inner.network_read_count.max(1) as f64),
                                         active_workers: s_inner.segments.iter().filter(|seg| seg.state == crate::types::SegmentState::Active).count(),
                                         avg_latency_ms: s_inner.last_latency_ms,
+                                        engine_stats: Some(crate::types::EngineEventStats {
+                                            total_splits: s_inner.total_splits,
+                                            total_retries: s_inner.total_retries,
+                                            http_version: s_inner.http_version.clone(),
+                                        }),
                                     }
                                 };
                                 let event = DownloadProgressEvent {

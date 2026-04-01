@@ -6,12 +6,20 @@ export interface SegmentInfo {
   downloaded: number;
   state: 'Pending' | 'Active' | 'Completed' | 'Failed';
   retry_count: number;
+  last_latency_ms: number;
+}
+
+export interface EngineEventStats {
+  total_splits: number;
+  total_retries: number;
+  http_version: string;
 }
 
 export interface DownloadMetrics {
   io_efficiency: number;
   active_workers: number;
   avg_latency_ms: number;
+  engine_stats?: EngineEventStats;
 }
 
 export interface DownloadProgressEvent {
