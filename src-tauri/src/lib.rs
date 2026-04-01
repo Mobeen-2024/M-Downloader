@@ -2,6 +2,10 @@ pub mod types;
 pub mod engine;
 pub mod commands;
 
+extern crate uuid;
+extern crate serde_json;
+extern crate lazy_static;
+
 use tauri::Manager;
 
 use crate::engine::state::AppState;

@@ -2,6 +2,7 @@ use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use regex::Regex;
+use std::time::Duration;
 use crate::engine::auth::AuthManager;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,6 +56,40 @@ impl SiteGrabber {
         }
 
         Ok(assets)
+    }
+
+    /// Performs a lightweight HEAD request to verify file availability and basic metadata.
+    pub async fn probe_sniffed_url(client: &reqwest::Client, url: &str) -> Result<Option<GrabbedAsset>, Box<dyn std::error::Error + Send + Sync>> {
+        let res = client.head(url)
+            .header(reqwest::header::USER_AGENT, "Mdownloader/2.0")
+            .timeout(Duration::from_secs(5))
+            .send()
+            .await?;
+
+        if !res.status().is_success() { return Ok(None); }
+
+        let mime = res.headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream")
+            .to_string();
+
+        let size = res.headers()
+            .get(reqwest::header::CONTENT_LENGTH)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(0);
+
+        let filename = url.split('/').last().unwrap_or("unknown").to_string();
+        let category = Self::get_category(&mime, &filename);
+
+        Ok(Some(GrabbedAsset {
+            url: url.to_string(),
+            filename,
+            mime,
+            size,
+            category,
+        }))
     }
 
     fn extract_links(&self, html: &str, base_url: &str) -> Vec<String> {
