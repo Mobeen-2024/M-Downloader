@@ -18,13 +18,17 @@ export const useGrabberStore = defineStore('grabber', () => {
   const crawlUrl = ref('');
   const downloadStore = useDownloadStore();
 
-  const startCrawl = async (url: string) => {
+  const startCrawl = async (url: string, depth: number = 0, strictDomain: boolean = true) => {
     isCrawling.value = true;
     crawlUrl.value = url;
     assets.value = [];
     
     try {
-      const results: GrabbedAsset[] = await invoke('start_grabber_crawl', { url });
+      const results: GrabbedAsset[] = await invoke('start_grabber_crawl', { 
+        url, 
+        depth, 
+        strictDomain 
+      });
       assets.value = results.map(a => ({ ...a, selected: true }));
     } catch (e) {
       console.error('Grabber Crawl Failed:', e);

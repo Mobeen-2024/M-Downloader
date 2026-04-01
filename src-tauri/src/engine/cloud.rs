@@ -7,6 +7,7 @@ use reqwest::Client;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CloudConfig {
     pub provider: String,
+    #[serde(skip_serializing, skip_deserializing)]
     pub api_key: String,
     pub target_folder_id: String,
     pub enabled: bool,
@@ -21,8 +22,11 @@ impl CloudUploader {
         let (tx, mut rx) = mpsc::channel::<Vec<u8>>(100);
         
         let handle = tokio::spawn(async move {
-            if !config.enabled || config.api_key.is_empty() {
-                log::warn!("[Cloud] Sync disabled or missing API key. Dropping chunks.");
+            let entry = keyring::Entry::new("com.mobeen.mdownloader.cloud", &config.provider).unwrap();
+            let api_key = entry.get_password().unwrap_or_default();
+
+            if !config.enabled || api_key.is_empty() {
+                log::warn!("[Cloud] Sync disabled or missing API key for {}. Dropping chunks.", config.provider);
                 while let Some(_) = rx.recv().await {}
                 return;
             }

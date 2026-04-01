@@ -13,10 +13,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const snifferFilter = ref(['mp4', 'mp3', 'mkv', 'zip', 'exe', 'iso']);
   const cloudConfig = ref({
     provider: 'Google Drive',
-    api_key: '',
     target_folder_id: '',
     enabled: false,
   });
+  const cloudApiKey = ref('');
 
   // Load from localStorage
   const saved = localStorage.getItem('mdownloader_settings');
@@ -31,7 +31,11 @@ export const useSettingsStore = defineStore('settings', () => {
       enableSpeedLimit.value = data.enableSpeedLimit ?? false;
       maxDownloadSpeed.value = data.maxDownloadSpeed ?? 1024;
       snifferFilter.value = data.snifferFilter || ['mp4', 'mp3', 'mkv', 'zip', 'exe', 'iso'];
-      if (data.cloudConfig) cloudConfig.value = data.cloudConfig;
+      if (data.cloudConfig) {
+        cloudConfig.value = data.cloudConfig;
+        // Migration: If api_key existed in local storage, move it to memory once
+        if (data.cloudConfig.api_key) cloudApiKey.value = data.cloudConfig.api_key;
+      }
     } catch (e) {
       console.error('Failed to load settings:', e);
     }
@@ -48,7 +52,10 @@ export const useSettingsStore = defineStore('settings', () => {
       enableSpeedLimit: enableSpeedLimit.value,
       maxDownloadSpeed: maxDownloadSpeed.value,
       snifferFilter: snifferFilter.value,
-      cloudConfig: cloudConfig.value,
+      cloudConfig: {
+        ...cloudConfig.value,
+        api_key: undefined // SECURE: Never persist to localStorage
+      },
     }));
   }, { deep: true });
 
@@ -65,9 +72,12 @@ export const useSettingsStore = defineStore('settings', () => {
   });
 
   // Sync cloud config with engine
-  watch(cloudConfig, async () => {
+  watch([cloudConfig, cloudApiKey], async () => {
     try {
-      await invoke('update_cloud_config', { config: cloudConfig.value });
+      await invoke('update_cloud_config', { 
+        config: cloudConfig.value,
+        apiKey: cloudApiKey.value 
+      });
     } catch (e) {
       console.error('Failed to sync cloud config with engine:', e);
     }
@@ -83,5 +93,6 @@ export const useSettingsStore = defineStore('settings', () => {
     maxDownloadSpeed,
     snifferFilter,
     cloudConfig,
+    cloudApiKey,
   };
 });

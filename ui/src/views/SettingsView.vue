@@ -237,8 +237,6 @@ onMounted(async () => {
           </div>
         </div>
       </GlassPanel>
-        </div>
-      </GlassPanel>
 
       <GlassPanel class="settings-card">
         <div class="card-title">
@@ -272,7 +270,7 @@ onMounted(async () => {
           <div class="setting-item" :class="{ disabled: !settings.cloudConfig.enabled }">
             <label>API Key / Bearer Token</label>
             <div class="input-wrapper">
-              <input type="password" v-model="settings.cloudConfig.api_key" placeholder="••••••••••••••••" />
+              <input type="password" v-model="settings.cloudApiKey" placeholder="••••••••••••••••" />
             </div>
           </div>
 

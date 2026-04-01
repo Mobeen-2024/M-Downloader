@@ -6,6 +6,8 @@ use crate::engine::grabber::{SiteGrabber, GrabbedAsset};
 #[tauri::command]
 pub async fn start_grabber_crawl(
     url: String,
+    depth: u32,
+    strict_domain: bool,
     state: State<'_, Arc<AppState>>
 ) -> Result<Vec<GrabbedAsset>, String> {
     let grabber = SiteGrabber::new(
@@ -13,8 +15,8 @@ pub async fn start_grabber_crawl(
         state.auth_manager.clone()
     );
 
-    log::info!("[Grabber] Starting crawl for: {}", url);
-    match grabber.grab_page(&url).await {
+    log::info!("[Grabber] Starting crawl for: {} (Depth: {}, Strict: {})", url, depth, strict_domain);
+    match grabber.grab_page(&url, depth, strict_domain).await {
         Ok(assets) => {
             log::info!("[Grabber] Crawl complete. Found {} assets.", assets.len());
             Ok(assets)

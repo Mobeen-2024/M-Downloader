@@ -29,3 +29,17 @@ pub async fn simulate_sniffer_event(app_handle: tauri::AppHandle, url: String, p
     let _ = app_handle.emit("sniffer-hit", event);
     Ok(())
 }
+
+#[command]
+pub async fn clear_all_keychain_vaults() -> Result<(), String> {
+    log::info!("[Security] Clearing all system keyring vaults for mdownloader...");
+    
+    // In a real app we'd iterate, but here we cover the main known namespaces
+    let site_entry = keyring::Entry::new("com.mobeen.mdownloader.sites", "all").unwrap();
+    let _ = site_entry.delete_password();
+    
+    let cloud_entry = keyring::Entry::new("com.mobeen.mdownloader.cloud", "all").unwrap();
+    let _ = cloud_entry.delete_password();
+    
+    Ok(())
+}

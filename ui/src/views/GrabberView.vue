@@ -19,6 +19,9 @@ const store = useGrabberStore();
 const urlInput = ref('');
 const filterCategory = ref('All');
 
+const crawlDepth = ref(0);
+const strictDomain = ref(true);
+
 const filteredAssets = computed(() => {
   if (filterCategory.value === 'All') return store.assets;
   return store.assets.filter(a => a.category === filterCategory.value);
@@ -26,7 +29,7 @@ const filteredAssets = computed(() => {
 
 const handleCrawl = async () => {
   if (!urlInput.value) return;
-  await store.startCrawl(urlInput.value);
+  await store.startCrawl(urlInput.value, crawlDepth.value, strictDomain.value);
 };
 
 const handleBulkAdd = async () => {
@@ -76,7 +79,18 @@ const getCategoryIcon = (cat: string) => {
             type="text" 
             placeholder="Enter Target URL (e.g. https://archive.org/...)" 
             @keyup.enter="handleCrawl"
+            class="url-input"
           />
+          <div class="crawl-options">
+            <div class="option-group" :class="{ disabled: crawlDepth === 0 }">
+              <label>Domain Lock</label>
+              <input type="checkbox" v-model="strictDomain" :disabled="crawlDepth === 0" />
+            </div>
+            <div class="option-group">
+              <label>Depth</label>
+              <input type="number" v-model="crawlDepth" min="0" max="3" />
+            </div>
+          </div>
           <button @click="handleCrawl" :disabled="store.isCrawling" class="btn-primary">
             <template v-if="store.isCrawling">
               <Loader2 class="animate-spin" :size="18" />
@@ -247,7 +261,7 @@ const getCategoryIcon = (cat: string) => {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.search-bar input {
+.search-bar .url-input {
   flex: 1;
   background: transparent;
   border: none;
@@ -255,6 +269,40 @@ const getCategoryIcon = (cat: string) => {
   color: var(--text-primary);
   font-size: 0.95rem;
   padding: 0 12px;
+}
+
+.crawl-options {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 0 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.option-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.option-group.disabled {
+  opacity: 0.3;
+}
+
+.option-group input[type="number"] {
+  width: 40px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--accent-primary);
+  border-radius: 6px;
+  padding: 4px;
+  text-align: center;
+  font-weight: 700;
 }
 
 .btn-primary {
