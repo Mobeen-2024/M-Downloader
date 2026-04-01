@@ -295,21 +295,21 @@ onMounted(async () => {
             <div class="roadmap-dot active"></div>
             <div class="roadmap-content">
               <h5>HTTP/3 (QUIC) Support</h5>
-              <p>Eliminating head-of-line blocking for multi-threaded acceleration. (Engine Ready)</p>
+              <p>Eliminating head-of-line blocking for multi-threaded acceleration. (Ready)</p>
             </div>
           </div>
           <div class="roadmap-item">
-            <div class="roadmap-dot"></div>
+            <div class="roadmap-dot active"></div>
             <div class="roadmap-content">
               <h5>Cloud Stream Proxying</h5>
-              <p>Direct-to-Cloud (Google Drive/Dropbox) parallel fetching and uploading.</p>
+              <p>Direct-to-Cloud (Google Drive/Dropbox) parallel fetching and uploading. (Active)</p>
             </div>
           </div>
           <div class="roadmap-item">
-            <div class="roadmap-dot"></div>
+            <div class="roadmap-dot active"></div>
             <div class="roadmap-content">
               <h5>WFP Stealth Sniffing</h5>
-              <p>Institutional-grade media detection with kernel-mode traffic interception.</p>
+              <p>Institutional-grade media detection with kernel-mode traffic interception. (Ready)</p>
             </div>
           </div>
         </div>

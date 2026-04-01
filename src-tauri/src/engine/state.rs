@@ -44,6 +44,7 @@ impl AppState {
             .pool_max_idle_per_host(32)
             .tcp_keepalive(Duration::from_secs(30))
             .read_timeout(Duration::from_secs(30))
+            .http2_prior_knowledge() // High-perf optimization
             .build()
             .expect("Failed to create reqwest client");
 
