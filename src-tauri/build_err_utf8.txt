@@ -1,0 +1,54 @@
+﻿cargo.exe :     Checking 
+webview2-com v0.38.2
+At line:1 char:1
++ & "$env:USERPROFILE\.carg
+o\bin\cargo.exe" check > 
+build_err_actual.tx ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (     
+   Checking webview2-com   
+  v0.38.2:String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+    Checking reqwest 
+v0.12.28
+   Compiling mdownloader 
+v0.2.0 (D:\WorkStation\IDM\
+src-tauri)
+error: The `http3` feature 
+is unstable, and requires 
+the `RUSTFLAGS='--cfg 
+reqwest_unstable'` 
+environment variable to be 
+set.
+   --> C:\Users\-Mobeen-\.c
+argo\registry\src\index.cra
+tes.io-1949cf8c6b5b557f\req
+west-0.12.28\src\lib.rs:251
+:1
+    |
+251 | / compile_error!(
+252 | |     "\
+253 | |     The `http3` 
+feature is unstable, and 
+requires the \
+254 | |     
+`RUSTFLAGS='--cfg 
+reqwest_unstable'` 
+environment variable to be 
+set.\
+255 | | "
+256 | | );
+    | |_^
+
+error: could not compile 
+`reqwest` (lib) due to 1 
+previous error
+warning: build failed, 
+waiting for other jobs to 
+finish...

@@ -12,7 +12,7 @@ import {
   FileText,
   Box
 } from 'lucide-vue-next';
-import { useDownloadStore } from '../../stores/download.store';
+import { useDownloadStore } from '@/stores/download.store';
 
 const store = useDownloadStore();
 
@@ -123,6 +123,7 @@ const categories = [
   font-weight: 800;
   letter-spacing: -0.02em;
   background: linear-gradient(135deg, var(--text-primary), var(--accent-primary));
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

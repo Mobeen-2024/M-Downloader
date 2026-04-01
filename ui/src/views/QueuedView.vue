@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useDownloadStore } from '../stores/download.store';
-import DownloadCard from '../components/download/DownloadCard.vue';
+import { useDownloadStore } from '@/stores/download.store';
+import DownloadCard from '@/features/downloads/DownloadCard.vue';
 import { Clock } from 'lucide-vue-next';
 
 const store = useDownloadStore();

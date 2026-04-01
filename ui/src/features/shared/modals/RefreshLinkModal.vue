@@ -2,8 +2,8 @@
 import { ref, onUnmounted, watch } from 'vue';
 import { X, ExternalLink, Link, AlertTriangle, Loader2 } from 'lucide-vue-next';
 import { listen } from '@tauri-apps/api/event';
-import { useDownload } from '../../composables/useDownload';
-import GlassPanel from '../ui/GlassPanel.vue';
+import { useDownload } from '@/composables/useDownload';
+import GlassPanel from '@/features/shared/components/GlassPanel.vue';
 
 const props = defineProps<{
   show: boolean;

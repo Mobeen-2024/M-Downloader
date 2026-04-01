@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
-import TitleBar from './components/layout/TitleBar.vue';
-import AppSidebar from './components/layout/AppSidebar.vue';
-import AppTopBar from './components/layout/AppTopBar.vue';
-import NewDownloadModal from './components/modals/NewDownloadModal.vue';
-import { useIpcEvents } from './composables/useIpcEvents';
-import { useSettingsStore } from './stores/settings.store';
+import TitleBar from '@/features/layout/TitleBar.vue';
+import AppSidebar from '@/features/layout/AppSidebar.vue';
+import AppTopBar from '@/features/layout/AppTopBar.vue';
+import MediaSnifferHud from '@/features/sniffer/MediaSnifferHud.vue';
+import NewDownloadModal from '@/features/shared/modals/NewDownloadModal.vue';
+import { useIpcEvents } from '@/composables/useIpcEvents';
+import { useSettingsStore } from '@/stores/settings.store';
 
 const showNewModal = ref(false);
 const { initListeners } = useIpcEvents();

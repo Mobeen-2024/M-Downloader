@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { X, Globe, Download, AlertCircle } from 'lucide-vue-next';
-import GlassPanel from '../ui/GlassPanel.vue';
-import { useDownload } from '../../composables/useDownload';
+import GlassPanel from '@/features/shared/components/GlassPanel.vue';
+import { useDownload } from '@/composables/useDownload';
 
 const props = defineProps<{
   show: boolean;

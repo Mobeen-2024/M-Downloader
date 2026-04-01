@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
-import type { SegmentInfo } from '../../types/download';
+import type { SegmentInfo } from '@/types/download';
 
 const props = defineProps<{
   segments: SegmentInfo[];

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useDownloadStore } from '../stores/download.store';
-import { useDownload } from '../composables/useDownload';
-import DownloadCard from '../components/download/DownloadCard.vue';
-import RefreshLinkModal from '../components/modals/RefreshLinkModal.vue';
+import { useDownloadStore } from '@/stores/download.store';
+import { useDownload } from '@/composables/useDownload';
+import DownloadCard from '@/features/downloads/DownloadCard.vue';
+import RefreshLinkModal from '@/features/shared/modals/RefreshLinkModal.vue';
 import { Layers } from 'lucide-vue-next';
-import type { DownloadItem } from '../types/download';
+import type { DownloadItem } from '@/types/download';
 
 const store = useDownloadStore();
 const { refreshDownload } = useDownload();

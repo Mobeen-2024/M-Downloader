@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DownloadStatus } from '../../types/download';
+import type { DownloadStatus } from '@/types/download';
 
 defineProps<{
   status: DownloadStatus;

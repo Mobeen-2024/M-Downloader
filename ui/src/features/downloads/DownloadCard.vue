@@ -12,12 +12,12 @@ import {
   RotateCw
 } from 'lucide-vue-next';
 import { computed } from 'vue';
-import type { DownloadItem } from '../../types/download';
-import { useFormatters } from '../../composables/useFormatters';
-import { useDownload } from '../../composables/useDownload';
-import StatusBadge from '../ui/StatusBadge.vue';
+import type { DownloadItem } from '@/types/download';
+import { useFormatters } from '@/composables/useFormatters';
+import { useDownload } from '@/composables/useDownload';
+import StatusBadge from '@/features/shared/components/StatusBadge.vue';
 import SegmentVisualizer from './SegmentVisualizer.vue';
-import GlassPanel from '../ui/GlassPanel.vue';
+import GlassPanel from '@/features/shared/components/GlassPanel.vue';
 
 const props = defineProps<{
   download: DownloadItem;

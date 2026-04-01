@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useSettingsStore } from '../stores/settings.store';
+import { useSettingsStore } from '@/stores/settings.store';
 import { Settings, Cpu, Folder, Palette, Activity } from 'lucide-vue-next';
-import GlassPanel from '../components/ui/GlassPanel.vue';
+import GlassPanel from '@/features/shared/components/GlassPanel.vue';
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 

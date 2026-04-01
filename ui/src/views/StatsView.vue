@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { computed } from 'vue';
-import { useDownloadStore } from '../stores/download.store';
+import { useDownloadStore } from '@/stores/download.store';
 import { 
   Zap, 
   Cpu, 
@@ -9,7 +9,7 @@ import {
   Activity,
   AlertCircle
 } from 'lucide-vue-next';
-import GlassPanel from '../components/ui/GlassPanel.vue';
+import GlassPanel from '@/features/shared/components/GlassPanel.vue';
 
 const store = useDownloadStore();
 

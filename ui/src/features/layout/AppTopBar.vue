@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
-import { useDownloadStore } from '../../stores/download.store';
-import { useFormatters } from '../../composables/useFormatters';
+import { useDownloadStore } from '@/stores/download.store';
+import { useFormatters } from '@/composables/useFormatters';
 import { invoke } from '@tauri-apps/api/core';
-import SpeedGraph from '../ui/SpeedGraph.vue';
+import SpeedGraph from '@/features/shared/components/SpeedGraph.vue';
 import { Plus, Wifi, Activity, Gauge, Zap } from 'lucide-vue-next';
 
 const store = useDownloadStore();
