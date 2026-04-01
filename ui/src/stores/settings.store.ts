@@ -11,6 +11,12 @@ export const useSettingsStore = defineStore('settings', () => {
   const enableSpeedLimit = ref(false);
   const maxDownloadSpeed = ref(1024); // KB/s
   const snifferFilter = ref(['mp4', 'mp3', 'mkv', 'zip', 'exe', 'iso']);
+  const cloudConfig = ref({
+    provider: 'Google Drive',
+    api_key: '',
+    target_folder_id: '',
+    enabled: false,
+  });
 
   // Load from localStorage
   const saved = localStorage.getItem('mdownloader_settings');
@@ -25,13 +31,14 @@ export const useSettingsStore = defineStore('settings', () => {
       enableSpeedLimit.value = data.enableSpeedLimit ?? false;
       maxDownloadSpeed.value = data.maxDownloadSpeed ?? 1024;
       snifferFilter.value = data.snifferFilter || ['mp4', 'mp3', 'mkv', 'zip', 'exe', 'iso'];
+      if (data.cloudConfig) cloudConfig.value = data.cloudConfig;
     } catch (e) {
       console.error('Failed to load settings:', e);
     }
   }
 
   // Persist
-  watch([maxConnections, downloadDir, themeAccent, monitorClipboard, bridgeEnabled, enableSpeedLimit, maxDownloadSpeed, snifferFilter], () => {
+  watch([maxConnections, downloadDir, themeAccent, monitorClipboard, bridgeEnabled, enableSpeedLimit, maxDownloadSpeed, snifferFilter, cloudConfig], () => {
     localStorage.setItem('mdownloader_settings', JSON.stringify({
       maxConnections: maxConnections.value,
       downloadDir: downloadDir.value,
@@ -41,6 +48,7 @@ export const useSettingsStore = defineStore('settings', () => {
       enableSpeedLimit: enableSpeedLimit.value,
       maxDownloadSpeed: maxDownloadSpeed.value,
       snifferFilter: snifferFilter.value,
+      cloudConfig: cloudConfig.value,
     }));
   }, { deep: true });
 
@@ -56,6 +64,15 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   });
 
+  // Sync cloud config with engine
+  watch(cloudConfig, async () => {
+    try {
+      await invoke('update_cloud_config', { config: cloudConfig.value });
+    } catch (e) {
+      console.error('Failed to sync cloud config with engine:', e);
+    }
+  }, { deep: true });
+
   return {
     maxConnections,
     downloadDir,
@@ -65,5 +82,6 @@ export const useSettingsStore = defineStore('settings', () => {
     enableSpeedLimit,
     maxDownloadSpeed,
     snifferFilter,
+    cloudConfig,
   };
 });

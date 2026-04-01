@@ -15,3 +15,4 @@ pub mod grabber;
 pub mod auth;
 pub mod scheduler;
 pub mod test_utils;
+pub mod cloud;

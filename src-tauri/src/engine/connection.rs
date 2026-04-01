@@ -32,6 +32,7 @@ pub async fn download_segment(
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     quota_tracker: Arc<crate::engine::quota::UsageTracker>,
     simulation: Option<Arc<crate::engine::test_utils::SimulationEngine>>,
+    cloud_tx: Option<tokio::sync::mpsc::Sender<Vec<u8>>>,
     cookies: Option<String>,
     referer: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -51,6 +52,7 @@ pub async fn download_segment(
             shaper.clone(),
             quota_tracker.clone(),
             simulation.clone(),
+            cloud_tx.clone(),
             cookies.clone(),
             referer.clone(),
         )
@@ -80,6 +82,7 @@ async fn download_segment_attempt(
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     quota_tracker: Arc<crate::engine::quota::UsageTracker>,
     simulation: Option<Arc<crate::engine::test_utils::SimulationEngine>>,
+    cloud_tx: Option<tokio::sync::mpsc::Sender<Vec<u8>>>,
     cookies: Option<String>,
     referer: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -214,6 +217,11 @@ async fn download_segment_attempt(
 
         writer.write_all(&data[..bytes_to_write]).await?;
         write_pos += bytes_to_write as u64;
+
+        // ── Cloud Stream Proxying: Real-time Data Piping ──────────────────
+        if let Some(ref tx) = cloud_tx {
+            let _ = tx.send(data[..bytes_to_write].to_vec()).await;
+        }
         
         // ── Bandwidth Governance: Traffic Shaper ───────────────────────────
         if let Some(ref bucket) = shaper {
@@ -268,6 +276,7 @@ pub async fn download_stream_segment(
     cancel_token: CancellationToken,
     auth_manager: Arc<crate::engine::auth::AuthManager>,
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
+    cloud_tx: Option<tokio::sync::mpsc::Sender<Vec<u8>>>,
     cookies: Option<String>,
     referer: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -298,6 +307,11 @@ pub async fn download_stream_segment(
             if let Some(delay) = bucket.consume(data.len() as i64) {
                 tokio::time::sleep(delay).await;
             }
+        }
+
+        // ── Cloud Stream Proxying: Real-time Data Piping ──────────────────
+        if let Some(ref tx) = cloud_tx {
+            let _ = tx.send(data.to_vec()).await;
         }
 
         file.write_all(&data).await?;

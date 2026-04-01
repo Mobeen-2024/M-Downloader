@@ -33,6 +33,7 @@ pub struct AppState {
     pub bridge_connected: Arc<AtomicBool>,
     pub orchestration_tx: tokio::sync::mpsc::UnboundedSender<String>,
     pub global_shaper: Arc<crate::engine::shaper::TokenBucket>,
+    pub cloud_manager: Arc<crate::engine::cloud::CloudManager>,
 }
 
 impl AppState {
@@ -62,6 +63,7 @@ impl AppState {
             bridge_connected: Arc::new(AtomicBool::new(false)),
             orchestration_tx,
             global_shaper: Arc::new(crate::engine::shaper::TokenBucket::new(1024 * 1024 * 1024)), // Default 1 Gbps (unlimited)
+            cloud_manager: Arc::new(crate::engine::cloud::CloudManager::new()),
         }
     }
 }

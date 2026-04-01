@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useSettingsStore } from '@/stores/settings.store';
-import { Settings, Cpu, Folder, Palette, Activity, Link2, Clipboard, MoveHorizontal } from 'lucide-vue-next';
+import { Settings, Cpu, Folder, Palette, Activity, Link2, Clipboard, MoveHorizontal, Cloud } from 'lucide-vue-next';
 import GlassPanel from '@/features/shared/components/GlassPanel.vue';
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
@@ -237,6 +237,54 @@ onMounted(async () => {
           </div>
         </div>
       </GlassPanel>
+        </div>
+      </GlassPanel>
+
+      <GlassPanel class="settings-card">
+        <div class="card-title">
+          <Cloud :size="20" class="text-accent" />
+          <h4>Cloud Infrastructure</h4>
+        </div>
+        <div class="setting-item">
+          <div class="setting-row">
+            <div class="flex flex-col">
+              <label>Real-time Cloud Sync</label>
+              <p class="helper-text">Bridge downloads directly to your cloud storage.</p>
+            </div>
+            <button 
+              class="toggle-btn"
+              :class="{ active: settings.cloudConfig.enabled }"
+              @click="settings.cloudConfig.enabled = !settings.cloudConfig.enabled"
+            >
+              <div class="toggle-slider"></div>
+            </button>
+          </div>
+          
+          <div class="setting-divider"></div>
+
+          <div class="setting-item" :class="{ disabled: !settings.cloudConfig.enabled }">
+            <label>Cloud Provider</label>
+            <div class="input-wrapper">
+              <input type="text" v-model="settings.cloudConfig.provider" placeholder="e.g. Google Drive" />
+            </div>
+          </div>
+
+          <div class="setting-item" :class="{ disabled: !settings.cloudConfig.enabled }">
+            <label>API Key / Bearer Token</label>
+            <div class="input-wrapper">
+              <input type="password" v-model="settings.cloudConfig.api_key" placeholder="••••••••••••••••" />
+            </div>
+          </div>
+
+          <div class="setting-item" :class="{ disabled: !settings.cloudConfig.enabled }">
+            <label>Target Folder ID</label>
+            <div class="input-wrapper">
+              <input type="text" v-model="settings.cloudConfig.target_folder_id" placeholder="Folder hash..." />
+            </div>
+          </div>
+        </div>
+      </GlassPanel>
+
       <GlassPanel class="settings-card roadmap-card">
         <div class="card-title">
           <Activity :size="20" class="text-accent" />

@@ -19,6 +19,7 @@ pub struct DownloadManager {
     pub shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     pub cookies: Option<String>,
     pub referer: Option<String>,
+    pub cloud_tx: Option<tokio::sync::mpsc::Sender<Vec<u8>>>,
 }
 
 impl DownloadManager {
@@ -43,6 +44,7 @@ impl DownloadManager {
             shaper: None, // No limit by default
             cookies: None, // Will be set post-init or via options
             referer: None,
+            cloud_tx: None,
         }
     }
 
@@ -64,6 +66,7 @@ impl DownloadManager {
             shaper: limit.map(|bps| Arc::new(crate::engine::shaper::TokenBucket::new(bps))),
             cookies: None, // Metadata is usually transient and not persisted in sidecars
             referer: None,
+            cloud_tx: None,
         }
     }
 
@@ -88,6 +91,7 @@ impl DownloadManager {
             shaper: None,
             cookies: None,
             referer: None,
+            cloud_tx: None,
         }
     }
 
@@ -166,6 +170,7 @@ impl DownloadManager {
 
             let cookies = self.cookies.clone();
             let referer = self.referer.clone();
+            let cloud_tx = self.cloud_tx.clone();
 
             let worker = tokio::spawn(async move {
                 loop {
@@ -227,6 +232,7 @@ impl DownloadManager {
                                     Some(shaper.clone()),
                                     quota_tracker.clone(),
                                     Some(Arc::new(app_state.simulation_engine.clone())),
+                                    cloud_tx.clone(),
                                     cookies.clone(),
                                     referer.clone(),
                                 ).await
@@ -243,6 +249,7 @@ impl DownloadManager {
                                     cancel_token.clone(),
                                     app_state.auth_manager.clone(),
                                     Some(shaper.clone()),
+                                    cloud_tx.clone(),
                                     cookies.clone(),
                                     referer.clone(),
                                 ).await

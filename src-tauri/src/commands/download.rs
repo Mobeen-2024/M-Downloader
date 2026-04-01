@@ -96,7 +96,7 @@ pub async fn start_download_internal(
         };
 
         let cancel_token = CancellationToken::new();
-        let manager = DownloadManager::new_stream(
+        let mut manager = DownloadManager::new_stream(
             id.clone(),
             url.clone(),
             file_path.clone(),
@@ -105,6 +105,20 @@ pub async fn start_download_internal(
             cancel_token.clone(),
             DEFAULT_WORKERS,
         );
+
+        // ── Cloud Stream Proxying: Real-time Sync Activation ──────────────
+        {
+            let config = app_state.cloud_manager.config.lock().await;
+            if config.enabled && !config.api_key.is_empty() {
+                let (uploader, _handle) = crate::engine::cloud::CloudUploader::new(
+                    config.clone(),
+                    app_state.client.clone(),
+                    filename.to_string(),
+                );
+                manager.cloud_tx = Some(uploader.tx);
+                log::info!("[Cloud] Real-time sync bridge established for: {}", filename);
+            }
+        }
 
         if should_queue {
             app_state.queue_manager.add_job(id.clone()).await;
@@ -173,6 +187,20 @@ pub async fn start_download_internal(
     );
     manager.cookies = cookies;
     manager.referer = referer;
+
+    // ── Cloud Stream Proxying: Real-time Sync Activation ──────────────
+    {
+        let config = app_state.cloud_manager.config.lock().await;
+        if config.enabled && !config.api_key.is_empty() {
+            let (uploader, _handle) = crate::engine::cloud::CloudUploader::new(
+                config.clone(),
+                app_state.client.clone(),
+                filename.to_string(),
+            );
+            manager.cloud_tx = Some(uploader.tx);
+            log::info!("[Cloud] Real-time sync bridge established for: {}", filename);
+        }
+    }
 
     // Save integrity tokens
     {
@@ -298,7 +326,7 @@ pub async fn resume_download_internal(
     // ── Resume path: try to recover persisted segment state ───────────────
     let cancel_token = CancellationToken::new();
 
-    let manager = if let Some(saved_state) = persistence::load_state(&file_path).await {
+    let mut manager = if let Some(saved_state) = persistence::load_state(&file_path).await {
         // ── Step 1: Integrity Check ───────────────────────────────────────
         let res = state
             .client
@@ -357,6 +385,21 @@ pub async fn resume_download_internal(
             max_workers,
         )
     };
+
+    // ── Cloud Stream Proxying: Real-time Sync Activation for Resume ──
+    {
+        let config = state.cloud_manager.config.lock().await;
+        if config.enabled && !config.api_key.is_empty() {
+            let filename = url.split('/').last().unwrap_or("download.bin");
+            let (uploader, _handle) = crate::engine::cloud::CloudUploader::new(
+                config.clone(),
+                state.client.clone(),
+                filename.to_string(),
+            );
+            manager.cloud_tx = Some(uploader.tx);
+            log::info!("[Cloud] Real-time sync bridge re-established for resumed job: {}", filename);
+        }
+    }
 
     // Update the existing handle with the fresh cancellation token.
     {

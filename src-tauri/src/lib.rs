@@ -81,6 +81,8 @@ pub fn run() {
             crate::commands::auth::remove_site_credential,
             crate::commands::auth::get_all_site_credentials,
             crate::commands::grabber::start_grabber_crawl,
+            crate::commands::cloud::get_cloud_config,
+            crate::commands::cloud::update_cloud_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
