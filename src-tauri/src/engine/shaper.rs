@@ -93,9 +93,10 @@ mod tests {
     #[test]
     fn test_token_bucket_refill() {
         let bucket = TokenBucket::new(1000); // 1000 bytes per sec
+        let min_cap = 64 * 1024; // the bucket enforces 64KB minimum burst
         
         // Initial state should be full
-        assert!(bucket.consume(1000).is_none());
+        assert!(bucket.consume(min_cap).is_none());
         assert!(bucket.consume(1).is_some()); // Empty now
         
         // Wait for refill (at least 100ms for 100 tokens)
@@ -106,7 +107,8 @@ mod tests {
     #[test]
     fn test_token_bucket_burst() {
         let bucket = TokenBucket::new(100); 
-        // Should allow consuming capacity (100 or 64KB min) immediately
-        assert!(bucket.consume(100).is_none());
+        let min_cap = 64 * 1024;
+        // Should allow consuming capacity immediately
+        assert!(bucket.consume(min_cap).is_none());
     }
 }
