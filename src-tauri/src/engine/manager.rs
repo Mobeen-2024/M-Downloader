@@ -108,11 +108,25 @@ impl DownloadManager {
     /// immediately get work on their first iteration: worker 0 claims the Pending segment,
     /// workers 1-N each call split_and_claim() to steal increasingly smaller tails.
     pub async fn start(&self, window: Option<tauri::WebviewWindow>, app_state: Arc<crate::engine::state::AppState>) {
-        // ── Pre-flight Quota Check ──────────────────────────────────────────
-        // Check if the user has exceeded their rolling 24-hour quota (1GB default).
+        // Check if the user has exceeded their rolling 24-hour quota (50GB default).
         let current_usage_mb = app_state.quota_tracker.get_usage_mb(24).await;
-        if current_usage_mb > 1024.0 { // 1GB quota hardcoded for demo, usually configurable
+        if current_usage_mb > 51200.0 { // 50GB quota for pro tools
             log::warn!("Daily quota exceeded ({} MB). Download paused.", current_usage_mb);
+            
+            if let Some(ref win) = window {
+                let s = self.state.lock().await;
+                let event = DownloadProgressEvent {
+                    id: s.id.clone(),
+                    downloaded: s.total_downloaded(),
+                    total: s.total_size,
+                    speed_bps: 0.0,
+                    status: DownloadStatus::Paused,
+                    segments: s.segments.clone(),
+                    last_error_code: Some(429), // Too many requests/quota
+                    metrics: None,
+                };
+                let _ = win.emit("download-progress", event);
+            }
             return;
         }
 

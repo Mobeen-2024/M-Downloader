@@ -2,12 +2,12 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Mdownloader",
   "version": "0.1.0",
-  "identifier": "com.mdownloader.app",
+  "identifier": "com.mdownloader.mobile",
   "build": {
     "frontendDist": "../ui/dist",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "npm run dev --prefix ui",
-    "beforeBuildCommand": "npm run build --prefix ui"
+    "beforeDevCommand": "npm.cmd run dev --prefix ui",
+    "beforeBuildCommand": "npm.cmd run build --prefix ui"
   },
   "app": {
     "windows": [

@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, onUnmounted, watch } from 'vue';
-import { ExternalLink, Link, AlertTriangle, CheckCircle2, Globe } from 'lucide-vue-next';
+import { 
+  PhArrowSquareOut, 
+  PhLink, 
+  PhWarning, 
+  PhCheckCircle, 
+  PhGlobe 
+} from "@phosphor-icons/vue";
 import { listen } from '@tauri-apps/api/event';
 import { useDownload } from '@/composables/useDownload';
 import BaseDialog from '@/features/shared/components/BaseDialog.vue';
@@ -27,7 +33,6 @@ let unlisten: (() => void) | null = null;
 const setupListener = async () => {
   if (unlisten) unlisten();
   
-  // Subscribe to transparent refresh events from the bridge
   unlisten = await listen('url-refreshed', (event: any) => {
     if (event.payload.id === props.id) {
       isWaiting.value = false;
@@ -59,11 +64,11 @@ onUnmounted(async () => {
 
 const handleSubmit = () => {
   if (!newUrl.value) {
-    error.value = 'Please enter a valid source address';
+    error.value = 'PLEASE ENTER A VALID SOURCE ADDRESS';
     return;
   }
   if (!newUrl.value.startsWith('http')) {
-    error.value = 'Protocol identifier missing (e.g. https://)';
+    error.value = 'PROTOCOL IDENTIFIER MISSING';
     return;
   }
   emit('refresh', newUrl.value);
@@ -78,70 +83,87 @@ const openUrl = (url: string) => {
 <template>
   <BaseDialog 
     :show="show" 
-    title="Synchronize Transmission" 
+    title="Synchronize Transmission Link" 
     size="md" 
     @close="emit('close')"
   >
-    <div class="modal-body">
-      <!-- Status Banner -->
-      <div v-if="!captureSuccess" class="pro-alert warn">
-        <div class="alert-icon-box">
-          <AlertTriangle :size="16" />
+    <div class="flex flex-col gap-8">
+      <!-- Status Banner (Warning) -->
+      <Transition 
+        enter-active-class="transition duration-300 ease-out"
+        enter-from-class="opacity-0 -translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+      >
+        <div v-if="!captureSuccess" class="flex gap-4 p-5 bg-amber-500/5 border border-amber-500/20 rounded-2xl overflow-hidden relative">
+          <div class="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent"></div>
+          <PhWarning :size="20" weight="bold" class="text-amber-500 shrink-0 relative z-10" />
+          <div class="space-y-1 relative z-10">
+            <p class="text-[10px] font-black uppercase text-amber-500 tracking-widest">Link Identity Expired</p>
+            <p class="text-[10px] font-bold text-white/50 tracking-widest leading-relaxed uppercase">
+              Secure token for <code class="bg-black/40 px-1.5 py-0.5 rounded text-white">{{ downloadName }}</code> has been invalidated by host.
+            </p>
+          </div>
         </div>
-        <div class="alert-content">
-          <p class="alert-title">Link Identity Expired</p>
-          <p class="alert-desc">The secure token for <code>{{ downloadName }}</code> has been invalidated by the host.</p>
-        </div>
-      </div>
+      </Transition>
 
-      <div v-if="captureSuccess" class="pro-alert success">
-        <div class="alert-icon-box">
-          <CheckCircle2 :size="16" />
+      <!-- Success Banner -->
+      <Transition 
+        enter-active-class="transition duration-500 cubic-bezier(0.16, 1, 0.3, 1)"
+        enter-from-class="opacity-0 scale-95"
+        enter-to-class="opacity-100 scale-100"
+      >
+        <div v-if="captureSuccess" class="flex gap-4 p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl overflow-hidden relative shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+          <PhCheckCircle :size="20" weight="bold" class="text-emerald-500 shrink-0" />
+          <div class="space-y-1">
+            <p class="text-[10px] font-black uppercase text-emerald-500 tracking-widest">Signal Captured</p>
+            <p class="text-[10px] font-bold text-white/50 tracking-widest leading-relaxed uppercase">New transmission parameters intercepted. Resuming stream...</p>
+          </div>
         </div>
-        <div class="alert-content">
-          <p class="alert-title">Identity Captured</p>
-          <p class="alert-desc">New transmission parameters intercepted. Resuming stream...</p>
-        </div>
-      </div>
+      </Transition>
 
-      <!-- Autonomous Interception Area -->
-      <div v-if="isWaiting" class="interception-zone">
-        <div class="radar-visual">
-          <div class="radar-dot"></div>
-          <div class="radar-pulse"></div>
-          <Link :size="24" class="radar-icon" />
+      <!-- Interception Area -->
+      <section v-if="isWaiting" class="flex flex-col items-center gap-6 p-8 bg-white/[0.02] border border-white/5 rounded-[2rem] shadow-inner">
+        <div class="relative w-16 h-16 flex items-center justify-center">
+          <div class="absolute inset-0 bg-tactical-cyan/20 rounded-full animate-ping"></div>
+          <div class="absolute inset-2 bg-tactical-cyan/40 rounded-full animate-pulse"></div>
+          <div class="w-8 h-8 bg-tactical-cyan rounded-full flex items-center justify-center shadow-[0_0_20px_#00f2ff]">
+            <PhLink :size="18" weight="bold" class="text-black" />
+          </div>
         </div>
-        <div class="interception-text">
-          <h4>Awaiting Extension Handshake</h4>
-          <p>Re-trigger the download link in your browser. Our bridge will capture the fresh address automatically.</p>
+        
+        <div class="text-center space-y-2">
+          <h4 class="text-xs font-black uppercase tracking-[0.2em] text-white">Awaiting Handshake</h4>
+          <p class="text-[10px] font-bold text-white/40 tracking-widest leading-relaxed uppercase max-w-[280px]">
+            Re-trigger the download in your browser. Fresh address will be captured automatically.
+          </p>
         </div>
-      </div>
+      </section>
 
-      <!-- Manual Controls Header -->
-      <div class="manual-header" v-if="!captureSuccess">
-        <div class="h-divider"></div>
-        <span class="h-label">Traditional Fallback</span>
-        <div class="h-divider"></div>
+      <!-- Fallback Header -->
+      <div v-if="!captureSuccess" class="flex items-center gap-4 py-4">
+        <div class="flex-1 h-[1px] bg-white/5"></div>
+        <span class="text-[9px] font-black uppercase text-white/20 tracking-[0.3em]">Manual Fallback</span>
+        <div class="flex-1 h-[1px] bg-white/5"></div>
       </div>
 
       <!-- Source Context -->
-      <div v-if="sourceUrl && !captureSuccess" class="context-group">
-        <label class="field-label">Original Discovery Context</label>
-        <div class="source-card">
-          <Globe :size="14" class="text-accent" />
-          <span class="source-text" :title="sourceUrl">{{ sourceUrl }}</span>
-          <BaseButton variant="glass" size="sm" @click="openUrl(sourceUrl)">
-            <ExternalLink :size="12" />
+      <div v-if="sourceUrl && !captureSuccess" class="space-y-3">
+        <label class="text-[10px] font-black uppercase text-white/40 tracking-widest pl-1">Discovery Origin</label>
+        <div class="flex items-center gap-3 p-4 bg-white/5 border border-white/5 rounded-2xl group hover:bg-white/[0.08] transition-colors">
+          <PhGlobe :size="18" weight="duotone" class="text-tactical-cyan" />
+          <span class="flex-1 text-[11px] font-data font-black text-white/60 truncate tracking-tight">{{ sourceUrl }}</span>
+          <BaseButton variant="ghost" size="icon" @click="openUrl(sourceUrl)" class="!rounded-xl hover:!text-tactical-cyan transition-colors">
+            <PhArrowSquareOut :size="14" weight="bold" />
           </BaseButton>
         </div>
       </div>
 
       <!-- Manual Input -->
-      <div v-if="!captureSuccess && !isWaiting" class="input-section">
-        <label class="field-label">Manual URL Submission</label>
+      <div v-if="!captureSuccess && !isWaiting" class="space-y-4">
         <BaseInput 
           v-model="newUrl" 
-          placeholder="Paste high-speed link destination..." 
+          label="Manual Signal Submission"
+          placeholder="PASTE FRESH LINK DESTINATION..." 
           :error="error"
           @keyup.enter="handleSubmit"
         />
@@ -149,196 +171,15 @@ const openUrl = (url: string) => {
     </div>
 
     <template #footer>
-      <BaseButton variant="glass" @click="emit('close')">Cancel</BaseButton>
+      <BaseButton variant="ghost" @click="emit('close')" class="!px-8">ABORT</BaseButton>
       <BaseButton 
         variant="primary" 
         :disabled="captureSuccess || isWaiting"
         @click="handleSubmit"
+        class="!px-10 !rounded-2xl"
       >
-        Synchronize Stream
+        SYNCHRONIZE_STREAM
       </BaseButton>
     </template>
   </BaseDialog>
 </template>
-
-<style scoped>
-.modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* Alert Banner */
-.pro-alert {
-  display: flex;
-  gap: 16px;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid transparent;
-}
-
-.pro-alert.warn {
-  background: rgba(245, 158, 11, 0.05);
-  border-color: rgba(245, 158, 11, 0.2);
-  color: #f59e0b;
-}
-
-.pro-alert.success {
-  background: rgba(16, 185, 129, 0.05);
-  border-color: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-}
-
-.alert-icon-box {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.alert-title {
-  font-size: 0.9rem;
-  font-weight: 800;
-  margin: 0 0 4px 0;
-}
-
-.alert-desc {
-  font-size: 0.75rem;
-  margin: 0;
-  opacity: 0.8;
-  line-height: 1.4;
-}
-
-code {
-  font-family: var(--font-mono);
-  background: rgba(0, 0, 0, 0.2);
-  padding: 2px 4px;
-  border-radius: 4px;
-}
-
-/* Interception Zone */
-.interception-zone {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed var(--border-color);
-  border-radius: 16px;
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  text-align: center;
-}
-
-.radar-visual {
-  width: 64px;
-  height: 64px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.radar-dot {
-  width: 8px;
-  height: 8px;
-  background: var(--accent-primary);
-  border-radius: 50%;
-  z-index: 2;
-}
-
-.radar-pulse {
-  position: absolute;
-  inset: 0;
-  border: 2px solid var(--accent-primary);
-  border-radius: 50%;
-  animation: radar-pulse 2s infinite ease-out;
-}
-
-.radar-icon {
-  position: absolute;
-  color: var(--accent-primary);
-  opacity: 0.2;
-}
-
-@keyframes radar-pulse {
-  0% { transform: scale(0.5); opacity: 0.8; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
-
-.interception-text h4 {
-  font-size: 1rem;
-  font-weight: 800;
-  margin: 0 0 8px 0;
-  color: var(--text-primary);
-}
-
-.interception-text p {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0;
-}
-
-/* Manual Header */
-.manual-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  opacity: 0.4;
-}
-
-.h-divider {
-  flex: 1;
-  height: 1px;
-  background: var(--border-color);
-}
-
-.h-label {
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-}
-
-/* Context Group */
-.field-label {
-  display: block;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  font-weight: 800;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-  letter-spacing: 0.05em;
-}
-
-.source-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.source-text {
-  flex: 1;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-family: var(--font-mono);
-}
-
-.error-msg {
-  color: var(--color-error);
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin-top: 6px;
-}
-</style>

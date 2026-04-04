@@ -1,263 +1,141 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { useDownloadStore } from '@/stores/download.store';
 import DownloadCard from '@/features/downloads/DownloadCard.vue';
-import { Clock, Play, Square } from 'lucide-vue-next';
+import { 
+  PhClock, 
+  PhPlay, 
+  PhStop, 
+  PhCpu, 
+  PhGhost,
+  PhStack
+} from "@phosphor-icons/vue";
 import { useSettingsStore } from '@/stores/settings.store';
 import BaseButton from '@/features/shared/components/BaseButton.vue';
-import BaseCard from '@/features/shared/components/BaseCard.vue';
+import BaseSkeleton from '@/features/shared/components/BaseSkeleton.vue';
 
 const store = useDownloadStore();
 const settings = useSettingsStore();
+const isInitialLoading = ref(true);
+
+onMounted(() => {
+  setTimeout(() => { isInitialLoading.value = false; }, 500);
+});
 
 const toggleQueue = () => {
-  if (store.queue_active) {
-    store.stop_queue();
-  } else {
-    store.start_queue();
-  }
+  if (store.queue_active) store.stop_queue();
+  else store.start_queue();
 };
 </script>
 
 <template>
-  <div class="queued-view">
-    <div class="view-header">
-      <div class="header-left">
-        <h2 class="view-title">Scheduler & Queue</h2>
-        <p class="view-subtitle">{{ store.queuedDownloads.length }} items pending sequential execution.</p>
+  <div class="h-full flex flex-col p-8 md:p-12 gap-8 overflow-y-auto select-none">
+    <!-- Header -->
+    <header class="flex justify-between items-end shrink-0">
+      <div class="space-y-1">
+        <h2 class="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white">Scheduler & Queue</h2>
+        <p class="text-[10px] font-bold text-white/40 tracking-widest uppercase flex items-center gap-2">
+          <PhCpu :size="12" class="text-tactical-cyan" />
+          {{ store.queuedDownloads.length }} Units pending sequential execution
+        </p>
       </div>
-      <div class="header-right">
-        <div class="status-pill" :class="{ 'is-active': store.queue_active }">
-          <div class="pulse-dot" v-if="store.queue_active"></div>
-          <span>{{ store.queue_active ? 'Processing Active' : 'Scheduler Offline' }}</span>
-        </div>
+
+      <div class="px-3 py-1 bg-white/5 border border-white/5 rounded flex items-center gap-2 backdrop-blur-md">
+        <div v-if="store.queue_active" class="w-1.5 h-1.5 bg-tactical-cyan rounded-full animate-pulse shadow-[0_0_8px_rgba(0,242,255,0.8)]"></div>
+        <span class="text-[9px] font-data font-black text-white/40 uppercase tracking-widest">
+          {{ store.queue_active ? 'Engine_Engaged' : 'Engine_Offline' }}
+        </span>
+      </div>
+    </header>
+
+    <!-- Skeleton -->
+    <div v-if="isInitialLoading" class="space-y-6">
+      <BaseSkeleton height="100px" borderRadius="16px" />
+      <div class="space-y-4">
+        <BaseSkeleton v-for="i in 3" :key="i" height="110px" borderRadius="16px" />
       </div>
     </div>
 
-    <!-- Scheduler Control Card -->
-    <BaseCard variant="glass" padding="md" class="scheduler-card">
-      <div class="card-left">
-        <div class="icon-orb">
-          <Clock :size="20" class="text-accent" />
+    <template v-else>
+      <!-- Scheduler control card -->
+      <section class="bg-white/5 border border-white/10 rounded-2xl p-6 flex justify-between items-center backdrop-blur-xl group hover:border-tactical-cyan/30 transition-all duration-500 overflow-hidden relative">
+        <div class="absolute -top-10 -left-10 w-32 h-32 bg-tactical-cyan/5 rounded-full blur-3xl group-hover:bg-tactical-cyan/10 transition-all"></div>
+        
+        <div class="flex items-center gap-5 z-10">
+          <div class="w-12 h-12 bg-black/40 border border-white/5 rounded-xl flex items-center justify-center text-tactical-cyan shadow-inner">
+            <PhClock :size="24" weight="duotone" />
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase text-white/30 tracking-[0.2em]">System_Matrix</p>
+            <p class="text-sm font-data font-black text-white">
+              Concurrency: <span class="text-tactical-cyan">{{ settings.maxConnections > 2 ? '0.2x' : '0.1x' }}</span> Multiplier_Active
+            </p>
+          </div>
         </div>
-        <div class="info-group">
-          <span class="info-label">Current Configuration</span>
-          <p class="info-val">Parallel Limit: <strong>{{ settings.maxConnections > 2 ? 2 : 1 }}</strong> Concurrent Segments</p>
-        </div>
-      </div>
-      <div class="card-actions">
+
         <BaseButton 
-          :variant="store.queue_active ? 'danger' : 'primary'" 
-          @click="toggleQueue"
+          @click="toggleQueue" 
+          class="!px-8 !py-3 !rounded-xl !font-black !tracking-tighter !transition-all active:scale-95 z-10"
+          :class="store.queue_active ? '!bg-red-500 !text-white' : '!bg-tactical-cyan !text-black'"
         >
           <template #icon-left>
-            <component :is="store.queue_active ? Square : Play" :size="16" />
+            <component :is="store.queue_active ? PhStop : PhPlay" :size="20" weight="bold" />
           </template>
-          {{ store.queue_active ? 'Stop Engine' : 'Start Queue' }}
+          {{ store.queue_active ? 'HALT_OPERATIONS' : 'RESUME_OPERATIONS' }}
         </BaseButton>
-      </div>
-    </BaseCard>
+      </section>
 
-    <div v-if="store.queuedDownloads.length === 0" class="empty-container">
-      <div class="empty-visual">
-        <div class="visual-glow"></div>
-        <Clock :size="48" class="visual-icon" />
+      <!-- Empty state -->
+      <div v-if="store.queuedDownloads.length === 0" 
+           class="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-3xl opacity-10 gap-6 py-20">
+        <PhGhost :size="80" weight="thin" />
+        <div class="text-center space-y-2">
+          <p class="text-lg font-black tracking-[0.4em] uppercase">Registry Empty</p>
+          <p class="text-[10px] font-bold tracking-widest uppercase">Scheduled tasks will appear here for processing</p>
+        </div>
       </div>
-      <div class="empty-text">
-        <h3>Queue Empty</h3>
-        <p>No pending accelerations detected. Scheduled tasks will appear here for automated processing.</p>
-      </div>
-    </div>
 
-    <div v-else class="items-grid">
-      <TransitionGroup name="list-move">
-        <DownloadCard 
-          v-for="download in store.queuedDownloads" 
-          :key="download.id" 
-          :download="download" 
-          is-queued-view 
-        />
-      </TransitionGroup>
-    </div>
+      <!-- Queue list -->
+      <div v-else class="space-y-4 pb-20">
+        <div class="flex items-center gap-3 mb-6 text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">
+          <PhStack :size="14" weight="duotone" />
+          <span>Execution_Chain // Priority_Sort</span>
+        </div>
+
+        <TransitionGroup name="list-move">
+          <DownloadCard
+            v-for="download in store.queuedDownloads"
+            :key="download.id"
+            :download="download"
+            is-queued-view
+            class="vault-item"
+          />
+        </TransitionGroup>
+      </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
-.queued-view {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 32px 40px;
-  overflow: hidden;
+.list-move-enter-active,
+.list-move-leave-active {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-.view-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 32px;
+.list-move-enter-from,
+.list-move-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
 }
+</style>
 
-.view-title {
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  margin-bottom: 4px;
+<style scoped>
+.list-move-enter-active,
+.list-move-leave-active {
+  transition: all 0.5s ease;
 }
-
-.view-subtitle {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}
-
-.status-pill {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-  transition: all 0.3s;
-}
-
-.status-pill.is-active {
-  color: var(--color-downloading);
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.2);
-}
-
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  background: #10b981;
-  border-radius: 50%;
-  box-shadow: 0 0 10px #10b981;
-  animation: pulse-glow 2s infinite;
-}
-
-@keyframes pulse-glow {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.5); opacity: 0.5; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-/* Scheduler Card */
-.scheduler-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 32px;
-}
-
-.card-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.icon-orb {
-  width: 44px;
-  height: 44px;
-  background: rgba(59, 130, 246, 0.1);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.info-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.info-label {
-  font-size: 0.65rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  opacity: 0.6;
-}
-
-.info-val {
-  font-size: 0.95rem;
-  color: var(--text-primary);
-}
-
-.items-grid {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-right: 12px;
-  max-width: 1200px;
-}
-
-/* Empty State */
-.empty-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
-  transform: translateY(-40px);
-}
-
-.empty-visual {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.visual-glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
-  animation: breathe 4s ease-in-out infinite;
-}
-
-.visual-icon {
-  color: var(--text-secondary);
-  opacity: 0.2;
-}
-
-.empty-text {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.empty-text h3 {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.empty-text p {
-  color: var(--text-secondary);
-  max-width: 300px;
-  line-height: 1.6;
-}
-
-@keyframes breathe {
-  0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.2); opacity: 1; }
-}
-
-
-
-/* Custom Scrollbar */
-.items-grid::-webkit-scrollbar {
-  width: 6px;
+.list-move-enter-from,
+.list-move-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
 }
 </style>

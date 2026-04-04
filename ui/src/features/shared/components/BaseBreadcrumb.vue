@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronRight, Home } from 'lucide-vue-next';
+import { PhCaretRight, PhHouseSimple } from "@phosphor-icons/vue";
 
 interface BreadcrumbItem {
   label: string;
@@ -14,27 +14,36 @@ const props = defineProps<Props>();
 const emit = defineEmits(['navigate']);
 
 const handleClick = (item: BreadcrumbItem, index: number) => {
-  // Don't emit for the last item (current directory)
   if (index === props.items.length - 1) return;
   emit('navigate', item);
 };
 </script>
 
 <template>
-  <nav class="base-breadcrumb glass-panel">
-    <ol class="breadcrumb-list">
-      <li class="breadcrumb-item home">
-        <button @click="emit('navigate', { label: 'Root', id: 'root' })" class="breadcrumb-btn home-btn">
-          <Home :size="14" />
+  <nav class="flex items-center select-none">
+    <ol class="flex items-center flex-wrap gap-y-2">
+      <!-- Root / Home link -->
+      <li class="flex items-center">
+        <button 
+          @click="emit('navigate', { label: 'Root', id: 'root' })" 
+          class="flex items-center justify-center p-1.5 rounded-lg bg-white/5 border border-white/5 text-tactical-cyan/40 hover:text-tactical-cyan hover:bg-white/10 transition-all active:scale-95"
+        >
+          <PhHouseSimple :size="14" weight="duotone" />
         </button>
       </li>
       
-      <li v-for="(item, index) in items" :key="item.id" class="breadcrumb-item">
-        <ChevronRight :size="14" class="separator" />
+      <!-- Path items -->
+      <li v-for="(item, index) in items" :key="item.id" class="flex items-center">
+        <PhCaretRight :size="10" weight="bold" class="text-white/10 mx-2" />
+        
         <button 
           @click="handleClick(item, index)" 
-          class="breadcrumb-btn"
-          :class="{ 'is-current': index === items.length - 1 }"
+          class="text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+          :class="[
+            index === items.length - 1 
+              ? 'text-white cursor-default' 
+              : 'text-white/30 hover:text-white cursor-pointer active:scale-95'
+          ]"
           :disabled="index === items.length - 1"
         >
           {{ item.label }}
@@ -43,68 +52,3 @@ const handleClick = (item: BreadcrumbItem, index: number) => {
     </ol>
   </nav>
 </template>
-
-<style scoped>
-.base-breadcrumb {
-  display: inline-flex;
-  padding: 6px 16px;
-  border-radius: var(--radius-md);
-  margin-bottom: 20px;
-}
-
-.breadcrumb-list {
-  display: flex;
-  align-items: center;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  gap: 4px;
-}
-
-.breadcrumb-item {
-  display: flex;
-  align-items: center;
-}
-
-.breadcrumb-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  font-weight: 500;
-  padding: 4px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.breadcrumb-btn:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--accent-primary);
-}
-
-.breadcrumb-btn.is-current {
-  color: var(--text-primary);
-  font-weight: 700;
-  cursor: default;
-}
-
-.home-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-}
-
-.separator {
-  color: var(--text-secondary);
-  opacity: 0.4;
-  margin: 0 2px;
-}
-
-.home {
-  display: flex;
-  align-items: center;
-}
-</style>

@@ -1,68 +1,36 @@
 <script setup lang="ts">
 import type { DownloadStatus } from '@/types/download';
 
-defineProps<{
-  status: DownloadStatus;
+const props = defineProps<{
+  status: DownloadStatus | string;
+  text?: string;
 }>();
+
+const statusMap: Record<string, { color: string, bg: string, border: string }> = {
+  downloading: { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20' },
+  paused: { color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20' },
+  completed: { color: 'text-tactical-cyan', bg: 'bg-tactical-cyan/10', border: 'border-tactical-cyan/20' },
+  error: { color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+  queued: { color: 'text-white/40', bg: 'bg-white/5', border: 'border-white/10' },
+  active: { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20' },
+};
+
+const currentStatus = (props.status || 'queued').toLowerCase();
+const style = statusMap[currentStatus] || statusMap.queued;
 </script>
 
 <template>
-  <div class="status-badge" :class="status.toLowerCase()">
-    <span class="dot"></span>
-    <span class="text">{{ status }}</span>
+  <div 
+    class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest transition-all duration-300"
+    :class="[style.color, style.bg, style.border]"
+  >
+    <span 
+      class="w-1.5 h-1.5 rounded-full" 
+      :class="[
+        style.color.replace('text-', 'bg-'),
+        { 'animate-pulse shadow-[0_0_8px_currentColor]': currentStatus === 'downloading' || currentStatus === 'active' }
+      ]"
+    ></span>
+    <span>{{ text || status }}</span>
   </div>
 </template>
-
-<style scoped>
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-secondary);
-}
-
-.status-badge.downloading {
-  color: var(--color-downloading);
-  background: rgba(16, 185, 129, 0.1);
-}
-.status-badge.downloading .dot {
-  background: var(--color-downloading);
-  box-shadow: 0 0 8px var(--color-downloading);
-  animation: pulse 2s infinite;
-}
-
-.status-badge.paused {
-  color: var(--color-paused);
-  background: rgba(245, 158, 11, 0.1);
-}
-.status-badge.paused .dot { background: var(--color-paused); }
-
-.status-badge.completed {
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
-}
-.status-badge.completed .dot { background: #3b82f6; }
-
-.status-badge.error {
-  color: var(--color-error);
-  background: rgba(239, 68, 68, 0.1);
-}
-.status-badge.error .dot { background: var(--color-error); }
-
-@keyframes pulse {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.2); }
-  100% { opacity: 1; transform: scale(1); }
-}
-</style>

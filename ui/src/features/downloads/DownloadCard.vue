@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { 
-  Pause, 
-  Play, 
-  X, 
-  FileText, 
-  FileArchive, 
-  FileCode, 
-  FileVideo, 
-  FileImage,
-  FolderOpen,
-  RotateCw,
-  ChevronUp,
-  ChevronDown
-} from 'lucide-vue-next';
+  PhPause, 
+  PhPlay, 
+  PhX, 
+  PhFileText, 
+  PhArchive, 
+  PhFileCode, 
+  PhVideoCamera, 
+  PhImage,
+  PhFolderOpen,
+  PhArrowsClockwise,
+  PhCaretUp,
+  PhCaretDown
+} from "@phosphor-icons/vue";
 import { computed } from 'vue';
 import type { DownloadItem } from '@/types/download';
 import { useFormatters } from '@/composables/useFormatters';
@@ -20,15 +20,13 @@ import { useDownload } from '@/composables/useDownload';
 import { useDownloadStore } from '@/stores/download.store';
 import StatusBadge from '@/features/shared/components/StatusBadge.vue';
 import SegmentVisualizer from './SegmentVisualizer.vue';
-import BaseCard from '@/features/shared/components/BaseCard.vue';
-import BaseButton from '@/features/shared/components/BaseButton.vue';
 
 const props = defineProps<{
   download: DownloadItem;
   isQueuedView?: boolean;
 }>();
 
-const emit = defineEmits(['refresh']);
+const emit = defineEmits(['refresh', 'new-download']);
 
 const { formatSize, formatSpeed, formatEta } = useFormatters();
 const { pauseDownload, resumeDownload, cancelDownload } = useDownload();
@@ -36,11 +34,11 @@ const store = useDownloadStore();
 
 const fileIcon = computed(() => {
   const ext = props.download.name.split('.').pop()?.toLowerCase();
-  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext || '')) return FileArchive;
-  if (['mp4', 'mkv', 'avi', 'mov'].includes(ext || '')) return FileVideo;
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext || '')) return FileImage;
-  if (['exe', 'msi', 'dmg'].includes(ext || '')) return FileCode;
-  return FileText;
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext || '')) return PhArchive;
+  if (['mp4', 'mkv', 'avi', 'mov'].includes(ext || '')) return PhVideoCamera;
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext || '')) return PhImage;
+  if (['exe', 'msi', 'dmg'].includes(ext || '')) return PhFileCode;
+  return PhFileText;
 });
 
 const progressPercent = computed(() => {
@@ -50,257 +48,106 @@ const progressPercent = computed(() => {
 </script>
 
 <template>
-  <BaseCard variant="glass" padding="md" hoverable class="download-card">
-    <div class="card-layout">
-      <!-- Icon Section -->
-      <div class="icon-section">
-        <div class="icon-wrapper">
-          <component :is="fileIcon" :size="24" />
+  <div class="group relative glass-panel hover-glow rounded-2xl p-4 md:p-5 flex flex-col md:flex-row gap-4 md:gap-5">
+    <!-- Icon Layer (Hidden on extra small mobile to save space) -->
+    <div class="hidden sm:block shrink-0 pt-1">
+      <div class="p-3 bg-black/40 border border-white/5 rounded-xl text-tactical-cyan/60 group-hover:text-tactical-cyan group-hover:border-tactical-cyan/20 transition-all duration-300">
+        <component :is="fileIcon" :size="24" weight="duotone" />
+      </div>
+    </div>
+
+    <!-- Content Engine -->
+    <div class="flex-1 min-w-0 flex flex-col gap-3">
+      <!-- Header Info -->
+      <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
+        <div class="min-w-0 w-full sm:w-auto space-y-1">
+          <h4 class="text-sm font-black text-white truncate uppercase tracking-tight" :title="download.name">
+            {{ download.name }}
+          </h4>
+          <div class="flex items-center gap-2 md:gap-3 text-[10px] font-bold text-text-dim flex-wrap">
+            <span class="text-tactical-cyan font-data">{{ formatSize(download.total) }}</span>
+            <span class="opacity-10 hidden xs:inline">|</span>
+            <span class="truncate max-w-[150px] md:max-w-[300px] opacity-40 font-data">{{ download.url }}</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto shrink-0 border-t sm:border-t-0 border-white/5 pt-3 sm:pt-0">
+          <StatusBadge :status="download.status" />
+          
+          <!-- Tactical Controls -->
+          <div class="flex items-center gap-1 p-1 bg-black/40 rounded-lg border border-white/5">
+            <template v-if="isQueuedView">
+              <button class="p-1.5 hover:text-tactical-cyan transition-colors" @click="store.move_up(download.id)"><PhCaretUp :size="12" weight="bold" /></button>
+              <button class="p-1.5 hover:text-tactical-cyan transition-colors" @click="store.move_down(download.id)"><PhCaretDown :size="12" weight="bold" /></button>
+            </template>
+
+            <button v-if="download.status === 'RefreshNeeded'" 
+                    class="p-1.5 text-hazard-orange hover:bg-hazard-orange/10 rounded transition-colors"
+                    @click="$emit('refresh', download)">
+              <PhArrowsClockwise :size="14" weight="bold" />
+            </button>
+
+            <button v-if="download.status === 'Downloading'" 
+                    class="p-1.5 hover:text-tactical-cyan transition-colors"
+                    @click="pauseDownload(download.id)">
+              <PhPause :size="14" weight="bold" />
+            </button>
+
+            <button v-else-if="download.status === 'Paused' || download.status === 'Queued'" 
+                    class="p-1.5 hover:text-tactical-cyan transition-colors"
+                    @click="resumeDownload(download.id)">
+              <PhPlay :size="14" weight="bold" />
+            </button>
+
+            <button v-if="download.status === 'Completed'" 
+                    class="p-1.5 hover:text-tactical-cyan transition-colors">
+              <PhFolderOpen :size="14" weight="duotone" />
+            </button>
+
+            <button class="p-1.5 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors" 
+                    @click="cancelDownload(download.id)">
+              <PhX :size="14" weight="bold" />
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Main Content Section -->
-      <div class="content-section">
-        <div class="header-row">
-          <div class="title-area">
-            <h4 class="file-name" :title="download.name">{{ download.name }}</h4>
-            <div class="metadata-row">
-              <span class="size">{{ formatSize(download.total) }}</span>
-              <span class="divider"></span>
-              <span class="url" :title="download.url">{{ download.url }}</span>
-            </div>
-          </div>
-          
-          <div class="actions-area">
-            <StatusBadge :status="download.status" />
-            <div class="button-group">
-              <template v-if="isQueuedView">
-                <BaseButton variant="glass" size="icon" title="Move Up" @click="store.move_up(download.id)">
-                  <ChevronUp :size="16" />
-                </BaseButton>
-                <BaseButton variant="glass" size="icon" title="Move Down" @click="store.move_down(download.id)">
-                  <ChevronDown :size="16" />
-                </BaseButton>
-              </template>
-              
-              <BaseButton 
-                v-if="download.status === 'RefreshNeeded'" 
-                variant="danger" 
-                size="icon"
-                title="Refresh Link"
-                @click="$emit('refresh', download)"
-              >
-                <RotateCw :size="16" />
-              </BaseButton>
-
-              <BaseButton 
-                v-if="download.status === 'Downloading'" 
-                variant="glass" 
-                size="icon"
-                @click="pauseDownload(download.id)"
-              >
-                <Pause :size="16" />
-              </BaseButton>
-
-              <BaseButton 
-                v-else-if="download.status === 'Paused' || download.status === 'Queued'" 
-                variant="glass" 
-                size="icon"
-                @click="resumeDownload(download.id)"
-              >
-                <Play :size="16" />
-              </BaseButton>
-
-              <BaseButton 
-                v-if="download.status === 'Completed'" 
-                variant="glass" 
-                size="icon"
-                class="success-text"
-              >
-                <FolderOpen :size="16" />
-              </BaseButton>
-
-              <BaseButton variant="danger" size="icon" @click="cancelDownload(download.id)">
-                <X :size="16" />
-              </BaseButton>
-            </div>
-          </div>
-        </div>
-
-        <div class="progress-section">
-          <div class="stats-row">
-            <div class="main-stats">
-              <span class="speed">{{ formatSpeed(download.speed_bps) }}</span>
-              <span class="percentage">{{ progressPercent.toFixed(1) }}%</span>
-            </div>
-            <span class="eta" v-if="download.status === 'Downloading'">
-              {{ formatEta(download.downloaded, download.total, download.speed_bps) }}
+      <!-- Telemetry Visualizer -->
+      <div class="space-y-3 pt-1">
+        <div class="flex justify-between items-end gap-2 flex-wrap">
+          <div class="flex items-baseline gap-3">
+            <span class="text-xs font-data font-black text-white leading-none">
+              {{ progressPercent.toFixed(1) }}<span class="text-[9px] opacity-40 ml-0.5">%</span>
+            </span>
+            <span v-if="download.status === 'Downloading'" class="text-[10px] font-data font-bold text-tactical-cyan whitespace-nowrap">
+              {{ formatSpeed(download.speed_bps) }}
             </span>
           </div>
+          <span v-if="download.status === 'Downloading'" class="text-[9px] font-data font-bold text-white/30 uppercase tracking-widest leading-none">
+            T-MINUS: {{ formatEta(download.downloaded, download.total, download.speed_bps) }}
+          </span>
+        </div>
 
+        <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden relative border border-white/5">
+          <div class="absolute inset-y-0 left-0 bg-tactical-cyan/20 shadow-[0_0_10px_rgba(0,242,255,0.2)] transition-all duration-300"
+               :style="{ width: progressPercent + '%' }"></div>
           <SegmentVisualizer 
             :segments="download.segments" 
             :total="download.total" 
-            class="visualizer"
+            class="h-full w-full opacity-40"
           />
+        </div>
 
-          <div class="details-row">
-            <span class="transferred">{{ formatSize(download.downloaded) }} / {{ formatSize(download.total) }}</span>
-            <span class="segments-count" v-if="download.segments?.length">
-              {{ download.segments.length }} segments
+        <div class="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-white/20">
+          <div class="flex gap-4 flex-wrap">
+            <span>Flow: <span class="text-white/40 font-data">{{ formatSize(download.downloaded) }}</span> / {{ formatSize(download.total) }}</span>
+            <span v-if="download.segments?.length" class="text-terminal-green/40 hidden xs:inline">
+              Cycles: {{ download.segments.length }}
             </span>
           </div>
+          <span v-if="download.status === 'Completed'" class="text-terminal-green shrink-0 whitespace-nowrap">Transmission Complete</span>
         </div>
       </div>
     </div>
-  </BaseCard>
+  </div>
 </template>
-
-<style scoped>
-.download-card {
-  margin-bottom: 2px;
-}
-
-.card-layout {
-  display: flex;
-  gap: 20px;
-}
-
-.icon-section {
-  flex-shrink: 0;
-}
-
-.icon-wrapper {
-  width: 52px;
-  height: 52px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent-primary);
-  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.02);
-}
-
-.content-section {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.title-area {
-  flex: 1;
-  min-width: 0;
-}
-
-.file-name {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.metadata-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-.divider {
-  width: 3px;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-}
-
-.url {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: 0.6;
-}
-
-.actions-area {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-}
-
-.button-group {
-  display: flex;
-  gap: 6px;
-}
-
-.progress-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.stats-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.main-stats {
-  display: flex;
-  gap: 12px;
-}
-
-.speed {
-  color: var(--accent-primary);
-  font-family: var(--font-mono);
-}
-
-.percentage {
-  color: var(--text-primary);
-}
-
-.eta {
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.visualizer {
-  height: 14px !important;
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.details-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-  opacity: 0.8;
-}
-
-.success-text {
-  color: var(--color-downloading) !important;
-}
-
-.success-text:hover {
-  background: rgba(16, 185, 129, 0.1) !important;
-}
-</style>

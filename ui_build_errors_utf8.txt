@@ -1,0 +1,23 @@
+﻿
+> ui@0.0.0 build
+> vue-tsc -b && vite build
+
+src/features/shared/components/BaseButton.vue(2,25): error TS6133: 'onMounted' is declared but its value is never read.
+src/features/shared/components/BaseButton.vue(37,22): error TS2345: Argument of type '{ stiffness: number; damping: number; }' is not assignable to parameter of type 'number | ValueAnimationOptions<number> | undefined'.
+  Property 'keyframes' is missing in type '{ stiffness: number; damping: number; }' but required in type 'ValueAnimationOptions<number>'.
+src/features/shared/components/BaseButton.vue(45,22): error TS2345: Argument of type '{ stiffness: number; damping: number; }' is not assignable to parameter of type 'number | ValueAnimationOptions<number> | undefined'.
+  Property 'keyframes' is missing in type '{ stiffness: number; damping: number; }' but required in type 'ValueAnimationOptions<number>'.
+src/features/shared/components/BaseButton.vue(53,22): error TS2345: Argument of type '{ stiffness: number; damping: number; }' is not assignable to parameter of type 'number | ValueAnimationOptions<number> | undefined'.
+  Property 'keyframes' is missing in type '{ stiffness: number; damping: number; }' but required in type 'ValueAnimationOptions<number>'.
+src/features/shared/components/BaseButton.vue(61,22): error TS2345: Argument of type '{ stiffness: number; damping: number; }' is not assignable to parameter of type 'number | ValueAnimationOptions<number> | undefined'.
+  Property 'keyframes' is missing in type '{ stiffness: number; damping: number; }' but required in type 'ValueAnimationOptions<number>'.
+src/features/shared/components/BaseToggle.vue(28,22): error TS2345: Argument of type '{ stiffness: number; damping: number; }' is not assignable to parameter of type 'number | ValueAnimationOptions<number> | undefined'.
+  Property 'keyframes' is missing in type '{ stiffness: number; damping: number; }' but required in type 'ValueAnimationOptions<number>'.
+src/views/CloudDriveView.vue(57,50): error TS2345: Argument of type '{ stiffness: number; damping: number; }' is not assignable to parameter of type 'number | ValueAnimationOptions<number> | undefined'.
+  Property 'keyframes' is missing in type '{ stiffness: number; damping: number; }' but required in type 'ValueAnimationOptions<number>'.
+src/views/CompletedView.vue(19,24): error TS2345: Argument of type '{ stiffness: number; damping: number; }' is not assignable to parameter of type 'number | ValueAnimationOptions<number> | undefined'.
+  Property 'keyframes' is missing in type '{ stiffness: number; damping: number; }' but required in type 'ValueAnimationOptions<number>'.
+src/views/SettingsView.vue(40,22): error TS2345: Argument of type '{ stiffness: number; damping: number; }' is not assignable to parameter of type 'number | ValueAnimationOptions<number> | undefined'.
+  Property 'keyframes' is missing in type '{ stiffness: number; damping: number; }' but required in type 'ValueAnimationOptions<number>'.
+src/views/StatsView.vue(117,24): error TS2345: Argument of type '{ stiffness: number; damping: number; }' is not assignable to parameter of type 'number | ValueAnimationOptions<number> | undefined'.
+  Property 'keyframes' is missing in type '{ stiffness: number; damping: number; }' but required in type 'ValueAnimationOptions<number>'.

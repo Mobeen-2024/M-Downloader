@@ -32,8 +32,12 @@ pub fn check_ffmpeg_availability(app: &AppHandle) -> DependencyStatus {
     // 2. If not found in PATH, check the localized 'bin' resource directory
     if !ffmpeg_found || !ffprobe_found {
         if let Some(bin_dir) = get_bundle_bin_dir(app) {
-            let local_ffmpeg = bin_dir.join("ffmpeg.exe");
-            let local_ffprobe = bin_dir.join("ffprobe.exe");
+            let extension = std::env::consts::EXE_EXTENSION;
+            let ffmpeg_name = if extension.is_empty() { "ffmpeg".to_string() } else { format!("ffmpeg.{}", extension) };
+            let ffprobe_name = if extension.is_empty() { "ffprobe".to_string() } else { format!("ffprobe.{}", extension) };
+
+            let local_ffmpeg = bin_dir.join(ffmpeg_name);
+            let local_ffprobe = bin_dir.join(ffprobe_name);
 
             if local_ffmpeg.exists() && Command::new(&local_ffmpeg).arg("-version").output().is_ok() {
                 ffmpeg_found = true;

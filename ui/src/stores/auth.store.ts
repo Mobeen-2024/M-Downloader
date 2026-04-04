@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 
 export interface SiteCredential {
-  domain: String;
+  domain: string;
   username?: string;
   password?: string;
   cookies?: string;

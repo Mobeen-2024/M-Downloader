@@ -1,17 +1,5 @@
 <template>
-  <div class="glass-panel">
+  <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] overflow-hidden">
     <slot></slot>
   </div>
 </template>
-
-<style scoped>
-.glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md, 12px);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  overflow: hidden;
-}
-</style>

@@ -24,6 +24,7 @@ pub struct MediaTrack {
     pub name: String,
     pub segments: Vec<String>,
     pub mime_type: Option<String>,
+    pub size: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

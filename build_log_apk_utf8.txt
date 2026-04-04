@@ -1,0 +1,285 @@
+﻿
+> build:apk:infinix
+> cross-env RUSTFLAGS="--cfg reqwest_unstable" tauri android build --apk --target aarch64 --debug
+
+node.exe :         Info 
+ANDROID_HOME not set, 
+trying to locate Android 
+SDK...
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (     
+       Info AN... Androi   
+ d SDK...:String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+        Info Using 
+installed Android SDK: C:\U
+sers\-Mobeen-\AppData\Local
+\Android/Sdk
+        Info Using 
+installed NDK: C:\Users\-Mo
+been-\AppData\Local\Android
+/Sdk\ndk\30.0.14904198
+        Info Looking up 
+installed tauri packages 
+to check mismatched 
+versions...
+     Running 
+beforeBuildCommand 
+`npm.cmd run build 
+--prefix ui`
+
+> ui@0.0.0 build
+> vue-tsc -b && vite build
+
+[36mvite v8.0.3 [32mbuilding client environment for production...[36m[39m
+[2K
+transforming...Γ£ô 1960 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                    1.25 kB Γöé gzip:  0.53 kB
+dist/assets/CompletedView-jaVMF75P.css             0.21 kB Γöé gzip:  0.13 kB
+dist/assets/QueuedView-uPnna9Uk.css                0.21 kB Γöé gzip:  0.13 kB
+dist/assets/BaseToggle-DW2HCTQ6.css                0.92 kB Γöé gzip:  0.44 kB
+dist/assets/ViewShell-DF3DeFMT.css                 1.56 kB Γöé gzip:  0.60 kB
+dist/assets/SitesView-fCLeoC_9.css                 1.65 kB Γöé gzip:  0.61 kB
+dist/assets/StatsView-DQ8WVYXO.css                 2.58 kB Γöé gzip:  0.90 kB
+dist/assets/SettingsView-BHUkWRAQ.css              3.21 kB Γöé gzip:  1.03 kB
+dist/assets/CloudDriveView-CGkuy-K-.css            4.37 kB Γöé gzip:  1.33 kB
+dist/assets/GrabberView-m6gIOkVJ.css               5.01 kB Γöé gzip:  1.40 kB
+dist/assets/index-C8crd1Sr.css                    26.82 kB Γöé gzip:  5.65 kB
+dist/assets/stagger-BfPB9lHK.js                    0.29 kB Γöé gzip:  0.23 kB
+dist/assets/ui.store-BfsT86U_.js                   0.45 kB Γöé gzip:  0.31 kB
+dist/assets/BaseToggle-Bnau9_NK.js                 1.02 kB Γöé gzip:  0.59 kB
+dist/assets/PhFolder.vue-C7XMj6Ya.js               2.70 kB Γöé gzip:  1.16 kB
+dist/assets/PhTrash.vue-BjtrhmhV.js                3.07 kB Γöé gzip:  1.14 kB
+dist/assets/download.store-DKrSsV2W.js             3.61 kB Γöé gzip:  1.44 kB
+dist/assets/PhShieldWarning.vue-DmsBIHmn.js        3.76 kB Γöé gzip:  1.57 kB
+dist/assets/PhCpu.vue-yy_LuzXZ.js                  3.95 kB Γöé gzip:  1.40 kB
+dist/assets/CompletedView-Bn4hgrwR.js              4.56 kB Γöé gzip:  2.07 kB
+dist/assets/PhGlobe.vue-CtEaPb4A.js                5.68 kB Γöé gzip:  1.88 kB
+dist/assets/ViewShell.module-BgFePVTA.js           6.31 kB Γöé gzip:  2.95 kB
+dist/assets/QueuedView-DNLZGF0Q.js                 9.43 kB Γöé gzip:  3.29 kB
+dist/assets/SitesView-JXaRN4Uo.js                  9.70 kB Γöé gzip:  3.82 kB
+dist/assets/CloudDriveView-BbZT3FAT.js            13.25 kB Γöé gzip:  4.50 kB
+dist/assets/runtime-dom.esm-bundler-CwUEwuAM.js   14.77 kB Γöé gzip:  6.30 kB
+dist/assets/StatsView-CaDNX8yk.js                 15.34 kB Γöé gzip:  5.44 kB
+dist/assets/SettingsView-BXweIztJ.js              20.66 kB Γöé gzip:  6.73 kB
+dist/assets/GrabberView-BL2jwEkA.js               27.30 kB Γöé gzip:  8.04 kB
+dist/assets/animate-B7q7VkV1.js                  126.53 kB Γöé gzip: 46.71 kB
+dist/assets/index-DuMHEC8T.js                    265.43 kB Γöé gzip: 76.69 kB
+
+[32mΓ£ô built in 666ms[39m
+[1m[92m   Compiling[0m 
+mdownloader v0.2.0 (D:\Work
+Station\IDM\src-tauri)
+[1m[91merror[E0433][0m[
+1m[97m: failed to 
+resolve: could not find 
+`windows` in `net`[0m
+   [1m[96m--> [0msrc\eng
+ine\state.rs:38:74
+    [1m[96m|[0m
+[1m[96m 38[0m 
+[1m[96m|[0m     pub 
+bridge_writer: Arc<Mutex<Op
+tion<tokio::io::WriteHalf<t
+okio::net::windows::named_p
+ipe::NamedPipeServer>>>>,
+    [1m[96m|[0m         
+                           
+                           
+           
+[1m[91m^^^^^^^[0m 
+[1m[91mcould not find 
+`windows` in `net`[0m
+    [1m[96m|[0m
+[1m[92mnote[0m: found 
+an item that was 
+configured out
+   [1m[96m--> [0mC:\User
+s\-Mobeen-\.cargo\registry\
+src\index.crates.io-1949cf8
+c6b5b557f\tokio-1.50.0\src\
+net\mod.rs:63:13
+    [1m[96m|[0m
+[1m[96m 63[0m 
+[1m[96m|[0m     pub mod 
+windows;
+    [1m[96m|[0m         
+    [1m[92m^^^^^^^[0m
+    [1m[96m|[0m
+   [1m[96m::: [0mC:\User
+s\-Mobeen-\.cargo\registry\
+src\index.crates.io-1949cf8
+c6b5b557f\tokio-1.50.0\src\
+macros\cfg.rs:375:26
+    [1m[96m|[0m
+[1m[96m375[0m 
+[1m[96m|[0m             
+#[cfg(all(any(all(doc, 
+docsrs), windows), feature 
+= "net"))]
+    [1m[96m|[0m         
+                 [1m[96m-
+--------------------------
+[0m [1m[96mthe item is 
+gated here[0m
+
+[1m[93mwarning[0m[1m[9
+7m: unused import: 
+`Emitter`[0m
+ [1m[96m--> [0msrc\comma
+nds\system.rs:1:33
+  [1m[96m|[0m
+[1m[96m1[0m 
+[1m[96m|[0m use 
+tauri::{AppHandle, 
+command, Emitter};
+  [1m[96m|[0m           
+                      
+[1m[93m^^^^^^^[0m
+  [1m[96m|[0m
+  [1m[96m= 
+[0m[1m[97mnote[0m: 
+`#[warn(unused_imports)]` 
+(part of 
+`#[warn(unused)]`) on by 
+default
+
+[1m[93mwarning[0m[1m[9
+7m: variable does not need 
+to be mutable[0m
+  [1m[96m--> [0msrc\engi
+ne\grabber.rs:77:13
+   [1m[96m|[0m
+[1m[96m77[0m 
+[1m[96m|[0m         let 
+mut current_urls: Arc<std::
+sync::Mutex<Vec<String>>> 
+= Arc::new(std::sync::Mutex
+::new(Vec::new()));
+   [1m[96m|[0m          
+   [1m[96m----[0m[1m[9
+3m^^^^^^^^^^^^[0m
+   [1m[96m|[0m          
+   [1m[96m|[0m
+   [1m[96m|[0m          
+   [1m[96mhelp: remove 
+this `mut`[0m
+   [1m[96m|[0m
+   [1m[96m= 
+[0m[1m[97mnote[0m: 
+`#[warn(unused_mut)]` 
+(part of 
+`#[warn(unused)]`) on by 
+default
+
+[1m[91merror[E0282][0m[
+1m[97m: type annotations 
+needed[0m
+   [1m[96m--> [0msrc\eng
+ine\grabber.rs:277:13
+    [1m[96m|[0m
+[1m[96m277[0m 
+[1m[96m|[0m         let 
+mut bridge_writer_lock = se
+lf.state.bridge_writer.lock
+().await;
+    [1m[96m|[0m         
+    [1m[91m^^^^^^^^^^^^^^
+^^^^^^^^[0m
+[1m[96m278[0m 
+[1m[96m|[0m         if 
+let Some(writer) = bridge_w
+riter_lock.as_mut() {
+    [1m[96m|[0m         
+                      [1m
+[96m------------------[0m 
+[1m[96mtype must be 
+known at this point[0m
+    [1m[96m|[0m
+[1m[96mhelp[0m: 
+consider giving 
+`bridge_writer_lock` an 
+explicit type
+    [1m[96m|[0m
+[1m[96m277[0m 
+[1m[96m| [0m        let 
+mut 
+bridge_writer_lock[92m: 
+/* Type */[0m = self.state
+.bridge_writer.lock().await
+;
+    [1m[96m|[0m         
+                          
+[92m++++++++++++[0m
+
+[1m[91merror[E0282][0m[
+1m[97m: type annotations 
+needed[0m
+   [1m[96m--> [0msrc\eng
+ine\grabber.rs:284:13
+    [1m[96m|[0m
+[1m[96m284[0m 
+[1m[96m|[0m             
+writer.write_all(payload.as
+_bytes()).await?;
+    [1m[96m|[0m         
+    [1m[91m^^^^^^[0m 
+[1m[91mcannot infer 
+type[0m
+
+[1m[97mSome errors have 
+detailed explanations: 
+E0282, E0433.[0m
+[1m[97mFor more 
+information about an 
+error, try `rustc 
+--explain E0282`.[0m
+[1m[93mwarning[0m: 
+`mdownloader` (lib) 
+generated 2 warnings
+[1m[91merror[0m: could 
+not compile `mdownloader` 
+(lib) due to 3 previous 
+errors; 2 warnings emitted
+failed to build Android 
+app: `Failed to run `cargo 
+build`: command ["cargo", 
+"build", "--package", 
+"mdownloader", 
+"--manifest-path", "D:\\Wor
+kStation\\IDM\\src-tauri\\C
+argo.toml", "--target", 
+"aarch64-linux-android", 
+"--features", 
+"tauri/custom-protocol 
+tauri/custom-protocol", 
+"--lib"] exited with code 
+101
+       Error failed to 
+build Android app: `Failed 
+to run `cargo build`: 
+command ["cargo", "build", 
+"--package", 
+"mdownloader", 
+"--manifest-path", "D:\\Wor
+kStation\\IDM\\src-tauri\\C
+argo.toml", "--target", 
+"aarch64-linux-android", 
+"--features", 
+"tauri/custom-protocol 
+tauri/custom-protocol", 
+"--lib"] exited with code 
+101

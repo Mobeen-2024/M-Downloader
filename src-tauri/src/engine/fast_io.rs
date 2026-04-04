@@ -1,4 +1,5 @@
 use std::fs::File;
+#[cfg(windows)]
 use std::os::windows::io::AsRawHandle;
 use std::path::Path;
 

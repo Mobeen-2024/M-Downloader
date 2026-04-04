@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Download, Info } from 'lucide-vue-next';
+import { PhDownloadSimple, PhInfo } from "@phosphor-icons/vue";
 import { useDownload } from '@/composables/useDownload';
 import BaseDialog from '@/features/shared/components/BaseDialog.vue';
 import BaseButton from '@/features/shared/components/BaseButton.vue';
@@ -28,7 +28,7 @@ const isValidUrl = computed(() => {
 
 const fileName = computed(() => {
   if (!isValidUrl.value) return '';
-  return url.value.split('/').pop() || 'unknown-binary-blob';
+  return url.value.split('/').pop() || 'UNKNOWN_BINARY_BLOB';
 });
 
 const handleStart = async () => {
@@ -41,7 +41,7 @@ const handleStart = async () => {
     await startDownload(url.value);
     emit('close');
   } catch (e: any) {
-    error.value = e.message || 'Transmission initialization failed';
+    error.value = (typeof e === 'string' ? e : e?.message) || 'TRANSMISSION_INITIALIZATION_FAILED';
   } finally {
     isSubmitting.value = false;
   }
@@ -51,128 +51,66 @@ const handleStart = async () => {
 <template>
   <BaseDialog 
     :show="show" 
-    title="Create Transmission" 
+    title="Initialize Tactical Download" 
     size="md" 
     @close="$emit('close')"
   >
-    <div class="modal-body">
-      <div class="input-section">
-        <label class="field-label">Resource URL</label>
+    <div class="flex flex-col gap-8">
+      <!-- Input Section -->
+      <section class="space-y-4">
         <BaseInput 
           v-model="url" 
-          placeholder="Enter high-speed source URL..." 
+          label="Target Resource URL"
+          placeholder="ENTER HIGH-SPEED SOURCE URL..." 
           :error="error"
           autofocus
           @keyup.enter="handleStart"
-        />
-      </div>
+        >
+          <template #icon-left><PhDownloadSimple :size="18" weight="duotone" /></template>
+        </BaseInput>
+      </section>
 
-      <Transition name="fade">
-        <div v-if="isValidUrl" class="metadata-preview">
-          <div class="meta-item">
-            <span class="m-label">Calculated Filename</span>
-            <span class="m-val">{{ fileName }}</span>
+      <!-- Metadata Preview -->
+      <Transition 
+        enter-active-class="transition duration-300 ease-out"
+        enter-from-class="opacity-0 -translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+      >
+        <div v-if="isValidUrl" class="bg-white/5 border border-white/5 rounded-2xl p-6 space-y-4 shadow-inner">
+          <div class="flex justify-between items-center">
+            <span class="text-[10px] font-black uppercase text-white/30 tracking-[0.2em]">Calculated Filename</span>
+            <span class="text-xs font-data font-black text-tactical-cyan truncate max-w-[240px]">{{ fileName }}</span>
           </div>
-          <div class="meta-item">
-            <span class="m-label">Engine Strategy</span>
-            <span class="m-val">Multi-segment adaptive split</span>
+          <div class="h-[1px] bg-white/5 w-full"></div>
+          <div class="flex justify-between items-center">
+            <span class="text-[10px] font-black uppercase text-white/30 tracking-[0.2em]">Engine Strategy</span>
+            <span class="text-[10px] font-black text-white/60 tracking-widest uppercase italic">Multi_Segment_Adaptive_Split</span>
           </div>
         </div>
       </Transition>
 
-      <div class="pro-notice">
-        <Info :size="14" class="text-accent" />
-        <p>This resource will be processed using the <strong>In-Half Division</strong> rule, dynamically splitting the payload into optimized byte-ranges for maximum throughput.</p>
+      <!-- Tactical Notice -->
+      <div class="flex gap-4 p-5 bg-tactical-cyan/5 border border-tactical-cyan/10 rounded-2xl overflow-hidden relative group">
+        <div class="absolute inset-0 bg-tactical-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <PhInfo :size="20" weight="duotone" class="text-tactical-cyan shrink-0" />
+        <p class="text-[10px] font-bold text-white/50 tracking-widest leading-relaxed uppercase">
+          Resource processing uses <strong class="text-white">Segmented Byte-Range Retrieval</strong>, dynamically splitting payloads for maximum throughput efficiency.
+        </p>
       </div>
     </div>
 
     <template #footer>
-      <BaseButton variant="glass" @click="$emit('close')">Cancel</BaseButton>
+      <BaseButton variant="ghost" @click="$emit('close')" class="!px-8">ABORT</BaseButton>
       <BaseButton 
         variant="primary" 
         :disabled="!isValidUrl || isSubmitting"
         :loading="isSubmitting"
         @click="handleStart"
+        class="!px-10 !rounded-2xl"
       >
-        <template #icon-left v-if="!isSubmitting"><Download :size="16" /></template>
-        Initialize Download
+        <template #icon-left v-if="!isSubmitting"><PhDownloadSimple :size="20" weight="bold" /></template>
+        ENGAGE TRANSMISSION
       </BaseButton>
     </template>
   </BaseDialog>
 </template>
-
-<style scoped>
-.modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.field-label {
-  display: block;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  font-weight: 800;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-  letter-spacing: 0.05em;
-}
-
-.error-msg {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--color-error);
-  font-size: 0.75rem;
-  margin-top: 6px;
-  font-weight: 600;
-}
-
-.metadata-preview {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.meta-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.m-label {
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  font-weight: 800;
-  color: var(--text-secondary);
-  opacity: 0.5;
-}
-
-.m-val {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--accent-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pro-notice {
-  display: flex;
-  gap: 12px;
-  background: rgba(59, 130, 246, 0.05);
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 0.75rem;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.pro-notice p { margin: 0; }
-
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-</style>

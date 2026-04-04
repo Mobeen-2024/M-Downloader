@@ -2,9 +2,13 @@
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",
-    "build": "tauri build"
+    "build": "tauri build",
+    "build:apk": "cross-env RUSTFLAGS=\"--cfg reqwest_unstable\" tauri android build --apk --target aarch64",
+    "build:apk:debug": "cross-env RUSTFLAGS=\"--cfg reqwest_unstable\" tauri android build --apk --target aarch64 --debug",
+    "build:apk:infinix": "cross-env RUSTFLAGS=\"--cfg reqwest_unstable\" tauri android build --apk --target aarch64 --debug"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.2.0"
+    "@tauri-apps/cli": "^2.2.0",
+    "cross-env": "^7.0.3"
   }
 }

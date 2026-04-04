@@ -1,0 +1,190 @@
+﻿
+> tauri
+> tauri android build
+
+node.exe :         Info 
+Using installed NDK: C:\Use
+rs\-Mobeen-\AppData\Local\A
+ndroid\Sdk\ndk\30.0.1490419
+8
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (     
+       Info Us...k\30.0.   
+ 14904198:String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+        Info Looking up 
+installed tauri packages 
+to check mismatched 
+versions...
+        Warn The bundle 
+identifier 
+"com.mdownloader.app" set 
+in `"tauri.conf.json" 
+identifier` ends with 
+`.app`. This is not 
+recommended because it 
+conflicts with the 
+application bundle 
+extension on macOS.
+     Running 
+beforeBuildCommand `npm 
+run build --prefix ui`
+
+> ui@0.0.0 build
+> vue-tsc -b && vite build
+
+[36mvite v8.0.3 [32mbuilding client environment for production...[36m[39m
+[2K
+transforming...Γ£ô 2152 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                      1.26 kB Γöé gzip:  0.53 kB
+dist/assets/BaseSkeleton-CHQMjnPt.css                0.65 kB Γöé gzip:  0.34 kB
+dist/assets/BaseToggle-Cdz3LVog.css                  0.98 kB Γöé gzip:  0.45 kB
+dist/assets/CompletedView-euT5VFEO.css               1.54 kB Γöé gzip:  0.60 kB
+dist/assets/QueuedView-BkVNgb0z.css                  2.77 kB Γöé gzip:  0.90 kB
+dist/assets/SitesView-D2znPDx7.css                   3.45 kB Γöé gzip:  1.01 kB
+dist/assets/CloudDriveView-C76vEXld.css              3.94 kB Γöé gzip:  1.19 kB
+dist/assets/GrabberView-DYqbXpD4.css                 4.87 kB Γöé gzip:  1.35 kB
+dist/assets/SettingsView-Cb7jOToL.css                5.75 kB Γöé gzip:  1.44 kB
+dist/assets/StatsView-BFmiX3E-.css                   5.98 kB Γöé gzip:  1.53 kB
+dist/assets/index-bo2w-oSO.css                      33.76 kB Γöé gzip:  6.68 kB
+dist/assets/folder-CsiWvB6-.js                       0.23 kB Γöé gzip:  0.19 kB
+dist/assets/stagger-DaLrx_bg.js                      0.29 kB Γöé gzip:  0.23 kB
+dist/assets/ui.store-BGbnk8UF.js                     0.45 kB Γöé gzip:  0.32 kB
+dist/assets/BaseSkeleton-C0s-PYt9.js                 0.54 kB Γöé gzip:  0.35 kB
+dist/assets/cpu-CB45Aqzb.js                          0.65 kB Γöé gzip:  0.29 kB
+dist/assets/BaseToggle-5oKDl6FU.js                   1.00 kB Γöé gzip:  0.60 kB
+dist/assets/CompletedView-BgQGiZ8V.js                2.24 kB Γöé gzip:  1.17 kB
+dist/assets/QueuedView-DBAT9aWk.js                   2.38 kB Γöé gzip:  1.19 kB
+dist/assets/download.store-BylRVA3K.js               3.36 kB Γöé gzip:  1.36 kB
+dist/assets/SitesView-BxLyti2x.js                    4.53 kB Γöé gzip:  1.86 kB
+dist/assets/CloudDriveView-DZke9sbi.js               5.87 kB Γöé gzip:  2.67 kB
+dist/assets/core-DSiR9wp0.js                         6.97 kB Γöé gzip:  3.21 kB
+dist/assets/GrabberView-CgGAqr7t.js                  7.69 kB Γöé gzip:  3.32 kB
+dist/assets/StatsView-CVl8mT5s.js                    9.15 kB Γöé gzip:  3.58 kB
+dist/assets/SettingsView-DCLgh_Bw.js                10.08 kB Γöé gzip:  3.65 kB
+dist/assets/runtime-dom.esm-bundler-foCxgSmi.js     14.79 kB Γöé gzip:  6.32 kB
+dist/assets/animate-CRF_wRwq.js                     60.81 kB Γöé gzip: 21.34 kB
+dist/assets/_plugin-vue_export-helper-Bo2lGr76.js   65.58 kB Γöé gzip: 25.78 kB
+dist/assets/index-BjqMJcQ6.js                      147.89 kB Γöé gzip: 49.76 kB
+
+[32mΓ£ô built in 777ms[39m
+[1m[92m   Compiling[0m 
+tauri v2.10.3
+[1m[92m   Compiling[0m 
+wry v0.54.4
+[1m[92m   Compiling[0m 
+libsqlite3-sys v0.28.0
+[1m[92m   Compiling[0m 
+reqwest v0.12.28
+[1m[92m   Compiling[0m 
+env_logger v0.11.10
+[1m[92m   Compiling[0m 
+boa_engine v0.20.0
+[1m[92m   Compiling[0m 
+tokio-stream v0.1.18
+[1m[92m   Compiling[0m 
+async-recursion v1.1.1
+[1m[92m   Compiling[0m 
+roxmltree v0.20.0
+[1m[92m   Compiling[0m 
+tauri-plugin-store v2.4.2
+[1m[92m   Compiling[0m 
+tauri-plugin-log v2.8.0
+[1m[91merror[0m[1m[97m
+: The `http3` feature is 
+unstable, and requires the 
+`RUSTFLAGS='--cfg 
+reqwest_unstable'` 
+environment variable to be 
+set.[0m
+   [1m[96m--> [0mC:\User
+s\-Mobeen-\.cargo\registry\
+src\index.crates.io-1949cf8
+c6b5b557f\reqwest-0.12.28\s
+rc\lib.rs:251:1
+    [1m[96m|[0m
+[1m[96m251[0m 
+[1m[96m|[0m 
+[1m[91m/[0m 
+compile_error!(
+[1m[96m252[0m 
+[1m[96m|[0m 
+[1m[91m|[0m     "\
+[1m[96m253[0m 
+[1m[96m|[0m 
+[1m[91m|[0m     The 
+`http3` feature is 
+unstable, and requires the 
+\
+[1m[96m254[0m 
+[1m[96m|[0m 
+[1m[91m|[0m     
+`RUSTFLAGS='--cfg 
+reqwest_unstable'` 
+environment variable to be 
+set.\
+[1m[96m255[0m 
+[1m[96m|[0m 
+[1m[91m|[0m "
+[1m[96m256[0m 
+[1m[96m|[0m 
+[1m[91m|[0m );
+    [1m[96m|[0m 
+[1m[91m|_^[0m
+
+[1m[92m   Compiling[0m 
+mdownloader v0.2.0 (D:\Work
+Station\IDM\src-tauri)
+[1m[92m   Compiling[0m 
+rusqlite v0.31.0
+[1m[92m   Compiling[0m 
+tauri-runtime-wry v2.10.1
+[1m[91merror[0m: could 
+not compile `reqwest` 
+(lib) due to 1 previous 
+error
+[1m[93mwarning[0m: 
+build failed, waiting for 
+other jobs to finish...
+failed to build Android 
+app: `Failed to run `cargo 
+build`: command ["cargo", 
+"build", "--package", 
+"mdownloader", 
+"--manifest-path", "D:\\Wor
+kStation\\IDM\\src-tauri\\C
+argo.toml", "--target", 
+"aarch64-linux-android", 
+"--features", 
+"tauri/custom-protocol 
+tauri/custom-protocol", 
+"--lib", "--release"] 
+exited with code 101
+       Error failed to 
+build Android app: `Failed 
+to run `cargo build`: 
+command ["cargo", "build", 
+"--package", 
+"mdownloader", 
+"--manifest-path", "D:\\Wor
+kStation\\IDM\\src-tauri\\C
+argo.toml", "--target", 
+"aarch64-linux-android", 
+"--features", 
+"tauri/custom-protocol 
+tauri/custom-protocol", 
+"--lib", "--release"] 
+exited with code 101

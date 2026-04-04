@@ -41,6 +41,7 @@ impl MediaStream {
                         name: "Master".to_string(),
                         segments,
                         mime_type: Some("video/MP2T".to_string()),
+                        size: None, // HLS total size is unknown until segmented
                     }],
                     master_url: url.to_string() 
                 })
@@ -193,6 +194,7 @@ impl MediaStream {
                             name: format!("{} - {}bps", if is_video { "Video" } else { "Audio" }, bandwidth),
                             segments,
                             mime_type: Some(mime_type.to_string()),
+                            size: None, // DASH manifests usually only provide bitrate
                         });
                     }
                 }
@@ -210,6 +212,8 @@ impl MediaStream {
     pub async fn extract_resolutions(
         client: &Client,
         url: &str,
+        deobfuscator: Option<&YouTubeDeobfuscator>,
+        base_js_url: Option<&str>
     ) -> Result<Vec<MediaResolution>, String> {
         let res = client.get(url).send().await.map_err(|e| e.to_string())?;
         let text = res.text().await.map_err(|e| e.to_string())?;
@@ -223,8 +227,25 @@ impl MediaStream {
             let mime = adaptation.attribute("mimeType").unwrap_or("");
             if mime.contains("audio") || adaptation.attribute("contentType") == Some("audio") {
                 for rep in adaptation.descendants().filter(|n| n.has_tag_name("Representation")) {
-                    if let Some(base_url) = rep.descendants().find(|n| n.has_tag_name("BaseURL")) {
-                        audio_tracks.push(resolve_url(url, base_url.text().unwrap_or("")));
+                    if let Some(base_url_node) = rep.descendants().find(|n| n.has_tag_name("BaseURL")) {
+                        let mut audio_url = resolve_url(url, base_url_node.text().unwrap_or(""));
+                        
+                        // Deobfuscate audio URL
+                        if let (Some(deob), Some(b_js)) = (deobfuscator, base_js_url) {
+                            if audio_url.contains("youtube.com") || audio_url.contains("googlevideo.com") {
+                                if let Some(n_param) = extract_query_param(&audio_url, "n") {
+                                    if let Ok(sn) = deob.solve_n(&n_param, b_js).await {
+                                        audio_url = replace_query_param(&audio_url, "n", &sn);
+                                    }
+                                }
+                                if let Some(s_param) = extract_query_param(&audio_url, "sig") {
+                                    if let Ok(ss) = deob.solve_signature(&s_param, b_js).await {
+                                        audio_url = replace_query_param(&audio_url, "sig", &ss);
+                                    }
+                                }
+                            }
+                        }
+                        audio_tracks.push(audio_url);
                     }
                 }
             }
@@ -235,16 +256,31 @@ impl MediaStream {
             let mime = adaptation.attribute("mimeType").unwrap_or("");
             if mime.contains("video") || adaptation.attribute("contentType") == Some("video") {
                 for rep in adaptation.descendants().filter(|n| n.has_tag_name("Representation")) {
-                    let _id = rep.attribute("id").unwrap_or("unknown");
                     let bandwidth = rep.attribute("bandwidth").and_then(|b| b.parse::<u64>().ok()).unwrap_or(0);
                     let width = rep.attribute("width").and_then(|w| w.parse::<u32>().ok());
                     let height = rep.attribute("height").and_then(|h| h.parse::<u32>().ok());
                     
-                    let video_url = if let Some(base) = rep.descendants().find(|n| n.has_tag_name("BaseURL")) {
+                    let mut video_url = if let Some(base) = rep.descendants().find(|n| n.has_tag_name("BaseURL")) {
                         resolve_url(url, base.text().unwrap_or(""))
                     } else {
                         url.to_string() // Fallback to master if template based
                     };
+
+                    // Deobfuscate video URL
+                    if let (Some(deob), Some(b_js)) = (deobfuscator, base_js_url) {
+                        if video_url.contains("youtube.com") || video_url.contains("googlevideo.com") {
+                            if let Some(n_param) = extract_query_param(&video_url, "n") {
+                                if let Ok(sn) = deob.solve_n(&n_param, b_js).await {
+                                    video_url = replace_query_param(&video_url, "n", &sn);
+                                }
+                            }
+                            if let Some(s_param) = extract_query_param(&video_url, "sig") {
+                                if let Ok(ss) = deob.solve_signature(&s_param, b_js).await {
+                                    video_url = replace_query_param(&video_url, "sig", &ss);
+                                }
+                            }
+                        }
+                    }
 
                     let label = format!("{}p ({} Mbps)", height.unwrap_or(0), (bandwidth as f64 / 1_000_000.0).round());
                     
@@ -271,19 +307,10 @@ impl MediaStream {
         deobfuscator: Option<&YouTubeDeobfuscator>,
         base_js_url: Option<&str>
     ) -> Result<Self, String> {
-        let start_pattern = "ytInitialPlayerResponse = ";
-        let json_str = if let Some(start_idx) = html.find(start_pattern) {
-            let offset = start_idx + start_pattern.len();
-            if let Some(end_idx) = html[offset..].find(";</script>") {
-                &html[offset..offset+end_idx]
-            } else {
-                return Err("Could not find end of ytInitialPlayerResponse".into());
-            }
-        } else {
-            return Err("ytInitialPlayerResponse not found in HTML".into());
-        };
+        let json_str = extract_json_from_html(html, "ytInitialPlayerResponse")
+            .ok_or_else(|| "ytInitialPlayerResponse not found in HTML".to_string())?;
 
-        let v: serde_json::Value = serde_json::from_str(json_str)
+        let v: serde_json::Value = serde_json::from_str(&json_str)
             .map_err(|e| format!("JSON Parse Error: {}", e))?;
 
         let mut tracks = Vec::new();
@@ -350,10 +377,13 @@ impl MediaStream {
             }
         }
 
+        let size = format.get("contentLength").and_then(|s| s.as_str()).and_then(|s| s.parse::<u64>().ok());
+        
         Some(MediaTrack {
             name,
             segments: vec![url],
             mime_type: Some(mime_type),
+            size,
         })
     }
 
@@ -423,4 +453,38 @@ fn resolve_url(base: &str, relative: &str) -> String {
     let base_parts: Vec<&str> = base.split('?').next().unwrap().split('/').collect();
     let parent = base_parts[..base_parts.len() - 1].join("/");
     format!("{}/{}", parent, relative)
+}
+
+/// Robustly extracts a JSON object from HTML by matching curly brackets after a pattern.
+fn extract_json_from_html(html: &str, pattern: &str) -> Option<String> {
+    let start_idx = html.find(pattern)?;
+    let subst = &html[start_idx..];
+    
+    // Find the first opening bracket
+    let obj_start = subst.find('{')?;
+    let mut count = 0;
+    let mut in_string = false;
+    let mut escape = false;
+
+    for (i, c) in subst[obj_start..].char_indices() {
+        if escape {
+            escape = false;
+            continue;
+        }
+
+        match c {
+            '\\' => escape = true,
+            '"' => in_string = !in_string,
+            '{' if !in_string => count += 1,
+            '}' if !in_string => {
+                count -= 1;
+                if count == 0 {
+                    return Some(subst[obj_start..obj_start + i + 1].to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    None
 }

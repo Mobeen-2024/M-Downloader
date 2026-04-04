@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useDownloadStore } from '@/stores/download.store';
 import { invoke } from '@tauri-apps/api/core';
+import { 
+  PhWaves,
+  PhX
+} from "@phosphor-icons/vue";
+import BaseButton from '@/features/shared/components/BaseButton.vue';
 
 const store = useDownloadStore();
 
@@ -10,7 +15,6 @@ const selectedResolution = ref<any>(null);
 const isAudioOnly = ref(false);
 
 // Auto-sync resolution selection when new media arrives
-import { watch } from 'vue';
 watch(currentMedia, (newVal) => {
   if (newVal && newVal.resolutions) {
     selectedResolution.value = newVal.resolutions[0];
@@ -48,274 +52,91 @@ function dismiss() {
 </script>
 
 <template>
-  <transition name="slide-up">
-    <div v-if="currentMedia || store.isAnalyzingMedia" class="media-hud">
+  <Transition 
+    enter-active-class="transition duration-500 cubic-bezier(0.16, 1, 0.3, 1)"
+    enter-from-class="opacity-0 translate-x-12 scale-95"
+    enter-to-class="opacity-100 translate-x-0 scale-100"
+    leave-active-class="transition duration-300 ease-in"
+    leave-from-class="opacity-100 scale-100"
+    leave-to-class="opacity-0 scale-95"
+  >
+    <div v-if="currentMedia || store.isAnalyzingMedia" class="fixed top-24 right-8 w-80 bg-[#050505]/95 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[100] flex flex-col">
       <!-- Loading State -->
-      <div v-if="store.isAnalyzingMedia" class="loading-state">
-        <div class="loader-circle"></div>
-        <div class="text">
-          <h4>Analyzing Stream...</h4>
-          <p>Solving signatures and extracting qualities.</p>
+      <div v-if="store.isAnalyzingMedia" class="p-8 flex flex-col items-center gap-6 text-center">
+        <div class="relative w-12 h-12 flex items-center justify-center">
+          <div class="absolute inset-0 bg-tactical-cyan/20 rounded-full animate-ping"></div>
+          <div class="w-2 h-2 bg-tactical-cyan rounded-full shadow-[0_0_15px_#00f2ff]"></div>
+        </div>
+        <div class="space-y-2">
+          <h4 class="text-[10px] font-black uppercase text-tactical-cyan tracking-[0.2em]">Intercepting Signal...</h4>
+          <p class="text-[9px] font-bold text-white/30 tracking-widest leading-relaxed uppercase">Solving signatures and extracting stream metadata.</p>
         </div>
       </div>
 
       <!-- Detection State -->
-      <div v-else-if="currentMedia" class="hud-content">
-        <div class="media-info">
-          <div class="icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" class="pulse">
-              <path d="M23 7l-7 5 7 5V7zM1 5h14v14H1z" />
-            </svg>
+      <div v-else-if="currentMedia" class="flex flex-col">
+        <header class="px-6 py-5 bg-white/5 border-b border-white/5 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-tactical-cyan/10 flex items-center justify-center text-tactical-cyan shadow-inner">
+              <PhWaves :size="18" weight="duotone" class="animate-pulse" />
+            </div>
+            <h4 class="text-[10px] font-black uppercase text-white tracking-[0.2em]">Signal Detected</h4>
           </div>
-          <div class="text">
-            <h4>Video Stream Detected</h4>
-            <div class="meta">
-              <span class="mime">{{ currentMedia.mime || 'Unknown Codec' }}</span>
-              <span class="file">{{ currentMedia.filename || 'Adaptive Stream' }}</span>
+          <button @click="dismiss" class="text-white/20 hover:text-white transition-colors">
+            <PhX :size="14" weight="bold" />
+          </button>
+        </header>
+
+        <div class="p-6 space-y-6">
+          <div class="space-y-1">
+            <p class="text-[9px] font-black text-white/30 uppercase tracking-widest">{{ currentMedia.mime || 'Unidentified Codec' }}</p>
+            <p class="text-[11px] font-data font-black text-white truncate uppercase tracking-tight">{{ currentMedia.filename || 'Adaptive Buffer' }}</p>
+          </div>
+
+          <div v-if="currentMedia.resolutions?.length" class="space-y-3">
+            <label class="text-[9px] font-black uppercase text-white/30 tracking-[0.2em]">Output Parameters</label>
+            <div class="flex flex-wrap gap-2">
+              <button 
+                v-for="res in currentMedia.resolutions" 
+                :key="res.label"
+                class="px-3 py-1.5 rounded-lg text-[9px] font-black tracking-widest transition-all border"
+                :class="selectedResolution?.label === res.label 
+                  ? 'bg-tactical-cyan border-tactical-cyan text-black shadow-[0_0_15px_rgba(0,242,255,0.3)]' 
+                  : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:text-white'"
+                @click="selectedResolution = res"
+              >
+                {{ res.label }}
+              </button>
             </div>
           </div>
-        </div>
 
-        <div class="quality-selector" v-if="currentMedia.resolutions?.length">
-          <label>Quality</label>
-          <div class="resolutions">
-            <button 
-              v-for="res in currentMedia.resolutions" 
-              :key="res.label"
-              class="res-btn"
-              :class="{ active: selectedResolution?.label === res.label }"
-              @click="selectedResolution = res"
-            >
-              {{ res.label }}
-            </button>
+          <div class="pt-4 border-t border-white/5">
+            <label class="flex items-center gap-3 cursor-pointer group select-none">
+              <input 
+                type="checkbox" 
+                v-model="isAudioOnly" 
+                :disabled="!selectedResolution?.audio_url"
+                class="appearance-none w-4 h-4 rounded-md bg-white/5 border border-white/10 checked:bg-tactical-cyan checked:border-tactical-cyan transition-all cursor-pointer disabled:opacity-20"
+              />
+              <span class="text-[10px] font-black uppercase tracking-widest text-white/40 group-hover:text-white/60 transition-colors">
+                Extract Audio Buffer Only
+              </span>
+            </label>
           </div>
-        </div>
 
-        <div class="options">
-          <label class="checkbox-container">
-            <input type="checkbox" v-model="isAudioOnly" :disabled="!selectedResolution?.audio_url" />
-            <span class="checkmark"></span>
-            Extract Audio Only
-          </label>
-        </div>
-
-        <div class="hud-actions">
-          <button class="btn-cancel" @click="dismiss">Ignore</button>
-          <button class="btn-download" @click="startMediaDownload" :disabled="!selectedResolution">
-            Download at {{ selectedResolution?.label || 'Original' }}
-          </button>
+          <div class="flex gap-2 pt-2">
+            <BaseButton variant="ghost" class="flex-1 !h-10 text-[10px] font-black tracking-widest" @click="dismiss">IGNORE</BaseButton>
+            <BaseButton 
+              variant="primary" 
+              class="flex-2 !h-10 text-[10px] font-black tracking-widest !rounded-xl"
+              @click="startMediaDownload" 
+              :disabled="!selectedResolution"
+            >
+              EXECUTE CAPTURE
+            </BaseButton>
+          </div>
         </div>
       </div>
     </div>
-  </transition>
+  </Transition>
 </template>
-
-<style scoped>
-.media-hud {
-  position: fixed;
-  top: 60px;
-  right: 20px;
-  z-index: 9999;
-  width: 380px;
-  background: rgba(var(--accent-rgb), 0.15);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-  padding: 16px;
-  min-height: 80px;
-}
-
-.loading-state {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px;
-}
-
-.loader-circle {
-  width: 32px;
-  height: 32px;
-  border: 4px solid rgba(255, 255, 255, 0.1);
-  border-top-color: var(--accent-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.hud-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.media-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--accent-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.text h4 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.text p {
-  margin: 0;
-  font-size: 0.85rem;
-  opacity: 0.7;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 260px;
-}
-
-.hud-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-download {
-  flex: 1;
-  background: var(--accent-primary);
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.btn-download:hover {
-  transform: scale(1.02);
-  filter: brightness(1.1);
-}
-
-.btn-cancel {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 10px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.quality-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.quality-selector label, .options label {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-.resolutions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.res-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.res-btn.active {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
-}
-
-.options {
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.checkbox-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.checkbox-container input { display: none; }
-.checkmark {
-  width: 16px;
-  height: 16px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  position: relative;
-}
-
-.checkbox-container input:checked + .checkmark {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-}
-
-.checkbox-container input:checked + .checkmark::after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 2px;
-  width: 4px;
-  height: 8px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.meta { display: flex; flex-direction: column; gap: 2px; }
-.mime { font-size: 0.6rem; color: var(--accent-primary); font-weight: 700; }
-.file { font-size: 0.85rem; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
-
-.pulse {
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
-}
-
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.slide-up-enter-from,
-.slide-up-leave-to {
-  transform: translateY(-20px);
-  opacity: 0;
-}
-</style>

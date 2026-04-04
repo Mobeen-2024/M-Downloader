@@ -60,8 +60,9 @@ impl DownloadState {
     pub fn new_stream(id: String, url: String, file_path: String, metadata: MediaJobMetadata) -> Self {
         let mut segments = Vec::new();
         
-        // Flatten all tracks into a single segment list for the worker pool
+        let mut total_size = 0;
         for track in &metadata.tracks {
+            total_size += track.size.unwrap_or(0);
             for _ in &track.segments {
                 segments.push(SegmentInfo {
                     start: 0, 
@@ -79,7 +80,7 @@ impl DownloadState {
             job_type: JobType::Stream,
             url,
             file_path,
-            total_size: 0, // Mapped after muxing
+            total_size, 
             segments,
             stream_metadata: Some(metadata),
             is_fallback: false,

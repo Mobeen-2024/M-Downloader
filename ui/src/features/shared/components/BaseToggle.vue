@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { SwitchRoot, SwitchThumb } from 'radix-vue';
-import { animate, spring } from 'motion';
+import { animate } from 'motion';
 import { ref, watch, onMounted } from 'vue';
 
 interface Props {
@@ -18,98 +18,41 @@ const handleUpdate = (val: boolean) => {
   emit('update:modelValue', val);
 };
 
-// Phase 5: Motion One thumb physics
+// Physics-based thumb movement
 watch(() => props.modelValue, (val) => {
   if (!thumbRef.value) return;
   
   (animate as any)(
     thumbRef.value,
     { x: val ? 20 : 0 },
-    { easing: spring({ stiffness: 600, damping: 35 }) } as any
+    { type: 'spring', stiffness: 700, damping: 30 }
   );
 });
 
 onMounted(() => {
   if (thumbRef.value) {
-    // Initial position
     thumbRef.value.style.transform = `translateX(${props.modelValue ? 20 : 0}px)`;
   }
 });
 </script>
 
 <template>
-  <div class="toggle-wrapper">
+  <div class="flex items-center gap-4 cursor-pointer select-none group" @click="handleUpdate(!modelValue)">
     <SwitchRoot
       :checked="modelValue"
       @update:checked="handleUpdate"
       :disabled="disabled"
-      class="switch-root"
+      class="relative w-11 h-6 bg-white/5 border border-white/10 rounded-full transition-all duration-300 outline-none flex items-center px-1 focus:border-tactical-cyan/40"
+      :class="{ 'bg-tactical-cyan/10 border-tactical-cyan/20': modelValue, 'opacity-40 pointer-events-none': disabled }"
     >
       <SwitchThumb
         ref="thumbRef"
-        class="switch-thumb"
+        class="block w-4 h-4 rounded-full transition-shadow duration-300 bg-white/40 shadow-inner"
+        :class="{ 'bg-tactical-cyan shadow-[0_0_12px_#00f2ff] !opacity-100': modelValue }"
       />
     </SwitchRoot>
-    <span v-if="label" class="toggle-label">{{ label }}</span>
+    <span v-if="label" class="text-[10px] font-black uppercase tracking-[0.2em] transition-colors group-hover:text-white" :class="modelValue ? 'text-white' : 'text-white/30'">
+      {{ label }}
+    </span>
   </div>
 </template>
-
-<style scoped>
-.toggle-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.switch-root {
-  width: 44px;
-  height: 24px;
-  background-color: rgba(255, 255, 255, 0.05);
-  border-radius: 100px;
-  position: relative;
-  border: 1px solid var(--border-color);
-  cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
-  padding: 0;
-  outline: none;
-}
-
-.switch-root[data-state="checked"] {
-  background-color: var(--accent-primary);
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
-}
-
-.switch-root:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.switch-root:focus-visible {
-  box-shadow: 0 0 0 2px var(--accent-primary);
-}
-
-.switch-thumb {
-  display: block;
-  width: 18px;
-  height: 18px;
-  background-color: white;
-  border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  will-change: transform;
-}
-
-.toggle-label {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-/* Hover effects */
-.switch-root:not(:disabled):hover {
-  border-color: rgba(255, 255, 255, 0.2);
-}
-</style>

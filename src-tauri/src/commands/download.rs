@@ -94,10 +94,8 @@ pub async fn start_download_internal(
                                 filename = "youtube_video.mp4".to_string();
                                 file_path = format!("downloads/{}", filename);
                             }
-
                         } else {
-                            // Fallback if no DASH manifest is provided (e.g. progressive streams only). Let it drop to error or retry.
-                            return Err("Could not locate a DASH manifest (dashManifestUrl) in the provided YouTube video page. Ensure the video is public and accessible.".to_string());
+                            log::warn!("[Download] DASH manifest URL not found in HTML. Proceeding with page-level format extraction.");
                         }
 
                         // Try to extract dynamic base.js
@@ -201,6 +199,10 @@ pub async fn start_download_internal(
     let res = rb.send()
         .await
         .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        return Err(format!("Server rejected the request (Status Code: {})", res.status()));
+    }
 
     let total_size = res
         .headers()

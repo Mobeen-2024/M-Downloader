@@ -7,8 +7,11 @@ extern crate serde_json;
 extern crate lazy_static;
 
 use tauri::Manager;
+// Removed unused Arc import
 
 use crate::engine::state::AppState;
+
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -22,6 +25,7 @@ pub fn run() {
             let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
             let app_state = AppState::new(app_data_dir, tx);
             let state_arc = std::sync::Arc::new(app_state);
+            state_arc.set_app_handle(app.handle().clone());
             app.manage(state_arc.clone());
 
             // ── detached Orchestration Listener ────────────────────────────────
@@ -39,13 +43,16 @@ pub fn run() {
                 }
             });
 
-            // Start the Sniffer Orchestrator
-            let app_handle_for_sniffer = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                crate::engine::sniffing::orchestrator::start_sniffer_orchestrator(app_handle_for_sniffer).await;
-            });
+            // Start the Sniffer Orchestrator (Windows Only)
+            #[cfg(windows)]
+            {
+                let app_handle_for_sniffer = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    crate::engine::sniffing::orchestrator::start_sniffer_orchestrator(app_handle_for_sniffer).await;
+                });
 
-            crate::engine::bridge::setup_ipc_bridge(app.handle().clone());
+                crate::engine::bridge::setup_ipc_bridge(app.handle().clone());
+            }
 
             // ── detached Queue Heartbeat ──────────────────────────────────────
             // Drives the scheduler by calculating active slots and ticking the manager
@@ -98,8 +105,10 @@ pub fn run() {
             crate::commands::auth::remove_site_credential,
             crate::commands::auth::get_all_site_credentials,
             crate::commands::grabber::start_grabber_crawl,
+            crate::commands::grabber::stop_grabber_crawl,
             crate::commands::cloud::get_cloud_config,
             crate::commands::cloud::update_cloud_config,
+            crate::engine::cloud::sync_metadata,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

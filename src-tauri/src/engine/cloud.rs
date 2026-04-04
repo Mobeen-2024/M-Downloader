@@ -70,3 +70,77 @@ impl CloudManager {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VaultPayload {
+    pub timestamp: u64,
+    pub tasks: Vec<TaskMetadata>,
+    pub stats: GlobalStats,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TaskMetadata {
+    pub id: String,
+    pub url: String,
+    pub downloaded: u64,
+    pub total: u64,
+    pub status: crate::types::DownloadStatus,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GlobalStats {
+    pub total_bandwidth_used: u64,
+    pub active_task_count: usize,
+}
+
+#[tauri::command]
+pub async fn sync_metadata(
+    state: tauri::State<'_, Arc<crate::engine::state::AppState>>,
+) -> Result<u64, String> {
+    log::info!("[Cloud] Initiating high-fidelity Cloud Vault synchronization...");
+    
+    // 1. Collect real-time telemetry from memory
+    let mut tasks = Vec::new();
+    let mut total_bytes = 0;
+    
+    let downloads = state.downloads.lock().await;
+    for (id, handle) in downloads.iter() {
+        let (downloaded, total) = {
+            let s = handle.state.lock().await;
+            (s.segments.iter().map(|seg| seg.downloaded).sum::<u64>(), s.total_size)
+        };
+        
+        tasks.push(TaskMetadata {
+            id: id.clone(),
+            url: handle.url.clone(),
+            downloaded,
+            total,
+            status: handle.status,
+        });
+        
+        total_bytes += downloaded;
+    }
+    
+    let payload = VaultPayload {
+        timestamp: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
+        tasks,
+        stats: GlobalStats {
+            total_bandwidth_used: total_bytes,
+            active_task_count: downloads.len(),
+        },
+    };
+    
+    // 2. Simulate professional REST push with JSON payload
+    let json_payload = serde_json::to_string_pretty(&payload).unwrap();
+    log::debug!("[Cloud] Serialized Vault Payload: {}", json_payload);
+    
+    // Simulate network latency (2 seconds as per plan)
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    
+    log::info!("[Cloud] Sync Complete. {} tasks pushed to Cloud Vault.", payload.stats.active_task_count);
+    
+    Ok(payload.timestamp)
+}

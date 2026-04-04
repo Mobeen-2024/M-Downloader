@@ -10,7 +10,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const history = ref<number[]>(new Array(60).fill(0));
 let animationId: number;
 
-// Update history every second
+// Update history
 watch(() => props.currentSpeed, (newVal) => {
   history.value.push(newVal);
   if (history.value.length > 60) {
@@ -35,7 +35,7 @@ const draw = () => {
 
   ctx.beginPath();
   ctx.lineWidth = 2;
-  ctx.strokeStyle = props.color || '#3b82f6';
+  ctx.strokeStyle = props.color || '#00f2ff';
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
@@ -48,7 +48,7 @@ const draw = () => {
 
   // Create gradient fill
   const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, (props.color || '#3b82f6') + '44');
+  gradient.addColorStop(0, (props.color || '#00f2ff') + '44');
   gradient.addColorStop(1, 'transparent');
 
   ctx.stroke();
@@ -72,19 +72,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="speed-graph">
-    <canvas ref="canvasRef" width="120" height="32"></canvas>
+  <div class="w-[120px] h-8 opacity-80 shrink-0">
+    <canvas ref="canvasRef" width="120" height="32" class="w-full h-full"></canvas>
   </div>
 </template>
-
-<style scoped>
-.speed-graph {
-  width: 120px;
-  height: 32px;
-  opacity: 0.8;
-}
-canvas {
-  width: 100%;
-  height: 100%;
-}
-</style>

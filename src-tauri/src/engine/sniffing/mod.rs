@@ -1,3 +1,4 @@
+#![cfg(windows)]
 pub mod handle;
 pub mod orchestrator;
 

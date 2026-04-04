@@ -13,28 +13,27 @@ export function useDownload() {
       ui.success('Download started successfully');
       return id;
     } catch (e) {
-      ui.error('Failed to start download');
+      ui.error(`Failed to start download: ${typeof e === 'string' ? e : (e as Error).message}`);
       throw e;
     }
   };
 
   const pauseDownload = async (id: string) => {
-    const index = store.downloads.findIndex(d => d.id === id);
-    if (index === -1) return;
+    const download = store.downloads.find(d => d.id === id);
+    if (!download) return;
 
-    const originalStatus = store.downloads[index].status;
-    // Optimistic Update
-    store.downloads[index].status = 'Paused';
+    const originalStatus = download.status;
+    
+    // 1. Optimistic Update
+    download.status = 'Paused';
 
     try {
       await invoke('pause_download', { id });
+      ui.info(`Transmission ${id.slice(0, 8)} suspended`);
     } catch (e) {
-      // Rollback
-      if (store.downloads[index]) {
-        store.downloads[index].status = originalStatus;
-      }
-      ui.error('Failed to pause download');
-      console.error(e);
+      // 2. Rollback (Snap-Back)
+      if (download) download.status = originalStatus;
+      ui.error(`Suspension failed: ${typeof e === 'string' ? e : (e as Error).message}`);
     }
   };
 
@@ -43,35 +42,36 @@ export function useDownload() {
     if (index === -1) return;
 
     const originalDownload = { ...store.downloads[index] };
-    // Optimistic Remove
+    
+    // 1. Optimistic Remove
     store.removeDownload(id);
-    ui.info('Download cancelled');
+    ui.info('Payload purged from buffer');
 
     try {
       await invoke('cancel_download', { id });
     } catch (e) {
-      // Rollback: Re-insert into store
-      store.downloads.push(originalDownload);
-      ui.error('Failed to cancel download');
+      // 2. Rollback (Snap-Back)
+      store.downloads.splice(index, 0, originalDownload);
+      ui.error(`Purge failed: ${typeof e === 'string' ? e : (e as Error).message}`);
     }
   };
 
   const resumeDownload = async (id: string) => {
-    const index = store.downloads.findIndex(d => d.id === id);
-    if (index === -1) return;
+    const download = store.downloads.find(d => d.id === id);
+    if (!download) return;
 
-    const originalStatus = store.downloads[index].status;
-    // Optimistic Update
-    store.downloads[index].status = 'Downloading';
+    const originalStatus = download.status;
+
+    // 1. Optimistic Update
+    download.status = 'Downloading';
 
     try {
       await invoke('resume_download', { id });
+      ui.success(`Resuming acceleration for ${id.slice(0, 8)}`);
     } catch (e) {
-      // Rollback
-      if (store.downloads[index]) {
-        store.downloads[index].status = originalStatus;
-      }
-      ui.error('Failed to resume download');
+      // 2. Rollback (Snap-Back)
+      if (download) download.status = originalStatus;
+      ui.error(`Acceleration failed: ${typeof e === 'string' ? e : (e as Error).message}`);
     }
   };
 

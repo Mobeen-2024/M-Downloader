@@ -1,4 +1,4 @@
-use reqwest::header::{RANGE, USER_AGENT, COOKIE, REFERER, IF_RANGE};
+use reqwest::header::{RANGE, COOKIE, REFERER, IF_RANGE};
 use log;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt, BufWriter};
 use tokio::fs::OpenOptions;
@@ -28,7 +28,7 @@ pub async fn download_segment(
     state: Arc<Mutex<DownloadState>>,
     cancel_token: CancellationToken,
     total_size: u64,
-    auth_manager: Arc<crate::engine::auth::AuthManager>,
+    auth_manager: Arc<crate::engine::auth::SiteAuthManager>,
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     quota_tracker: Arc<crate::engine::quota::UsageTracker>,
     simulation: Option<Arc<crate::engine::test_utils::SimulationEngine>>,
@@ -78,7 +78,7 @@ async fn download_segment_attempt(
     state: Arc<Mutex<DownloadState>>,
     cancel_token: CancellationToken,
     total_size: u64,
-    auth_manager: Arc<crate::engine::auth::AuthManager>,
+    auth_manager: Arc<crate::engine::auth::SiteAuthManager>,
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     quota_tracker: Arc<crate::engine::quota::UsageTracker>,
     simulation: Option<Arc<crate::engine::test_utils::SimulationEngine>>,
@@ -99,8 +99,7 @@ async fn download_segment_attempt(
 
     // Open an HTTP range request for original or remaining range.
     let mut rb = client.get(&url)
-        .header(RANGE, format!("bytes={}-{}", start, initial_end))
-        .header(USER_AGENT, "Mdownloader/2.0");
+        .header(RANGE, format!("bytes={}-{}", start, initial_end));
 
     // ── Session & Integrity Headers ──────────────────────────────────────────
     let (saved_auth, saved_cookies) = auth_manager.get_headers_for_url(&url).await;
@@ -274,13 +273,13 @@ pub async fn download_stream_segment(
     state: Arc<Mutex<DownloadState>>,
     segment_idx: usize,
     cancel_token: CancellationToken,
-    auth_manager: Arc<crate::engine::auth::AuthManager>,
+    auth_manager: Arc<crate::engine::auth::SiteAuthManager>,
     shaper: Option<Arc<crate::engine::shaper::TokenBucket>>,
     cloud_tx: Option<tokio::sync::mpsc::Sender<Vec<u8>>>,
     cookies: Option<String>,
     referer: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let mut rb = client.get(&url).header(USER_AGENT, "Mdownloader/2.0");
+    let mut rb = client.get(&url);
 
     let (saved_auth, saved_cookies) = auth_manager.get_headers_for_url(&url).await;
     if let Some(auth) = saved_auth { rb = rb.header("Authorization", auth); }
@@ -315,6 +314,15 @@ pub async fn download_stream_segment(
         }
 
         file.write_all(&data).await?;
+        let bytes_written = data.len() as u64;
+
+        // Update the segment's downloaded counter in real-time
+        {
+            let mut s = state.lock().await;
+            if let Some(seg) = s.segments.get_mut(segment_idx) {
+                seg.downloaded += bytes_written;
+            }
+        }
     }
 
     file.flush().await?;
@@ -324,7 +332,6 @@ pub async fn download_stream_segment(
         let mut s = state.lock().await;
         if let Some(seg) = s.segments.get_mut(segment_idx) {
             seg.state = crate::types::SegmentState::Completed;
-            seg.downloaded = 1; // Mark as non-zero to show progress
         }
     }
 

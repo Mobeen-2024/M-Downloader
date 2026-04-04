@@ -69,7 +69,7 @@ export const useSettingsStore = defineStore('settings', () => {
     } catch (e) {
       console.error('Failed to sync speed limit with engine:', e);
     }
-  });
+  }, { immediate: true });
 
   // Sync cloud config with engine
   watch([cloudConfig, cloudApiKey], async () => {
@@ -81,7 +81,7 @@ export const useSettingsStore = defineStore('settings', () => {
     } catch (e) {
       console.error('Failed to sync cloud config with engine:', e);
     }
-  }, { deep: true });
+  }, { deep: true, immediate: true });
 
   return {
     maxConnections,

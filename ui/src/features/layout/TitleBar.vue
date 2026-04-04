@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Minus, Square, X, Copy } from 'lucide-vue-next';
+import { 
+  PhMinus, 
+  PhCornersOut, 
+  PhCornersIn, 
+  PhX 
+} from "@phosphor-icons/vue";
 import { useRoute } from 'vue-router';
 
-const isTauri = typeof window !== 'undefined' && window.__TAURI_INTERNALS__;
+const isTauri = typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__;
 const appWindow = isTauri ? getCurrentWindow() : null;
 const isMaximized = ref(false);
 const route = useRoute();
-let unlisten: any;
+let resizePromise: Promise<any> | null = null;
 
 const minimize = () => isTauri && appWindow?.minimize();
 const toggleMaximize = async () => {
@@ -21,108 +26,55 @@ const close = () => isTauri && appWindow?.close();
 onMounted(async () => {
   if (isTauri && appWindow) {
     isMaximized.value = await appWindow.isMaximized();
-    unlisten = await appWindow.onResized(async () => {
+    resizePromise = appWindow.onResized(async () => {
       isMaximized.value = await appWindow.isMaximized();
     });
   }
 });
 
-onUnmounted(() => {
-  if (unlisten) unlisten();
+onUnmounted(async () => {
+  if (resizePromise) {
+    const unlisten = await resizePromise;
+    unlisten();
+  }
 });
 </script>
 
 <template>
-  <div class="titlebar" data-tauri-drag-region>
-    <div class="title-section" data-tauri-drag-region>
-      <div class="app-dot"></div>
-      <span class="app-name" data-tauri-drag-region>Mdownloader</span>
-      <span class="route-name" data-tauri-drag-region>// {{ route.name }}</span>
+  <div class="h-10 bg-black/40 backdrop-blur-md border-b border-white/5 flex justify-between items-center px-6 select-none z-[200] relative" data-tauri-drag-region>
+    <div class="flex items-center gap-3 pointer-events-none">
+      <div class="w-1.5 h-1.5 bg-tactical-cyan rounded-full shadow-[0_0_8px_#00f2ff] animate-pulse"></div>
+      <div class="flex items-baseline gap-2">
+        <span class="text-[10px] font-black uppercase text-white tracking-[0.3em] font-data">M-Downloader</span>
+        <span class="text-[9px] font-black uppercase text-white/10 tracking-[0.2em] italic transition-all group-hover:text-white/20">
+          // {{ route.name || 'CORE_OPS' }}
+        </span>
+      </div>
     </div>
 
-    <div class="window-controls">
-      <button class="control-btn" title="Minimize" @click="minimize">
-        <Minus :size="14" />
+    <!-- Window Controls -->
+    <div class="flex h-full" data-tauri-drag-region="false">
+      <button 
+        class="h-full w-12 flex items-center justify-center text-white/20 hover:bg-white/5 hover:text-white transition-all" 
+        title="Minimize" 
+        @click="minimize"
+      >
+        <PhMinus :size="14" weight="bold" />
       </button>
-      <button class="control-btn" :title="isMaximized ? 'Restore' : 'Maximize'" @click="toggleMaximize">
-        <component :is="isMaximized ? Copy : Square" :size="12" />
+      <button 
+        class="h-full w-12 flex items-center justify-center text-white/20 hover:bg-white/5 hover:text-white transition-all" 
+        :title="isMaximized ? 'Restore' : 'Maximize'" 
+        @click="toggleMaximize"
+      >
+        <component :is="isMaximized ? PhCornersIn : PhCornersOut" :size="14" weight="bold" />
       </button>
-      <button class="control-btn close-btn" title="Close" @click="close">
-        <X :size="16" />
+      <button 
+        class="h-full w-12 flex items-center justify-center text-white/20 hover:bg-red-500 hover:text-white transition-all" 
+        title="Close" 
+        @click="close"
+      >
+        <PhX :size="14" weight="bold" />
       </button>
     </div>
   </div>
 </template>
-
-<style scoped>
-.titlebar {
-  height: 32px;
-  background: rgba(0, 0, 0, 0.3);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  user-select: none;
-  border-bottom: 1px solid var(--border-color);
-  z-index: 9999;
-}
-
-.title-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-left: 16px;
-  height: 100%;
-  flex: 1;
-}
-
-.app-dot {
-  width: 8px;
-  height: 8px;
-  background: var(--accent-primary);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--accent-primary);
-}
-
-.app-name {
-  font-size: 0.7rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-primary);
-}
-
-.route-name {
-  font-size: 0.65rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-}
-
-.window-controls {
-  display: flex;
-  height: 100%;
-}
-
-.control-btn {
-  width: 44px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.control-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-}
-
-.close-btn:hover {
-  background: #e81123 !important;
-  color: white !important;
-}
-</style>

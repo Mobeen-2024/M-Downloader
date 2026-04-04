@@ -35,7 +35,6 @@ const routes = [
   },
   {
     path: "/grabber",
-    name: "Grabber",
     component: () => import("../views/GrabberView.vue"),
   },
   {

@@ -79,9 +79,7 @@ impl TokenBucket {
         let new_cap = (new_rate_bps as i64).min(8 * 1024 * 1024).max(64 * 1024);
         self.refill_rate.store(new_rate_bps as i64, Ordering::Release);
         self.capacity.store(new_cap, Ordering::Release);
-        
-        // Reset tokens to handle the transition smoothly
-        self.tokens.store(new_cap, Ordering::Release);
+        // Removed tokens.store(new_cap) to ensure a smooth transition
     }
 }
 

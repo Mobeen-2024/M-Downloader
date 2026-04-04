@@ -3,19 +3,18 @@ import { invoke } from '@tauri-apps/api/core';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { listen } from '@tauri-apps/api/event';
 import { useDownloadStore } from '@/stores/download.store';
-import { animate, stagger, spring } from 'motion';
 import { 
-  Cpu, 
-  HardDrive, 
-  Activity,
-  AlertCircle,
-  ShieldCheck,
-  History,
-  Terminal,
-  Layers,
-  Network
-} from 'lucide-vue-next';
-import BaseCard from '@/features/shared/components/BaseCard.vue';
+  PhCpu, 
+  PhHardDrive, 
+  PhActivity,
+  PhWarning,
+  PhShieldCheck,
+  PhClockCounterClockwise,
+  PhTerminalWindow,
+  PhStack,
+  PhBroadcast,
+  PhTrendUp
+} from "@phosphor-icons/vue";
 import BaseButton from '@/features/shared/components/BaseButton.vue';
 
 const store = useDownloadStore();
@@ -34,11 +33,12 @@ const metrics = computed(() => {
 });
 
 const speedHistory = ref<number[]>(new Array(60).fill(0));
-watch(() => activeDownload.value?.speed_bps, (newSpeed) => {
-  if (newSpeed !== undefined) {
-    speedHistory.value.push(newSpeed);
-    if (speedHistory.value.length > 60) speedHistory.value.shift();
-  }
+let telemetryInterval: any = null;
+let snifferPromise: Promise<any> | null = null;
+
+// Context switching: Clear buffer when target download changes
+watch(() => activeDownload.value?.id, () => {
+  speedHistory.value = new Array(60).fill(0);
 });
 
 const sparklinePoints = computed(() => {
@@ -60,29 +60,26 @@ const efficiencyIndex = computed(() => {
 
 const latencyStatus = computed(() => {
   const ms = metrics.value.avg_latency_ms;
-  if (ms === 0) return { label: 'Idle', class: 'idle' };
-  if (ms < 50) return { label: 'Ultra-Low', class: 'ultra' };
-  if (ms < 150) return { label: 'Stable', class: 'ok' };
-  if (ms < 300) return { label: 'Moderate Jitter', class: 'warn' };
-  return { label: 'Severe Latency', class: 'error' };
+  if (ms === 0) return { label: 'IDLE', color: 'text-text-dim/40' };
+  if (ms < 50) return { label: 'ULTRA_LOW', color: 'text-tactical-cyan' };
+  if (ms < 150) return { label: 'STABLE', color: 'text-white/60' };
+  return { label: 'JITTER_DETECTED', color: 'text-hazard-orange' };
 });
 
 const getSegmentColor = (seg: any) => {
-  if (seg.state === 'Completed') return 'completed';
+  if (seg.state === 'Completed') return 'rgba(0, 242, 255, 0.1)';
   if (seg.state === 'Active') {
     const lat = seg.last_latency_ms;
-    if (lat === 0) return 'active-idle';
-    if (lat < 100) return 'active-fast';
-    if (lat < 300) return 'active-stable';
-    return 'active-slow';
+    if (lat === 0) return 'var(--color-tactical-cyan)';
+    if (lat < 100) return '#10b981';
+    if (lat < 300) return '#f59e0b';
+    return '#ef4444';
   }
-  if (seg.state === 'Failed') return 'failed';
-  return 'pending';
+  return 'rgba(255,255,255,0.02)';
 };
 
 const snifferLogs = ref<any[]>([]);
 const isSnifferActive = ref(false);
-let unlistenSniffer: any = null;
 
 const applySimulation = async (latency: number, packetLoss: number) => {
   try {
@@ -93,37 +90,30 @@ const applySimulation = async (latency: number, packetLoss: number) => {
 };
 
 const formatTime = (ts: number) => {
-  return new Date(ts * 1000).toLocaleTimeString([], { hour12: false, fractionalSecondDigits: 3 } as any);
+  const date = new Date(ts * 1000);
+  return date.toTimeString().split(' ')[0] + '.' + date.getMilliseconds().toString().padStart(3, '0');
 };
 
 const formatSpeed = (bps: number) => {
-  if (bps === 0) return '0 B/s';
+  if (bps === 0) return '0 B/S';
   const k = 1024;
-  const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+  const sizes = ['B/S', 'KB/S', 'MB/S', 'GB/S'];
   const i = Math.floor(Math.log(bps) / Math.log(k));
   return parseFloat((bps / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const gridRef = ref<HTMLElement | null>(null);
-
 onMounted(async () => {
-  // Phase 5: Dashboard Entry Animation
-  if (gridRef.value) {
-    (animate as any)(
-      ".dashboard-item",
-      { opacity: [0, 1], y: [20, 0] },
-      { 
-        delay: stagger(0.05),
-        easing: spring({ stiffness: 300, damping: 30 })
-      }
-    );
-  }
-
-  unlistenSniffer = await listen('sniffer-hit', (event: any) => {
+  snifferPromise = listen('sniffer-hit', (event: any) => {
     snifferLogs.value.unshift(event.payload);
     if (snifferLogs.value.length > 50) snifferLogs.value.pop();
   });
   
+  telemetryInterval = setInterval(() => {
+    const currentSpeed = activeDownload.value?.speed_bps || 0;
+    speedHistory.value.push(currentSpeed);
+    if (speedHistory.value.length > 60) speedHistory.value.shift();
+  }, 1000);
+
   try {
     isSnifferActive.value = await invoke('get_sniffer_status');
   } catch (e) {
@@ -131,527 +121,188 @@ onMounted(async () => {
   }
 });
 
-onUnmounted(() => {
-  if (unlistenSniffer) unlistenSniffer();
+onUnmounted(async () => {
+  if (snifferPromise) {
+    const unlisten = await snifferPromise;
+    unlisten();
+  }
+  if (telemetryInterval) clearInterval(telemetryInterval);
 });
 </script>
 
 <template>
-  <div class="stats-view">
-    <header class="view-header">
-      <div class="header-left">
-        <h2 class="view-title">System Instrumentation</h2>
-        <p class="view-subtitle">Real-time kernel-level telemetry and engine performance analysis.</p>
+  <div class="h-full flex flex-col p-8 md:p-12 gap-10 overflow-y-auto select-none">
+    <!-- Header -->
+    <header class="flex justify-between items-end shrink-0">
+      <div class="space-y-1">
+        <h2 class="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white">System Instrumentation</h2>
+        <p class="text-[10px] font-bold text-white/40 tracking-widest uppercase flex items-center gap-2">
+          <PhTrendUp :size="12" class="text-tactical-cyan" />
+          Real-time Kernel Telemetry & Engine Performance Analysis
+        </p>
       </div>
-      <div class="header-right" v-if="isSnifferActive">
-        <div class="status-indicator">
-          <div class="pulse-dot"></div>
-          <span>WFP Driver Active</span>
-        </div>
+
+      <div v-if="isSnifferActive" class="px-3 py-1 bg-tactical-cyan/10 border border-tactical-cyan/20 rounded flex items-center gap-2">
+        <div class="w-1.5 h-1.5 bg-tactical-cyan rounded-full animate-pulse shadow-[0_0_8px_rgba(0,242,255,0.8)]"></div>
+        <span class="text-[9px] font-data font-black text-tactical-cyan uppercase tracking-widest">WFP_Driver_Active</span>
       </div>
     </header>
 
-    <div v-if="!activeDownload && !snifferLogs.length" class="empty-state">
-      <BaseCard variant="glass" padding="lg" class="empty-card" ref="emptyCardRef">
-        <Activity :size="48" class="empty-icon" />
-        <h3>Awaiting Data Packets</h3>
-        <p>No active telemetry detected. Start a transmission or browse the web to see live packet interception.</p>
-      </BaseCard>
+    <!-- Empty State -->
+    <div v-if="!activeDownload && !snifferLogs.length" class="flex-1 flex flex-col items-center justify-center opacity-10 gap-6">
+      <PhActivity :size="80" weight="thin" />
+      <div class="text-center space-y-2">
+        <p class="text-lg font-black tracking-[0.4em] uppercase">Awaiting Signal</p>
+        <p class="text-[10px] font-bold tracking-widest uppercase max-w-sm mx-auto">No active telemetry packets detected. Start a transmission or browse the web to initiate data intercept.</p>
+      </div>
     </div>
 
-    <div v-else class="dashboard-grid" ref="gridRef">
+    <!-- Dashboard -->
+    <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20">
       <!-- Throughput Visualizer -->
-      <BaseCard variant="glass" padding="md" class="throughput-card full-width dashboard-item">
-        <div class="card-header">
-          <div class="header-main">
-            <History :size="16" class="text-accent" />
-            <h3>Throughput Stability</h3>
+      <section class="lg:col-span-2 glass-panel hover-glow rounded-2xl p-6 md:p-8 space-y-8 overflow-hidden relative">
+        <div class="flex justify-between items-start z-10 relative">
+          <div class="flex items-center gap-3">
+            <PhClockCounterClockwise :size="20" weight="duotone" class="text-tactical-cyan" />
+            <h3 class="text-xs font-black uppercase tracking-widest text-white">Throughput Stability</h3>
           </div>
-          <div class="current-value">{{ formatSpeed(activeDownload?.speed_bps || 0) }}</div>
+          <div class="text-2xl font-data font-black text-white tracking-widest">{{ formatSpeed(activeDownload?.speed_bps || 0) }}</div>
         </div>
         
-        <div class="graph-container">
-          <svg viewBox="0 0 100 30" preserveAspectRatio="none" class="spark-svg">
+        <div class="h-40 w-full z-10 relative">
+          <svg viewBox="0 0 100 30" preserveAspectRatio="none" class="w-full h-full opacity-60">
             <defs>
-              <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--accent-primary)" stop-opacity="0.3" />
-                <stop offset="100%" stop-color="var(--accent-primary)" stop-opacity="0" />
+              <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--color-tactical-cyan)" stop-opacity="0.3" />
+                <stop offset="100%" stop-color="var(--color-tactical-cyan)" stop-opacity="0" />
               </linearGradient>
             </defs>
-            <path
-              :d="`M ${sparklinePoints} L 100,30 L 0,30 Z`"
-              fill="url(#areaGradient)"
-              class="graph-area"
-            />
-            <polyline
-              fill="none"
-              stroke="var(--accent-primary)"
-              stroke-width="1.5"
-              stroke-linejoin="round"
-              stroke-linecap="round"
-              :points="sparklinePoints"
-              class="graph-line"
-            />
+            <path :d="`M ${sparklinePoints} L 100,30 L 0,30 Z`" fill="url(#areaGrad)" />
+            <polyline fill="none" stroke="var(--color-tactical-cyan)" stroke-width="0.5" :points="sparklinePoints" class="shadow-[0_0_10px_rgba(0,242,255,0.5)]" />
           </svg>
         </div>
-        <div class="graph-footer">
-          <span>60s Window</span>
-          <span>Adaptive Scaling</span>
+
+        <div class="flex justify-between items-center text-[9px] font-black uppercase tracking-[0.3em] text-white/10 z-10 relative">
+          <span>60S_Realtime_Window</span>
+          <span>Adaptive_Scaling (BPS/S)</span>
         </div>
-      </BaseCard>
+      </section>
 
-      <!-- IO & Engine Health -->
-      <div class="stats-subgrid full-width">
-        <BaseCard variant="glass" padding="md" class="stat-mini-card dashboard-item">
-          <div class="mini-header">
-            <HardDrive :size="14" />
-            <span>Disk I/O Efficiency</span>
+      <!-- Metrics Grid -->
+      <section class="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glass-panel hover-glow rounded-2xl p-5 space-y-4">
+          <div class="flex items-center gap-2 text-[10px] font-black text-white/30 uppercase tracking-widest">
+            <PhHardDrive :size="14" weight="duotone" class="text-tactical-cyan/40" />
+            Disk I/O
           </div>
-          <div class="mini-value">{{ (metrics.io_efficiency * 100).toFixed(1) }}%</div>
-          <div class="pro-progress">
-            <div class="pro-fill" :style="{ width: metrics.io_efficiency * 100 + '%' }"></div>
+          <div class="text-lg font-data font-black text-white">{{ (metrics.io_efficiency * 100).toFixed(1) }} <span class="text-[10px] font-bold text-white/20 ml-1">%</span></div>
+          <div class="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full bg-tactical-cyan transition-all duration-500" :style="{ width: metrics.io_efficiency * 100 + '%' }"></div>
           </div>
-        </BaseCard>
+        </div>
 
-        <BaseCard variant="glass" padding="md" class="stat-mini-card dashboard-item">
-          <div class="mini-header">
-            <ShieldCheck :size="14" class="text-success" />
-            <span>Engine Reliability</span>
+        <div class="glass-panel hover-glow rounded-2xl p-5 space-y-4">
+          <div class="flex items-center gap-2 text-[10px] font-black text-white/30 uppercase tracking-widest">
+            <PhShieldCheck :size="14" weight="duotone" class="text-terminal-green/40" />
+            Reliability
           </div>
-          <div class="mini-value">{{ efficiencyIndex }}%</div>
-          <div class="pro-progress">
-            <div class="pro-fill success" :style="{ width: efficiencyIndex + '%' }"></div>
+          <div class="text-lg font-data font-black text-white">{{ efficiencyIndex }} <span class="text-[10px] font-bold text-white/20 ml-1">%</span></div>
+          <div class="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full bg-terminal-green transition-all duration-500" :style="{ width: efficiencyIndex + '%' }"></div>
           </div>
-        </BaseCard>
+        </div>
 
-        <BaseCard variant="glass" padding="md" class="stat-mini-card dashboard-item">
-          <div class="mini-header">
-            <Cpu :size="14" class="text-accent" />
-            <span>Active Workers</span>
+        <div class="glass-panel hover-glow rounded-2xl p-5 space-y-4">
+          <div class="flex items-center gap-2 text-[10px] font-black text-white/30 uppercase tracking-widest">
+            <PhCpu :size="14" weight="duotone" class="text-tactical-cyan/40" />
+            CPU_Nodes
           </div>
-          <div class="mini-value">{{ metrics.active_workers }}</div>
-          <div class="worker-badges">
-            <div 
-              v-for="i in metrics.active_workers" 
-              :key="i" 
-              class="worker-pip active"
-            ></div>
+          <div class="text-lg font-data font-black text-white">{{ metrics.active_workers }} <span class="text-[10px] font-bold text-white/20 ml-1 uppercase">Units</span></div>
+          <div class="flex gap-1">
+            <div v-for="i in 12" :key="i" class="flex-1 h-1 rounded-[1px] transition-colors"
+                 :class="i <= metrics.active_workers ? 'bg-tactical-cyan' : 'bg-white/5'"></div>
           </div>
-        </BaseCard>
+        </div>
 
-        <BaseCard variant="glass" padding="md" class="stat-mini-card dashboard-item">
-          <div class="mini-header">
-            <Network :size="14" />
-            <span>Latency (TTFB)</span>
+        <div class="glass-panel hover-glow rounded-2xl p-5 space-y-4">
+          <div class="flex items-center gap-2 text-[10px] font-black text-white/30 uppercase tracking-widest">
+            <PhBroadcast :size="14" weight="duotone" class="text-tactical-cyan/40" />
+            Latency
           </div>
-          <div class="mini-value">{{ metrics.avg_latency_ms }}<span class="ms">ms</span></div>
-          <div class="latency-indicator" :class="latencyStatus.class">{{ latencyStatus.label }}</div>
-        </BaseCard>
-      </div>
+          <div class="text-lg font-data font-black text-white">{{ metrics.avg_latency_ms }} <span class="text-[10px] font-bold text-white/20 ml-1">MS</span></div>
+          <div class="text-[9px] font-black uppercase tracking-widest leading-none" :class="latencyStatus.color">
+            {{ latencyStatus.label }}
+          </div>
+        </div>
+      </section>
 
       <!-- Latency Heatmap -->
-      <BaseCard variant="glass" padding="md" class="heatmap-card dashboard-item" v-if="activeDownload">
-        <div class="card-header">
-          <div class="header-main">
-            <Layers :size="16" />
-            <h3>Segment Heatmap</h3>
+      <section v-if="activeDownload" class="glass-panel hover-glow rounded-2xl p-6 space-y-6">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-3">
+            <PhStack :size="20" weight="duotone" class="text-tactical-cyan" />
+            <h3 class="text-xs font-black uppercase tracking-widest text-white">Segment Cycles</h3>
           </div>
+          <span class="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 px-2 py-0.5 border border-white/5 rounded">Core_S_Grid</span>
         </div>
-        <div class="heatmap-grid" ref="heatmapRef">
+        <div class="grid grid-cols-8 md:grid-cols-12 gap-2">
           <div 
             v-for="(seg, idx) in activeDownload.segments" 
             :key="idx" 
-            class="heat-pixel"
-            :class="getSegmentColor(seg)"
-            :title="`Segment ${idx}: ${seg.last_latency_ms}ms`"
-            :style="{ '--delay': idx * 0.01 + 's' }"
+            class="aspect-square rounded-[2px] transition-colors duration-300"
+            :style="{ backgroundColor: getSegmentColor(seg) }"
           ></div>
         </div>
-        <div class="heatmap-legend">
-          <div class="legend-pip fast"></div> <span>Fast</span>
-          <div class="legend-pip ok"></div> <span>Stable</span>
-          <div class="legend-pip slow"></div> <span>Slow</span>
-          <div class="legend-pip done"></div> <span>Done</span>
-        </div>
-      </BaseCard>
+      </section>
 
       <!-- Sniffer Logs -->
-      <BaseCard variant="glass" padding="md" class="sniffer-card dashboard-item" :class="{ 'full-width': !activeDownload }">
-        <div class="card-header">
-          <div class="header-main">
-            <Terminal :size="16" />
-            <h3>Live Packet Sniffer</h3>
+      <section class="glass-panel hover-glow rounded-2xl p-6 space-y-6 flex flex-col"
+               :class="{ 'lg:col-span-2': !activeDownload }">
+        <div class="flex justify-between items-center shrink-0">
+          <div class="flex items-center gap-3">
+            <PhTerminalWindow :size="20" weight="duotone" class="text-tactical-cyan" />
+            <h3 class="text-xs font-black uppercase tracking-widest text-white">Log Matrix (Interception)</h3>
           </div>
-          <div class="sniffer-badge">KERNEL-MODE</div>
+          <span class="text-[9px] font-black uppercase tracking-[0.2em] text-hazard-orange/60 px-2 py-0.5 border border-hazard-orange/20 rounded">System_Ring_0</span>
         </div>
-        <div class="terminal-shell">
-          <div v-if="!snifferLogs.length" class="terminal-waiting">
-            Initializing WFP buffer... awaiting outbound link request.
+        
+        <div class="flex-1 min-h-[200px] bg-black/40 border border-white/5 rounded-xl p-4 font-data text-[10px] overflow-y-auto space-y-2 scrollbar-tactical">
+          <div v-if="!snifferLogs.length" class="h-full flex items-center justify-center italic text-white/5 uppercase tracking-widest">
+            Initializing WFP Signal Buffer...
           </div>
-          <div v-for="(log, i) in snifferLogs" :key="i" class="terminal-line">
-            <span class="line-time">{{ formatTime(log.timestamp) }}</span>
-            <span class="line-proc">{{ log.process_name }}</span>
-            <span class="line-url">{{ log.url }}</span>
+          <div v-for="(log, i) in snifferLogs" :key="i" class="grid grid-cols-[80px_100px_1fr] gap-4 py-1 border-b border-white/[0.02] last:border-0 group">
+            <span class="text-white/20 tracking-tighter">{{ formatTime(log.timestamp) }}</span>
+            <span class="text-tactical-cyan/60 font-black truncate">{{ log.process_name.toUpperCase() }}</span>
+            <span class="text-white/40 truncate group-hover:text-white/80 transition-colors">{{ log.url }}</span>
           </div>
         </div>
-      </BaseCard>
+      </section>
 
-      <!-- Simulation Controls -->
-      <BaseCard variant="glass" padding="md" class="simulation-card full-width dashboard-item">
-        <div class="card-header">
-          <div class="header-main">
-            <AlertCircle :size="16" class="text-warn" />
-            <h3>Adversarial Simulation</h3>
-          </div>
+      <!-- Simulation Engine -->
+      <section class="lg:col-span-2 glass-panel hover-glow rounded-2xl p-6 space-y-6 border-red-500/20">
+        <div class="flex items-center gap-3">
+          <PhWarning :size="20" weight="duotone" class="text-hazard-orange" />
+          <h3 class="text-xs font-black uppercase tracking-widest text-white">Adversarial Environment Simulation</h3>
         </div>
-        <div class="simulation-actions">
-          <BaseButton variant="glass" size="sm" @click="applySimulation(500, 0)">Simulate Latency (500ms)</BaseButton>
-          <BaseButton variant="glass" size="sm" @click="applySimulation(0, 0.1)">Simulate Loss (10%)</BaseButton>
-          <BaseButton variant="glass" size="sm" @click="applySimulation(250, 0.05)">High Jitter (Mixed)</BaseButton>
-          <div class="spacer"></div>
-          <BaseButton variant="danger" size="sm" @click="applySimulation(0, 0)">Reset Environment</BaseButton>
+        <div class="flex flex-wrap gap-4">
+          <BaseButton @click="applySimulation(500, 0)" class="!bg-white/5 !text-white/60 !text-[11px] !font-black !px-4 hover:!bg-white/10">LATENCY (500MS)</BaseButton>
+          <BaseButton @click="applySimulation(0, 0.1)" class="!bg-white/5 !text-white/60 !text-[11px] !font-black !px-4 hover:!bg-white/10">PACKET LOSS (10%)</BaseButton>
+          <BaseButton @click="applySimulation(250, 0.05)" class="!bg-white/5 !text-white/60 !text-[11px] !font-black !px-4 hover:!bg-white/10">SYNCED JITTER</BaseButton>
+          <div class="hidden md:block flex-1"></div>
+          <BaseButton @click="applySimulation(0, 0)" class="!bg-red-500/20 !text-red-500 !text-[11px] !font-black !px-6 border !border-red-500/30 hover:!bg-red-500 hover:!text-black transition-all">PURGE SIMULATION</BaseButton>
         </div>
-      </BaseCard>
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped>
-.stats-view {
-  height: 100%;
-  padding: 32px 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  overflow-y: auto;
-}
+.scrollbar-tactical::-webkit-scrollbar { width: 4px; }
+.scrollbar-tactical::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-tactical::-webkit-scrollbar-thumb { background: rgba(0, 242, 255, 0.1); border-radius: 10px; }
+.scrollbar-tactical::-webkit-scrollbar-thumb:hover { background: rgba(0, 242, 255, 0.3); }
+</style>
 
-.view-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.view-title {
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.view-subtitle {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(16, 185, 129, 0.1);
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.2);
-}
-
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  background: #10b981;
-  border-radius: 50%;
-  box-shadow: 0 0 10px #10b981;
-  animation: pulse-glow 2s infinite;
-}
-
-@keyframes pulse-glow {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.5); opacity: 0.5; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-/* Dashboard Grid */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-}
-
-.full-width {
-  grid-column: span 2;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.header-main {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.header-main h3 {
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
-}
-
-.current-value {
-  font-family: var(--font-mono);
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--accent-primary);
-}
-
-/* Sparkline */
-.graph-container {
-  height: 100px;
-  width: 100%;
-  margin-bottom: 12px;
-}
-
-.spark-svg {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.graph-line {
-  filter: drop-shadow(0 0 4px var(--accent-primary));
-  stroke-dasharray: 200;
-  stroke-dashoffset: 200;
-  animation: draw-line 2s ease-out forwards, pulse-glow 3s infinite;
-}
-
-@keyframes draw-line {
-  to { stroke-dashoffset: 0; }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { filter: drop-shadow(0 0 4px var(--accent-primary)); opacity: 1; }
-  50% { filter: drop-shadow(0 0 12px var(--accent-primary)); opacity: 0.8; }
-}
-
-.graph-footer {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.65rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  opacity: 0.5;
-}
-
-/* Subgrid Metrics */
-.stats-subgrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.stat-mini-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.mini-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.65rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  opacity: 0.7;
-}
-
-.mini-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.ms { font-size: 0.7rem; color: var(--text-secondary); margin-left: 2px; }
-
-.pro-progress {
-  height: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 2px;
-  margin-top: 4px;
-}
-
-.pro-fill {
-  height: 100%;
-  background: var(--accent-primary);
-  border-radius: 2px;
-}
-
-.pro-fill.success { background: #10b981; }
-
-.worker-badges {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.worker-pip {
-  width: 10px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 1px;
-}
-
-.worker-pip.active {
-  background: var(--accent-primary);
-  box-shadow: 0 0 5px var(--accent-primary);
-}
-
-.latency-indicator {
-  font-size: 0.7rem;
-  font-weight: 800;
-  margin-top: 4px;
-}
-
-.latency-indicator.ultra { color: #10b981; }
-.latency-indicator.ok { color: #22c55e; }
-.latency-indicator.warn { color: #f59e0b; }
-.latency-indicator.error { color: #ef4444; }
-
-/* Heatmap */
-.heatmap-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14px, 1fr));
-  gap: 4px;
-  max-height: 120px;
-  overflow-y: auto;
-  margin-bottom: 20px;
-}
-
-.heat-pixel {
-  aspect-ratio: 1;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.05);
-  transition: all 0.2s;
-}
-
-.heat-pixel.active-fast { background: #10b981; }
-.heat-pixel.active-stable { background: #f59e0b; }
-.heat-pixel.active-slow { background: #ef4444; }
-.heat-pixel.active-idle { background: var(--accent-primary); }
-.heat-pixel.completed { background: rgba(255, 255, 255, 0.2); }
-
-.heat-pixel {
-  animation: pixel-entry 0.5s ease-out both;
-  animation-delay: var(--delay, 0s);
-}
-
-@keyframes pixel-entry {
-  from { opacity: 0; transform: scale(0); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.heatmap-legend {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-.legend-pip { width: 8px; height: 8px; border-radius: 1px; }
-.legend-pip.fast { background: #10b981; }
-.legend-pip.ok { background: #f59e0b; }
-.legend-pip.slow { background: #ef4444; }
-.legend-pip.done { background: rgba(255, 255, 255, 0.2); }
-
-/* Sniffer */
-.sniffer-card {
-  display: flex;
-  flex-direction: column;
-}
-
-.sniffer-badge {
-  font-size: 0.6rem;
-  font-weight: 900;
-  background: var(--text-primary);
-  color: var(--bg-primary);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.terminal-shell {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  height: 200px;
-  overflow-y: auto;
-  padding: 16px;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.terminal-waiting {
-  opacity: 0.3;
-  text-align: center;
-  margin-top: 60px;
-  font-style: italic;
-}
-
-.terminal-line {
-  display: flex;
-  gap: 16px;
-  white-space: nowrap;
-}
-
-.line-time { color: var(--text-secondary); opacity: 0.6; }
-.line-proc { color: var(--accent-primary); font-weight: 700; }
-.line-url { color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; }
-
-/* Simulation */
-.simulation-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.spacer { flex: 1; }
-
-/* Empty State */
-.empty-state {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.empty-card {
-  max-width: 500px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.empty-icon { color: var(--text-secondary); opacity: 0.2; }
-
-/* Custom Scrollbar */
-.terminal-shell::-webkit-scrollbar,
-.stats-view::-webkit-scrollbar {
-  width: 6px;
-}
+<style scoped>
+/* Motion animations handled via onMounted if needed, or simple CSS transitions */
 </style>

@@ -5,9 +5,8 @@ import {
   DialogOverlay,
   DialogPortal,
   DialogRoot,
-  DialogTitle,
 } from 'radix-vue';
-import { X } from 'lucide-vue-next';
+import { PhX } from "@phosphor-icons/vue";
 import BaseButton from './BaseButton.vue';
 
 interface Props {
@@ -27,36 +26,64 @@ const emit = defineEmits(['close']);
 const updateShow = (val: boolean) => {
   if (!val) emit('close');
 };
+
+const sizeClasses = {
+  sm: 'max-w-[400px]',
+  md: 'max-w-[560px]',
+  lg: 'max-w-[800px]',
+  xl: 'max-w-[1100px]'
+};
 </script>
 
 <template>
   <DialogRoot :open="show" @update:open="updateShow">
     <DialogPortal>
-      <Transition name="fade">
-        <DialogOverlay class="dialog-overlay" />
+      <Transition 
+        enter-active-class="transition duration-300 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-200 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <DialogOverlay class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100]" />
       </Transition>
       
-      <Transition name="scale">
-        <DialogContent class="dialog-content" :class="[`size-${size}`]">
-          <header class="dialog-header">
-            <DialogTitle class="dialog-title">{{ title }}</DialogTitle>
+      <Transition 
+        enter-active-class="transition duration-500 cubic-bezier(0.16, 1, 0.3, 1)"
+        enter-from-class="opacity-0 scale-95 translate-y-8"
+        enter-to-class="opacity-100 scale-100 translate-y-0"
+        leave-active-class="transition duration-300 ease-in"
+        leave-from-class="opacity-100 scale-100 translate-y-0"
+        leave-to-class="opacity-0 scale-95 translate-y-4"
+      >
+        <DialogContent 
+          class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] bg-[#050505] border border-white/10 rounded-[2.5rem] shadow-[0_0_80px_rgba(0,0,0,0.8)] z-[101] overflow-hidden flex flex-col focus:outline-none"
+          :class="sizeClasses[size]"
+        >
+          <header class="px-10 py-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+            <div class="space-y-1">
+              <h3 class="text-xl font-black uppercase tracking-tight text-white">{{ title }}</h3>
+              <div class="h-[2px] w-8 bg-tactical-cyan rounded-full"></div>
+            </div>
+            
             <DialogClose as-child v-if="closable">
               <BaseButton 
-                variant="glass" 
+                variant="ghost" 
                 size="icon" 
-                class="close-btn"
+                class="hover:!text-red-500 !bg-white/5 group transition-colors"
                 aria-label="Close"
               >
-                <X :size="18" />
+                <PhX :size="18" weight="bold" class="group-hover:rotate-90 transition-transform duration-300" />
               </BaseButton>
             </DialogClose>
           </header>
 
-          <div class="dialog-body">
+          <div class="px-10 py-10 overflow-y-auto max-h-[70vh] custom-scrollbar">
             <slot></slot>
           </div>
 
-          <footer class="dialog-footer" v-if="$slots.footer">
+          <footer v-if="$slots.footer" class="px-10 py-8 border-t border-white/5 bg-white/[0.01] flex justify-end gap-4">
             <slot name="footer"></slot>
           </footer>
         </DialogContent>
@@ -66,83 +93,17 @@ const updateShow = (val: boolean) => {
 </template>
 
 <style scoped>
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  z-index: 1000;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
 }
-
-.dialog-content {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  max-height: 90vh;
-  z-index: 1001;
-  outline: none;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-.size-sm { width: 400px; }
-.size-md { width: 560px; }
-.size-lg { width: 800px; }
-.size-xl { width: 1100px; }
-
-.dialog-header {
-  padding: 24px 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border-color);
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
 }
-
-.dialog-title {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--text-primary);
-}
-
-.dialog-body {
-  padding: 32px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.dialog-footer {
-  padding: 20px 32px;
-  background: rgba(255, 255, 255, 0.02);
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-/* Transitions */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-
-.scale-enter-active { animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.scale-leave-active { animation: pop-in 0.25s reverse ease-in; }
-
-@keyframes pop-in {
-  from { opacity: 0; transform: translate(-50%, -40%) scale(0.9); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
-
-.close-btn {
-  opacity: 0.6;
-  transition: opacity 0.2s;
-}
-
-.close-btn:hover {
-  opacity: 1;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 242, 255, 0.2);
 }
 </style>

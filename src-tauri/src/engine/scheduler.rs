@@ -32,14 +32,14 @@ impl QueueManager {
         let mut q = self.queue.lock().await;
         if !q.contains(&id) {
             q.push_back(id);
-            let _ = self.save_to_disk(&*q);
+            self.save_to_disk(&*q);
         }
     }
 
     pub async fn remove_job(&self, id: &str) {
         let mut q = self.queue.lock().await;
         q.retain(|x| x != id);
-        let _ = self.save_to_disk(&*q);
+        self.save_to_disk(&*q);
     }
 
     pub async fn move_job_up(&self, id: String) {
@@ -47,7 +47,7 @@ impl QueueManager {
         if let Some(pos) = q.iter().position(|x| x == &id) {
             if pos > 0 {
                 q.swap(pos, pos - 1);
-                let _ = self.save_to_disk(&*q);
+                self.save_to_disk(&*q);
             }
         }
     }
@@ -57,7 +57,7 @@ impl QueueManager {
         if let Some(pos) = q.iter().position(|x| x == &id) {
             if pos < q.len() - 1 {
                 q.swap(pos, pos + 1);
-                let _ = self.save_to_disk(&*q);
+                self.save_to_disk(&*q);
             }
         }
     }
@@ -67,25 +67,42 @@ impl QueueManager {
         *p = limit;
     }
 
-    /// The heartbeat of the scheduler.
-    /// Checks if we have available slots and starts the next job in the queue.
     pub async fn tick(&self, currently_running: usize) {
         let max = *self.max_parallel.lock().await;
         
-        if currently_running < max {
+        let mut available_slots = max.saturating_sub(currently_running);
+        
+        if available_slots > 0 {
             let mut q = self.queue.lock().await;
-            if let Some(next_id) = q.pop_front() {
-                log::info!("[Scheduler] Queue Slot Available: Transitioning {} to Active", next_id);
-                let _ = self.orchestration_tx.send(next_id);
-                let _ = self.save_to_disk(&*q);
+            let mut modified = false;
+            
+            while available_slots > 0 {
+                if let Some(next_id) = q.pop_front() {
+                    log::info!("[Scheduler] Queue Slot Available: Transitioning {} to Active", next_id);
+                    let _ = self.orchestration_tx.send(next_id);
+                    available_slots -= 1;
+                    modified = true;
+                } else {
+                    break;
+                }
+            }
+
+            if modified {
+                self.save_to_disk(&*q);
             }
         }
     }
 
-    fn save_to_disk(&self, queue: &VecDeque<String>) -> std::io::Result<()> {
+    fn save_to_disk(&self, queue: &VecDeque<String>) {
         let path = self.app_data_dir.join("queue.json");
-        let json = serde_json::to_string(queue)?;
-        std::fs::write(path, json)
+        if let Ok(json) = serde_json::to_string(queue) {
+            // Detach disk I/O from the blocking queue mutex
+            tokio::spawn(async move {
+                if let Err(e) = tokio::fs::write(path, json).await {
+                    log::error!("[Scheduler] Failed to persist queue state: {}", e);
+                }
+            });
+        }
     }
 
     fn load_from_disk(&mut self) -> std::io::Result<()> {

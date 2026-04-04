@@ -5,11 +5,20 @@ import { useSettingsStore } from '@/stores/settings.store';
 import { useFormatters } from '@/composables/useFormatters';
 import { invoke } from '@tauri-apps/api/core';
 import SpeedGraph from '@/features/shared/components/SpeedGraph.vue';
-import BaseButton from '@/features/shared/components/BaseButton.vue';
-import { Plus, Wifi, Activity, Zap, Link2, Clipboard, Gauge } from 'lucide-vue-next';
+import { 
+  PhPlus, 
+  PhBroadcast, 
+  PhActivity, 
+  PhLightning, 
+  PhClipboardText, 
+  PhGauge, 
+  PhDeviceMobile
+} from "@phosphor-icons/vue";
 import { useClipboardMonitor } from '@/composables/useClipboardMonitor';
+import { useGrabberStore } from '@/stores/grabber.store';
 
 const store = useDownloadStore();
+const grabberStore = useGrabberStore();
 const settings = useSettingsStore();
 const { formatSpeed } = useFormatters();
 const { isEnabled: isClipboardEnabled, detectedUrl, startMonitoring, stopMonitoring, clearDetected } = useClipboardMonitor();
@@ -17,6 +26,7 @@ const { isEnabled: isClipboardEnabled, detectedUrl, startMonitoring, stopMonitor
 const isLimitEnabled = ref(false);
 const speedLimitKbps = ref(1024); // Default 1 MB/s
 const depStatus = ref({ ffmpeg_found: false, ffprobe_found: false });
+const isDevMobile = ref(false);
 
 const checkDeps = async () => {
   try {
@@ -24,6 +34,11 @@ const checkDeps = async () => {
   } catch (e) {
     console.error('Failed to check dependencies:', e);
   }
+};
+
+const toggleMobileView = () => {
+  isDevMobile.value = !isDevMobile.value;
+  document.documentElement.classList.toggle('mobile-optimized', isDevMobile.value);
 };
 
 const updateLimits = async () => {
@@ -55,334 +70,147 @@ defineEmits(['new-download']);
 </script>
 
 <template>
-  <header class="top-bar" data-tauri-drag-region>
-    <div class="stats-container" data-tauri-drag-region>
-      <!-- Real-time Throughput -->
-      <div class="stat-card throughput-card">
-        <div class="card-icon">
-          <Activity :size="18" class="text-accent" />
+  <div class="h-full px-6 flex items-center justify-between font-ui select-none" style="-webkit-app-region: drag;">
+    <!-- Left: Real-time Telemetry -->
+    <div class="flex items-center gap-8" style="-webkit-app-region: drag;">
+      <!-- Throughput -->
+      <div class="flex items-center gap-3">
+        <div class="p-1.5 bg-tactical-cyan/10 rounded border border-tactical-cyan/20">
+          <PhActivity :size="16" weight="duotone" class="text-tactical-cyan" />
         </div>
-        <div class="card-data">
-          <span class="label">Total Throughput</span>
-          <span class="value">{{ formatSpeed(store.totalSpeed) }}</span>
+        <div class="flex flex-col">
+          <span class="text-[9px] uppercase font-black text-white/30 leading-none mb-1">Global Throughput</span>
+          <span class="text-sm font-data font-black text-tactical-cyan tracking-tight leading-none">{{ formatSpeed(store.totalSpeed) }}</span>
         </div>
-        <SpeedGraph :current-speed="store.totalSpeed" class="mini-graph" />
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- Active Threads -->
-      <div class="stat-card">
-        <div class="card-icon">
-          <Wifi :size="18" />
-        </div>
-        <div class="card-data">
-          <span class="label">Active Workers</span>
-          <span class="value">{{ store.activeDownloads.length }}</span>
+        <div class="w-12 h-6 opacity-40">
+          <SpeedGraph :current-speed="store.totalSpeed" />
         </div>
       </div>
 
-      <div class="divider"></div>
+      <div class="w-[1px] h-8 bg-white/5"></div>
+
+      <!-- Active Nodes -->
+      <div class="flex items-center gap-3">
+        <div class="p-1.5 bg-white/5 rounded border border-white/5">
+          <PhBroadcast :size="16" weight="duotone" class="text-white/60" />
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[9px] uppercase font-black text-white/30 leading-none mb-1">Active Nodes</span>
+          <span class="text-sm font-data font-black text-white tracking-tight leading-none">{{ store.activeDownloads.length }} Units</span>
+        </div>
+      </div>
+
+      <div class="w-[1px] h-8 bg-white/5"></div>
 
       <!-- Engine Status -->
-      <div class="stat-card" :class="{ 'is-offline': !depStatus.ffmpeg_found }">
-        <div class="card-icon">
-          <Zap :size="18" />
+      <div class="flex items-center gap-3" :class="{ 'opacity-50 grayscale': !depStatus.ffmpeg_found }">
+        <div class="p-1.5 rounded border" :class="depStatus.ffmpeg_found ? 'bg-terminal-green/10 border-terminal-green/20' : 'bg-red-500/10 border-red-500/20'">
+          <PhLightning :size="16" weight="duotone" :class="depStatus.ffmpeg_found ? 'text-terminal-green' : 'text-red-500'" />
         </div>
-        <div class="card-data">
-          <span class="label">Muxing Engine</span>
-          <span class="value status-text">{{ depStatus.ffmpeg_found ? 'HEALTHY' : 'ERROR' }}</span>
+        <div class="flex flex-col">
+          <span class="text-[9px] uppercase font-black text-white/30 leading-none mb-1">Engine Pipeline</span>
+          <span class="text-sm font-data font-black tracking-tight leading-none" :class="depStatus.ffmpeg_found ? 'text-terminal-green' : 'text-red-500'">{{ depStatus.ffmpeg_found ? 'NOMINAL' : 'FAULT' }}</span>
         </div>
       </div>
 
-      <!-- Bridge Status -->
-      <template v-if="settings.bridgeEnabled">
-        <div class="divider"></div>
-        <div class="stat-card" :class="{ 'is-active-glow': store.bridgeConnected }">
-          <div class="card-icon">
-            <Link2 :size="18" />
-          </div>
-          <div class="card-data">
-            <span class="label">Chrome Extension</span>
-            <span class="value status-text">{{ store.bridgeConnected ? 'LINKED' : 'WAITING' }}</span>
+      <!-- Swarm Overlay (Conditional) -->
+      <template v-if="grabberStore.isCrawling">
+        <div class="w-[1px] h-8 bg-white/5"></div>
+        <div class="flex items-center gap-3 px-3 py-1.5 bg-tactical-cyan/5 border border-tactical-cyan/10 rounded-lg animate-tactical-glow">
+          <PhBroadcast :size="16" weight="fill" class="text-tactical-cyan" />
+          <div class="flex flex-col">
+            <span class="text-[8px] uppercase font-black text-tactical-cyan/60 leading-none mb-1">Swarm Active</span>
+            <span class="text-xs font-data font-black text-white leading-none">{{ grabberStore.activeWorkers }} Nodes</span>
           </div>
         </div>
       </template>
+    </div>
 
-      <div class="divider"></div>
+    <!-- Right: Tactical Controls -->
+    <div class="flex items-center gap-4" style="-webkit-app-region: no-drag;">
+      <div class="flex items-center gap-2 pr-4 border-r border-white/5">
+        <!-- Throttle -->
+        <div class="relative group">
+          <button 
+            class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all border"
+            :class="isLimitEnabled ? 'bg-tactical-cyan/20 border-tactical-cyan/30 text-tactical-cyan' : 'bg-white/5 border-white/5 text-text-dim hover:text-white'"
+            @click="isLimitEnabled = !isLimitEnabled"
+          >
+            <PhGauge :size="18" weight="duotone" />
+            <div class="flex flex-col items-start leading-tight">
+              <span class="text-[8px] uppercase font-black opacity-60">Throttle</span>
+              <span class="text-[10px] font-data font-bold">{{ isLimitEnabled ? speedLimitKbps + ' KB/S' : 'UNLIMITED' }}</span>
+            </div>
+          </button>
+          
+          <div v-if="isLimitEnabled" class="absolute top-full left-0 mt-2 w-48 p-4 bg-bg-surface border border-white/10 rounded-xl glass shadow-2xl z-[100] group-hover:block hidden">
+            <input type="range" v-model.number="speedLimitKbps" min="100" max="10240" step="100" class="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-tactical-cyan" />
+          </div>
+        </div>
 
-      <!-- Quick Toggles -->
-      <div class="toggles-group">
-        <button 
-          class="interactive-toggle" 
-          :class="{ 'is-active': isLimitEnabled }"
-          @click="isLimitEnabled = !isLimitEnabled"
-          title="Speed Limiter"
-        >
-          <Gauge :size="18" />
-          <div class="toggle-info">
-            <span class="t-label">Limit</span>
-            <span class="t-val">{{ isLimitEnabled ? speedLimitKbps + 'K' : 'OFF' }}</span>
-          </div>
-          <div v-if="isLimitEnabled" class="slider-popover" @click.stop>
-            <input type="range" v-model.number="speedLimitKbps" min="100" max="10240" step="100" />
-          </div>
-        </button>
-
-        <button 
-          class="interactive-toggle" 
-          :class="{ 'is-active': isClipboardEnabled }"
-          @click="toggleClipboard"
-          title="Clipboard Monitor"
-        >
-          <Clipboard :size="18" />
-          <div class="toggle-info">
-            <span class="t-label">Auto-Detect</span>
-            <span class="t-val">{{ isClipboardEnabled ? 'ON' : 'OFF' }}</span>
-          </div>
+        <!-- Clipboard Monitor -->
+        <div class="relative">
+          <button 
+            class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all border"
+            :class="isClipboardEnabled ? 'bg-tactical-cyan/20 border-tactical-cyan/30 text-tactical-cyan' : 'bg-white/5 border-white/5 text-text-dim hover:text-white'"
+            @click="toggleClipboard"
+          >
+            <PhClipboardText :size="18" weight="duotone" />
+            <div class="flex flex-col items-start leading-tight">
+              <span class="text-[8px] uppercase font-black opacity-60">Bio-Monitor</span>
+              <span class="text-[10px] font-data font-bold">{{ isClipboardEnabled ? 'ENGAGED' : 'OFF' }}</span>
+            </div>
+          </button>
           
           <Transition name="pop-in">
-            <div v-if="detectedUrl" class="clip-toast" @click.stop>
-              <div class="toast-header">
-                <Link2 :size="12" />
-                <span>Link Caught</span>
-              </div>
-              <p class="toast-body">{{ detectedUrl.split('/').pop() }}</p>
-              <div class="toast-footer">
-                <button class="t-btn primary" @click="$emit('new-download', detectedUrl); clearDetected()">Download</button>
-                <button class="t-btn ghost" @click="clearDetected()">Ignore</button>
+            <div v-if="detectedUrl" class="absolute top-full right-0 mt-2 w-64 p-4 bg-bg-surface border border-white/10 rounded-xl glass shadow-2xl z-[100]">
+              <div class="space-y-4">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-tactical-cyan animate-pulse"></span>
+                  <span class="text-[10px] font-black uppercase text-tactical-cyan tracking-widest">Packet Intercepted</span>
+                </div>
+                <div class="p-2 bg-black/40 rounded border border-white/5">
+                  <p class="text-[11px] font-medium truncate opacity-60">{{ detectedUrl }}</p>
+                </div>
+                <div class="flex gap-2">
+                  <button class="flex-1 py-1.5 bg-tactical-cyan text-bg-deep text-[10px] font-black uppercase rounded shadow-[0_0_15px_rgba(0,242,255,0.4)]" 
+                          @click="$emit('new-download', detectedUrl); clearDetected()">CAPTURE MISSION</button>
+                  <button class="flex-1 py-1.5 bg-white/5 text-white/60 text-[10px] font-black uppercase rounded border border-white/5" 
+                          @click="clearDetected()">IGNORE</button>
+                </div>
               </div>
             </div>
           </Transition>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2">
+        <button 
+          @click="toggleMobileView"
+          class="p-2 rounded-md border border-white/5 transition-all"
+          :class="isDevMobile ? 'bg-tactical-cyan/20 text-tactical-cyan border-tactical-cyan/30' : 'bg-white/5 text-text-dim hover:text-white'"
+        >
+          <PhDeviceMobile :size="18" weight="duotone" />
+        </button>
+        
+        <button 
+          @click="$emit('new-download')"
+          class="flex items-center gap-2 px-4 py-2 bg-tactical-cyan text-bg-deep rounded-md shadow-[0_0_20px_rgba(0,242,255,0.2)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <PhPlus :size="18" weight="bold" />
+          <span class="text-xs font-black uppercase tracking-tight">New Mission</span>
         </button>
       </div>
     </div>
-
-    <div class="actions-container">
-      <BaseButton variant="primary" @click="$emit('new-download')">
-        <template #icon-left><Plus :size="18" /></template>
-        New Download
-      </BaseButton>
-    </div>
-  </header>
+  </div>
 </template>
 
 <style scoped>
-.top-bar {
-  height: 90px;
-  min-height: 90px;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
-  padding: 0 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 40px;
-  position: relative;
-}
+.pop-in-enter-active, .pop-in-leave-active { transition: all 0.2s cubic-bezier(0.19, 1, 0.22, 1); }
+.pop-in-enter-from, .pop-in-leave-to { opacity: 0; transform: translateY(10px) scale(0.95); }
+</style>
 
-.stats-container {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex: 1;
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.card-icon {
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-}
-
-.card-data {
-  display: flex;
-  flex-direction: column;
-}
-
-.label {
-  font-size: 0.65rem;
-  color: var(--text-secondary);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.5;
-}
-
-.value {
-  font-size: 0.95rem;
-  font-weight: 800;
-  font-family: var(--font-mono);
-  color: var(--text-primary);
-}
-
-.status-text {
-  font-size: 0.8rem;
-  letter-spacing: 0.02em;
-}
-
-.mini-graph {
-  margin-left: 20px;
-  padding-left: 20px;
-  border-left: 1px solid var(--border-color);
-}
-
-.divider {
-  width: 1px;
-  height: 24px;
-  background: var(--border-color);
-  opacity: 0.5;
-}
-
-/* Status variants */
-.is-offline .card-icon { color: var(--color-error); background: rgba(239, 68, 68, 0.05); }
-.is-offline .status-text { color: var(--color-error); }
-
-.is-active-glow .card-icon { 
-  color: var(--color-downloading); 
-  background: rgba(16, 185, 129, 0.05);
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
-}
-.is-active-glow .status-text { color: var(--color-downloading); }
-
-/* Interactive Toggle Buttons */
-.toggles-group {
-  margin-left: auto;
-  display: flex;
-  gap: 12px;
-}
-
-.interactive-toggle {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-  color: var(--text-secondary);
-  position: relative;
-}
-
-.interactive-toggle:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.interactive-toggle.is-active {
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.2);
-  color: var(--accent-primary);
-}
-
-.toggle-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 40px;
-}
-
-.t-label {
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  font-weight: 800;
-  opacity: 0.7;
-}
-
-.t-val {
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-
-/* Popover & Toasts */
-.slider-popover {
-  position: absolute;
-  top: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--bg-secondary);
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-glass);
-  z-index: 100;
-}
-
-.clip-toast {
-  position: absolute;
-  top: 60px;
-  right: 0;
-  width: 240px;
-  background: var(--bg-secondary);
-  padding: 16px;
-  border-radius: 14px;
-  border: 1px solid var(--accent-primary);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  cursor: default;
-}
-
-.toast-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  font-weight: 800;
-  color: var(--accent-primary);
-}
-
-.toast-body {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.toast-footer {
-  display: flex;
-  gap: 8px;
-}
-
-.t-btn {
-  flex: 1;
-  padding: 8px;
-  border-radius: 8px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.t-btn.primary { background: var(--accent-primary); color: white; }
-.t-btn.ghost { background: rgba(255, 255, 255, 0.05); color: var(--text-secondary); }
-.t-btn:hover { filter: brightness(1.2); }
-
-/* Animation */
-.pop-in-enter-active { animation: pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.pop-in-leave-active { animation: pop-in 0.2s reverse; }
-
-@keyframes pop-in {
-  from { opacity: 0; transform: translateY(-10px) scale(0.9); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
+<style scoped>
+/* Scoped styles removed in favor of CSS Modules */
 </style>

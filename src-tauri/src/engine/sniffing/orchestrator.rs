@@ -1,7 +1,7 @@
 use std::time::Duration;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use crate::engine::sniffing::{SNIFFER, handle::SniffedUrl};
-use crate::engine::media::MediaStream;
+// Removed MediaStream as it is used via full path
 use crate::types::MediaInterceptionEvent;
 use lazy_static::lazy_static;
 
@@ -12,11 +12,19 @@ lazy_static! {
 
 fn is_media_extension(url: &str) -> bool {
     let url_lower = url.to_lowercase();
+    // Industrial grade signatures for media streams and fragments
     url_lower.contains(".mp4") || 
     url_lower.contains(".mkv") || 
     url_lower.contains(".m3u8") || 
     url_lower.contains(".mpd") ||
-    url_lower.contains("googlevideo.com")
+    url_lower.contains(".ts") ||
+    url_lower.contains(".f4m") ||
+    url_lower.contains(".flv") ||
+    url_lower.contains(".webm") ||
+    url_lower.contains("googlevideo.com") ||
+    url_lower.contains("/frag/") ||
+    url_lower.contains("/segment/") ||
+    url_lower.contains("/get_video?")
 }
 
 pub async fn start_sniffer_orchestrator(app_handle: AppHandle) {
@@ -24,6 +32,10 @@ pub async fn start_sniffer_orchestrator(app_handle: AppHandle) {
     
     let mut interval = tokio::time::interval(Duration::from_millis(500));
     
+    // Pre-fetch shared infrastructure from state
+    let state = app_handle.state::<std::sync::Arc<crate::engine::state::AppState>>();
+    let deobfuscator = state.deobfuscator.clone();
+
     loop {
         interval.tick().await;
         
@@ -33,7 +45,7 @@ pub async fn start_sniffer_orchestrator(app_handle: AppHandle) {
                 match sniffer.poll_driver_events() {
                     Ok(evs) => evs,
                     Err(e) => {
-                        log::error!("[Sniffer] Poll error: {}", e);
+                        log::error!("[Sniffer] Driver synchronization fault: {}", e);
                         vec![]
                     }
                 }
@@ -43,7 +55,6 @@ pub async fn start_sniffer_orchestrator(app_handle: AppHandle) {
         };
 
         for event in events {
-            // 1. Check if this is a media URL based on extensions/patterns
             if !is_media_extension(&event.url) {
                 continue;
             }
@@ -54,40 +65,47 @@ pub async fn start_sniffer_orchestrator(app_handle: AppHandle) {
                 let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
                 if let Some(last_seen) = cache.get(&event.url) {
                     if now - last_seen < 10 {
-                        continue; // Skip noise
+                        continue; 
                     }
                 }
                 cache.insert(event.url.clone(), now);
-                // Prune old entries
                 if cache.len() > 100 {
                     cache.retain(|_, v| now - *v < 60);
                 }
             }
 
-            log::info!("[Sniffer] High-Value Intercept: {} (Process: {})", event.url, event.process_name);
+            log::info!("[Sniffer] Industrial Intercept: {} (Source: {})", event.url, event.process_name);
             
-            // 3. Emit to frontend for the "Live Sniffer Log"
             let _ = app_handle.emit("sniffer-hit", event.clone());
             
-            // 4. Active Interception: Trigger Media HUD Analysis
             let app_for_analysis = app_handle.clone();
             let url_for_analysis = event.url.clone();
+            let deobfuscator_for_analysis = deobfuscator.clone();
             
             tauri::async_runtime::spawn(async move {
-                // Notify UI that analysis is starting
                 let _ = app_for_analysis.emit("media-analyzing", serde_json::json!({
                     "url": url_for_analysis
                 }));
 
                 let client = reqwest::Client::new();
                 
-                // Extract real resolutions
+                // Extract real resolutions using the shared deobfuscator
                 let resolutions = if url_for_analysis.contains(".mpd") || url_for_analysis.contains("googlevideo.com") {
-                    MediaStream::extract_resolutions(&client, &url_for_analysis).await
-                        .unwrap_or_default()
+                    let base_js_url = if url_for_analysis.contains("youtube.com") || url_for_analysis.contains("googlevideo.com") {
+                        Some("https://www.youtube.com/s/player/6f5d506d/player_ias.vflset/en_US/base.js")
+                    } else {
+                        None
+                    };
+
+                    crate::engine::media::MediaStream::extract_resolutions(
+                        &client, 
+                        &url_for_analysis, 
+                        Some(&deobfuscator_for_analysis),
+                        base_js_url
+                    ).await.unwrap_or_default()
                 } else {
                     vec![crate::types::MediaResolution {
-                        label: "Original (HD)".to_string(),
+                        label: "Direct Stream (Original)".to_string(),
                         video_url: url_for_analysis.clone(),
                         audio_url: None,
                         bandwidth: 0,
@@ -96,14 +114,13 @@ pub async fn start_sniffer_orchestrator(app_handle: AppHandle) {
                     }]
                 };
 
-                // Emit final interception data for HUD
                 let _ = app_for_analysis.emit("media-intercepted", MediaInterceptionEvent {
                     id: Some(uuid::Uuid::new_v4().to_string()),
                     url: url_for_analysis.clone(),
                     filename: url_for_analysis.split('/').last().unwrap_or("Detected Media").to_string(),
                     mime: Some(event.content_type),
                     resolutions,
-                    cookies: None, // WFP doesn't have easy cookie access, Bridge is better for that
+                    cookies: None, 
                     referer: None,
                 });
             });
@@ -115,9 +132,9 @@ pub async fn start_sniffer_orchestrator(app_handle: AppHandle) {
 pub fn simulate_sniff_event(url: String, process: String) -> SniffedUrl {
     SniffedUrl {
         url,
-        process_id: 1234,
+        process_id: 1,
         process_name: process,
-        content_type: "video/mp4".to_string(),
+        content_type: "video/application/octet-stream".to_string(),
         timestamp: std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()

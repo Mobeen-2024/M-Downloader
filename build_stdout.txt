@@ -1,0 +1,702 @@
+﻿
+> tauri
+> tauri android build
+
+node.exe :         Info 
+Using installed NDK: C:\Use
+rs\-Mobeen-\AppData\Local\A
+ndroid\Sdk\ndk\30.0.1490419
+8
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (     
+       Info Us...k\30.0.   
+ 14904198:String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+        Info Looking up 
+installed tauri packages 
+to check mismatched 
+versions...
+     Running 
+beforeBuildCommand `npm 
+run build --prefix ui`
+
+> ui@0.0.0 build
+> vue-tsc -b && vite build
+
+[36mvite v8.0.3 [32mbuilding client environment for production...[36m[39m
+[2K
+transforming...Γ£ô 2152 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                      1.26 kB Γöé gzip:  0.53 kB
+dist/assets/BaseSkeleton-CHQMjnPt.css                0.65 kB Γöé gzip:  0.34 kB
+dist/assets/BaseToggle-Cdz3LVog.css                  0.98 kB Γöé gzip:  0.45 kB
+dist/assets/CompletedView-euT5VFEO.css               1.54 kB Γöé gzip:  0.60 kB
+dist/assets/QueuedView-BkVNgb0z.css                  2.77 kB Γöé gzip:  0.90 kB
+dist/assets/SitesView-D2znPDx7.css                   3.45 kB Γöé gzip:  1.01 kB
+dist/assets/CloudDriveView-C76vEXld.css              3.94 kB Γöé gzip:  1.19 kB
+dist/assets/GrabberView-DYqbXpD4.css                 4.87 kB Γöé gzip:  1.35 kB
+dist/assets/SettingsView-Cb7jOToL.css                5.75 kB Γöé gzip:  1.44 kB
+dist/assets/StatsView-BFmiX3E-.css                   5.98 kB Γöé gzip:  1.53 kB
+dist/assets/index-bo2w-oSO.css                      33.76 kB Γöé gzip:  6.68 kB
+dist/assets/folder-CsiWvB6-.js                       0.23 kB Γöé gzip:  0.19 kB
+dist/assets/stagger-DaLrx_bg.js                      0.29 kB Γöé gzip:  0.23 kB
+dist/assets/ui.store-BGbnk8UF.js                     0.45 kB Γöé gzip:  0.32 kB
+dist/assets/BaseSkeleton-C0s-PYt9.js                 0.54 kB Γöé gzip:  0.35 kB
+dist/assets/cpu-CB45Aqzb.js                          0.65 kB Γöé gzip:  0.29 kB
+dist/assets/BaseToggle-5oKDl6FU.js                   1.00 kB Γöé gzip:  0.60 kB
+dist/assets/CompletedView-BgQGiZ8V.js                2.24 kB Γöé gzip:  1.17 kB
+dist/assets/QueuedView-DBAT9aWk.js                   2.38 kB Γöé gzip:  1.19 kB
+dist/assets/download.store-BylRVA3K.js               3.36 kB Γöé gzip:  1.36 kB
+dist/assets/SitesView-BxLyti2x.js                    4.53 kB Γöé gzip:  1.86 kB
+dist/assets/CloudDriveView-DZke9sbi.js               5.87 kB Γöé gzip:  2.67 kB
+dist/assets/core-DSiR9wp0.js                         6.97 kB Γöé gzip:  3.21 kB
+dist/assets/GrabberView-CgGAqr7t.js                  7.69 kB Γöé gzip:  3.32 kB
+dist/assets/StatsView-CVl8mT5s.js                    9.15 kB Γöé gzip:  3.58 kB
+dist/assets/SettingsView-DCLgh_Bw.js                10.08 kB Γöé gzip:  3.65 kB
+dist/assets/runtime-dom.esm-bundler-foCxgSmi.js     14.79 kB Γöé gzip:  6.32 kB
+dist/assets/animate-CRF_wRwq.js                     60.81 kB Γöé gzip: 21.34 kB
+dist/assets/_plugin-vue_export-helper-Bo2lGr76.js   65.58 kB Γöé gzip: 25.78 kB
+dist/assets/index-BjqMJcQ6.js                      147.89 kB Γöé gzip: 49.76 kB
+
+[32mΓ£ô built in 559ms[39m
+[1m[92m   Compiling[0m 
+mdownloader v0.2.0 (D:\Work
+Station\IDM\src-tauri)
+[1m[93mwarning[0m[1m[9
+7m: unused import: 
+`Emitter`[0m
+ [1m[96m--> [0msrc\comma
+nds\system.rs:1:33
+  [1m[96m|[0m
+[1m[96m1[0m 
+[1m[96m|[0m use 
+tauri::{AppHandle, 
+command, Emitter};
+  [1m[96m|[0m           
+                      
+[1m[93m^^^^^^^[0m
+  [1m[96m|[0m
+  [1m[96m= 
+[0m[1m[97mnote[0m: 
+`#[warn(unused_imports)]` 
+(part of 
+`#[warn(unused)]`) on by 
+default
+
+[1m[93mwarning[0m: 
+`mdownloader` (lib) 
+generated 1 warning (run 
+`cargo fix --lib -p 
+mdownloader` to apply 1 
+suggestion)
+[1m[92m    Finished[0m 
+]8;;https://doc.rust-lang.o
+rg/cargo/reference/profiles
+.html#default-profiles\`re
+lease` profile 
+[optimized]]8;;\ 
+target(s) in 32.25s
+        Info symlinking 
+lib "C:/Users/-Mobeen-/.car
+go/target-mdownloader\\aarc
+h64-linux-android\\release\
+\libapp_lib.so" in jniLibs 
+dir "D:\\WorkStation\\IDM\\
+src-tauri\\gen/android\\app
+/src/main/jniLibs/arm64-v8a
+"
+        Info "C:/Users/-Mob
+een-/.cargo/target-mdownloa
+der\\aarch64-linux-android\
+\release\\libapp_lib.so" 
+requires shared lib 
+"liblog.so"
+        Info "C:/Users/-Mob
+een-/.cargo/target-mdownloa
+der\\aarch64-linux-android\
+\release\\libapp_lib.so" 
+requires shared lib 
+"libandroid.so"
+        Info "C:/Users/-Mob
+een-/.cargo/target-mdownloa
+der\\aarch64-linux-android\
+\release\\libapp_lib.so" 
+requires shared lib 
+"libdl.so"
+        Info "C:/Users/-Mob
+een-/.cargo/target-mdownloa
+der\\aarch64-linux-android\
+\release\\libapp_lib.so" 
+requires shared lib 
+"libm.so"
+        Info "C:/Users/-Mob
+een-/.cargo/target-mdownloa
+der\\aarch64-linux-android\
+\release\\libapp_lib.so" 
+requires shared lib 
+"libc.so"
+        Info symlink at "D:
+\\WorkStation\\IDM\\src-tau
+ri\\gen/android\\app/src/ma
+in/jniLibs/arm64-v8a\\libap
+p_lib.so" points to "C:\\Us
+ers\\-Mobeen-\\.cargo\\targ
+et-mdownloader\\aarch64-lin
+ux-android\\release\\libapp
+_lib.so"
+
+> tauri
+> tauri android android-studio-script --release --target aarch64
+
+        Info connection; re
+mote_addr=127.0.0.1:50353 
+conn_id=0
+[1m[32m        Info[0m 
+Using installed NDK: C:\Use
+rs\-Mobeen-\AppData\Local\A
+ndroid\Sdk\ndk\30.0.1490419
+8
+[1m[92m   Compiling[0m 
+mdownloader v0.2.0 (D:\Work
+Station\IDM\src-tauri)
+[1m[93mwarning[0m[1m[9
+7m: unused import: 
+`Emitter`[0m
+ [1m[96m--> [0msrc\comma
+nds\system.rs:1:33
+  [1m[96m|[0m
+[1m[96m1[0m 
+[1m[96m|[0m use 
+tauri::{AppHandle, 
+command, Emitter};
+  [1m[96m|[0m           
+                      
+[1m[93m^^^^^^^[0m
+  [1m[96m|[0m
+  [1m[96m= 
+[0m[1m[97mnote[0m: 
+`#[warn(unused_imports)]` 
+(part of 
+`#[warn(unused)]`) on by 
+default
+
+[1m[93mwarning[0m: 
+`mdownloader` (lib) 
+generated 1 warning (run 
+`cargo fix --lib -p 
+mdownloader` to apply 1 
+suggestion)
+[1m[92m    Finished[0m 
+]8;;https://doc.rust-lang.o
+rg/cargo/reference/profiles
+.html#default-profiles\`re
+lease` profile 
+[optimized]]8;;\ 
+target(s) in 34.49s
+[1m[32m        Info[0m 
+symlinking lib "C:/Users/-M
+obeen-/.cargo/target-mdownl
+oader\\aarch64-linux-androi
+d\\release\\libapp_lib.so" 
+in jniLibs dir "D:\\WorkSta
+tion\\IDM\\src-tauri\\gen/a
+ndroid\\app/src/main/jniLib
+s/arm64-v8a"
+[1m[32m        Info[0m "
+C:/Users/-Mobeen-/.cargo/ta
+rget-mdownloader\\aarch64-l
+inux-android\\release\\liba
+pp_lib.so" requires shared 
+lib "liblog.so"
+[1m[32m        Info[0m "
+C:/Users/-Mobeen-/.cargo/ta
+rget-mdownloader\\aarch64-l
+inux-android\\release\\liba
+pp_lib.so" requires shared 
+lib "libandroid.so"
+[1m[32m        Info[0m "
+C:/Users/-Mobeen-/.cargo/ta
+rget-mdownloader\\aarch64-l
+inux-android\\release\\liba
+pp_lib.so" requires shared 
+lib "libdl.so"
+[1m[32m        Info[0m "
+C:/Users/-Mobeen-/.cargo/ta
+rget-mdownloader\\aarch64-l
+inux-android\\release\\liba
+pp_lib.so" requires shared 
+lib "libm.so"
+[1m[32m        Info[0m "
+C:/Users/-Mobeen-/.cargo/ta
+rget-mdownloader\\aarch64-l
+inux-android\\release\\liba
+pp_lib.so" requires shared 
+lib "libc.so"
+
+> tauri
+> tauri android android-studio-script --release --target armv7
+
+        Info connection; re
+mote_addr=127.0.0.1:50358 
+conn_id=1
+[1m[32m        Info[0m 
+Using installed NDK: C:\Use
+rs\-Mobeen-\AppData\Local\A
+ndroid\Sdk\ndk\30.0.1490419
+8
+[1m[92m   Compiling[0m 
+mdownloader v0.2.0 (D:\Work
+Station\IDM\src-tauri)
+[1m[93mwarning[0m[1m[9
+7m: unused import: 
+`Emitter`[0m
+ [1m[96m--> [0msrc\comma
+nds\system.rs:1:33
+  [1m[96m|[0m
+[1m[96m1[0m 
+[1m[96m|[0m use 
+tauri::{AppHandle, 
+command, Emitter};
+  [1m[96m|[0m           
+                      
+[1m[93m^^^^^^^[0m
+  [1m[96m|[0m
+  [1m[96m= 
+[0m[1m[97mnote[0m: 
+`#[warn(unused_imports)]` 
+(part of 
+`#[warn(unused)]`) on by 
+default
+
+[1m[93mwarning[0m: 
+`mdownloader` (lib) 
+generated 1 warning (run 
+`cargo fix --lib -p 
+mdownloader` to apply 1 
+suggestion)
+[1m[92m    Finished[0m 
+]8;;https://doc.rust-lang.o
+rg/cargo/reference/profiles
+.html#default-profiles\`re
+lease` profile 
+[optimized]]8;;\ 
+target(s) in 36.38s
+failed to build Android 
+app: Library artifact not 
+found at C:/Users/-Mobeen-/
+.cargo/target-mdownloader\a
+rmv7-linux-androideabi\rele
+ase\libapp_lib.so. Make 
+sure your Cargo.toml file 
+has a [lib] block with 
+`crate-type = 
+["staticlib", "cdylib", 
+"rlib"]`
+[1m[31m       Error[0m 
+failed to build Android 
+app: Library artifact not 
+found at C:/Users/-Mobeen-/
+.cargo/target-mdownloader\a
+rmv7-linux-androideabi\rele
+ase\libapp_lib.so. Make 
+sure your Cargo.toml file 
+has a [lib] block with 
+`crate-type = 
+["staticlib", "cdylib", 
+"rlib"]`
+
+[Incubating] Problems report is available at: file:///D:/WorkStation/IDM/src-tauri/gen/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with 
+an exception.
+
+* What went wrong:
+Execution failed for task 
+':app:rustBuildArmRelease'.
+> A problem occurred 
+starting process 'command 
+'npm.bat''
+
+* Try:
+> Run with --stacktrace 
+option to get the stack 
+trace.
+> Run with --info or 
+--debug option to get more 
+log output.
+> Run with --scan to get 
+full insights.
+> Get more help at 
+https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+BUILD FAILED in 1m 14s
+failed to build APK: 
+Failed to assemble APK 
+with 
+Io(BeforeSpawn(<closure>), 
+Io(StderrFile(File { 
+handle: 0x380 }), 
+Io(StdoutFile(File { 
+handle: 0x37c }), 
+Io(StdinFile(File { 
+handle: 0x378 }), 
+Io(Env("PATH", "D:\\WorkSta
+tion\\IDM\\node_modules\\.b
+in;D:\\WorkStation\\node_mo
+dules\\.bin;D:\\node_module
+s\\.bin;C:\\Program Files\\
+nodejs\\node_modules\\npm\\
+node_modules\\@npmcli\\run-
+script\\lib\\node-gyp-bin;C
+:\\Program Files\\Eclipse A
+doptium\\jdk-21.0.10.7-hots
+pot\\bin;C:\\Python314\\Scr
+ipts\\;C:\\Python314\\;C:\\
+WINDOWS\\system32;C:\\WINDO
+WS;C:\\WINDOWS\\System32\\W
+bem;C:\\WINDOWS\\System32\\
+WindowsPowerShell\\v1.0\\;C
+:\\WINDOWS\\System32\\OpenS
+SH\\;C:\\Program 
+Files\\Microsoft SQL Server
+\\170\\Tools\\Binn\\;C:\\Pr
+ogramData\\chocolatey\\bin;
+C:\\Program Files\\Git\\cmd
+;C:\\Program Files\\nodejs\
+\;C:\\Program Files\\CMake\
+\bin;C:\\Python314\\Scripts
+\\;C:\\Python314\\;C:\\WIND
+OWS\\system32;C:\\WINDOWS;C
+:\\WINDOWS\\System32\\Wbem;
+C:\\WINDOWS\\System32\\Wind
+owsPowerShell\\v1.0\\;C:\\W
+INDOWS\\System32\\OpenSSH\\
+;C:\\Program 
+Files\\Microsoft SQL Server
+\\170\\Tools\\Binn\\;C:\\Pr
+ogramData\\chocolatey\\bin;
+C:\\Program 
+Files\\Microsoft VS 
+Code\\bin;C:\\Program Files
+\\Git\\cmd;C:\\Program File
+s\\nodejs\\;C:\\Program Fil
+es\\CMake\\bin;C:\\Users\\-
+Mobeen-\\AppData\\Local\\Pr
+ograms\\Python\\Python314\\
+Scripts\\;C:\\Users\\-Mobee
+n-\\AppData\\Local\\Program
+s\\Python\\Python314\\;C:\\
+Users\\-Mobeen-\\AppData\\L
+ocal\\Microsoft\\WindowsApp
+s;C:\\Users\\-Mobeen-\\AppD
+ata\\Roaming\\npm;c:\\users
+\\-mobeen-\\appdata\\roamin
+g\\python\\python314\\scrip
+ts;c:\\users\\-mobeen-\\.lo
+cal\\bin;C:\\Program Files\
+\CMake\\bin;C:\\Users\\-Mob
+een-\\AppData\\Local\\Pytho
+n\\bin;C:\\Users\\-Mobeen-\
+\AppData\\Local\\Programs\\
+Antigravity\\bin;C:\\Users\
+\-Mobeen-\\AppData\\Local\\
+Programs\\Microsoft VS Code
+\\bin;C:\\Users\\-Mobeen-\\
+.cargo\\bin;"), 
+Io(Env("SYSTEMROOT", 
+"C:\\WINDOWS"), 
+Io(Env("NDK_HOME", "C:\\Use
+rs\\-Mobeen-\\AppData\\Loca
+l\\Android\\Sdk\\ndk\\30.0.
+14904198"), Io(Env("CARGO_T
+ARGET_AARCH64_LINUX_ANDROID
+_LINKER", "C:\\Users\\-Mobe
+en-\\AppData\\Local\\Androi
+d\\Sdk\\ndk\\30.0.14904198\
+\toolchains/llvm/prebuilt/w
+indows-x86_64\\bin\\aarch64
+-linux-android24-clang.cmd"
+), Io(Env("WRY_ANDROID_LIBR
+ARY", "app_lib"), 
+Io(Env("TEMP", "C:\\Users\\
+-Mobeen-\\AppData\\Local\\T
+emp"), Io(Env("CARGO_TARGET
+_I686_LINUX_ANDROID_RUSTFLA
+GS", "-Clink-arg=-landroid 
+-Clink-arg=-llog 
+-Clink-arg=-lOpenSLES"), Io
+(Env("CARGO_TARGET_X86_64_L
+INUX_ANDROID_RUSTFLAGS", 
+"-Clink-arg=-landroid 
+-Clink-arg=-llog 
+-Clink-arg=-lOpenSLES"), 
+Io(Env("ANDROID_HOME", "C:\
+\Users\\-Mobeen-\\AppData\\
+Local\\Android\\Sdk"), Io(E
+nv("WRY_ANDROID_PACKAGE", 
+"com.mdownloader.mobile"), 
+Io(Env("CARGO_TARGET_I686_L
+INUX_ANDROID_LINKER", "C:\\
+Users\\-Mobeen-\\AppData\\L
+ocal\\Android\\Sdk\\ndk\\30
+.0.14904198\\toolchains/llv
+m/prebuilt/windows-x86_64\\
+bin\\i686-linux-android24-c
+lang.cmd"), Io(Env("WRY_AND
+ROID_KOTLIN_FILES_OUT_DIR",
+ "D:\\WorkStation\\IDM\\src
+-tauri\\gen/android\\app/sr
+c/main\\java/com/mdownloade
+r/mobile\\generated"), Io(E
+nv("CARGO_TARGET_X86_64_LIN
+UX_ANDROID_LINKER", "C:\\Us
+ers\\-Mobeen-\\AppData\\Loc
+al\\Android\\Sdk\\ndk\\30.0
+.14904198\\toolchains/llvm/
+prebuilt/windows-x86_64\\bi
+n\\x86_64-linux-android24-c
+lang.cmd"), Io(Env("CARGO_T
+ARGET_ARMV7_LINUX_ANDROIDEA
+BI_LINKER", "C:\\Users\\-Mo
+been-\\AppData\\Local\\Andr
+oid\\Sdk\\ndk\\30.0.1490419
+8\\toolchains/llvm/prebuilt
+/windows-x86_64\\bin\\armv7
+a-linux-androideabi24-clang
+.cmd"), Io(Env("CARGO_TARGE
+T_ARMV7_LINUX_ANDROIDEABI_R
+USTFLAGS", 
+"-Clink-arg=-landroid 
+-Clink-arg=-llog 
+-Clink-arg=-lOpenSLES"), 
+Io(Env("PROGRAMDATA", 
+"C:\\ProgramData"), 
+Io(Env("RUST_LOG_STYLE", 
+"always"), Io(Env("TAURI_AN
+DROID_PROJECT_PATH", "D:\\W
+orkStation\\IDM\\src-tauri\
+\gen/android"), Io(Env("TAU
+RI_ANDROID_PACKAGE_UNESCAPE
+D", 
+"com.mdownloader.mobile"), 
+Io(Env("USERPROFILE", 
+"C:\\Users\\-Mobeen-"), Io(
+Env("CARGO_TARGET_AARCH64_L
+INUX_ANDROID_RUSTFLAGS", 
+"-Clink-arg=-landroid 
+-Clink-arg=-llog 
+-Clink-arg=-lOpenSLES"), Io
+(Env("TAURI_CLI_VERBOSITY",
+ "0"), Io(Env("TMP", "C:\\U
+sers\\-Mobeen-\\AppData\\Lo
+cal\\Temp"), 
+Io(Env("PATHEXT", ".COM;.EX
+E;.BAT;.CMD;.VBS;.VBE;.JS;.
+JSE;.WSF;.WSH;.MSC;.CPL"), 
+Cmd(["D:\\WorkStation\\IDM\
+\src-tauri\\gen/android\\gr
+adlew.bat", 
+"--project-dir", "D:\\WorkS
+tation\\IDM\\src-tauri\\gen
+/android"])))))))))))))))))
+)))))))))))): command ["D:\
+\WorkStation\\IDM\\src-taur
+i\\gen/android\\gradlew.bat
+", "--project-dir", "D:\\Wo
+rkStation\\IDM\\src-tauri\\
+gen/android"] exited with 
+code 1
+       Error failed to 
+build APK: Failed to 
+assemble APK with 
+Io(BeforeSpawn(<closure>), 
+Io(StderrFile(File { 
+handle: 0x380 }), 
+Io(StdoutFile(File { 
+handle: 0x37c }), 
+Io(StdinFile(File { 
+handle: 0x378 }), 
+Io(Env("PATH", "D:\\WorkSta
+tion\\IDM\\node_modules\\.b
+in;D:\\WorkStation\\node_mo
+dules\\.bin;D:\\node_module
+s\\.bin;C:\\Program Files\\
+nodejs\\node_modules\\npm\\
+node_modules\\@npmcli\\run-
+script\\lib\\node-gyp-bin;C
+:\\Program Files\\Eclipse A
+doptium\\jdk-21.0.10.7-hots
+pot\\bin;C:\\Python314\\Scr
+ipts\\;C:\\Python314\\;C:\\
+WINDOWS\\system32;C:\\WINDO
+WS;C:\\WINDOWS\\System32\\W
+bem;C:\\WINDOWS\\System32\\
+WindowsPowerShell\\v1.0\\;C
+:\\WINDOWS\\System32\\OpenS
+SH\\;C:\\Program 
+Files\\Microsoft SQL Server
+\\170\\Tools\\Binn\\;C:\\Pr
+ogramData\\chocolatey\\bin;
+C:\\Program Files\\Git\\cmd
+;C:\\Program Files\\nodejs\
+\;C:\\Program Files\\CMake\
+\bin;C:\\Python314\\Scripts
+\\;C:\\Python314\\;C:\\WIND
+OWS\\system32;C:\\WINDOWS;C
+:\\WINDOWS\\System32\\Wbem;
+C:\\WINDOWS\\System32\\Wind
+owsPowerShell\\v1.0\\;C:\\W
+INDOWS\\System32\\OpenSSH\\
+;C:\\Program 
+Files\\Microsoft SQL Server
+\\170\\Tools\\Binn\\;C:\\Pr
+ogramData\\chocolatey\\bin;
+C:\\Program 
+Files\\Microsoft VS 
+Code\\bin;C:\\Program Files
+\\Git\\cmd;C:\\Program File
+s\\nodejs\\;C:\\Program Fil
+es\\CMake\\bin;C:\\Users\\-
+Mobeen-\\AppData\\Local\\Pr
+ograms\\Python\\Python314\\
+Scripts\\;C:\\Users\\-Mobee
+n-\\AppData\\Local\\Program
+s\\Python\\Python314\\;C:\\
+Users\\-Mobeen-\\AppData\\L
+ocal\\Microsoft\\WindowsApp
+s;C:\\Users\\-Mobeen-\\AppD
+ata\\Roaming\\npm;c:\\users
+\\-mobeen-\\appdata\\roamin
+g\\python\\python314\\scrip
+ts;c:\\users\\-mobeen-\\.lo
+cal\\bin;C:\\Program Files\
+\CMake\\bin;C:\\Users\\-Mob
+een-\\AppData\\Local\\Pytho
+n\\bin;C:\\Users\\-Mobeen-\
+\AppData\\Local\\Programs\\
+Antigravity\\bin;C:\\Users\
+\-Mobeen-\\AppData\\Local\\
+Programs\\Microsoft VS Code
+\\bin;C:\\Users\\-Mobeen-\\
+.cargo\\bin;"), 
+Io(Env("SYSTEMROOT", 
+"C:\\WINDOWS"), 
+Io(Env("NDK_HOME", "C:\\Use
+rs\\-Mobeen-\\AppData\\Loca
+l\\Android\\Sdk\\ndk\\30.0.
+14904198"), Io(Env("CARGO_T
+ARGET_AARCH64_LINUX_ANDROID
+_LINKER", "C:\\Users\\-Mobe
+en-\\AppData\\Local\\Androi
+d\\Sdk\\ndk\\30.0.14904198\
+\toolchains/llvm/prebuilt/w
+indows-x86_64\\bin\\aarch64
+-linux-android24-clang.cmd"
+), Io(Env("WRY_ANDROID_LIBR
+ARY", "app_lib"), 
+Io(Env("TEMP", "C:\\Users\\
+-Mobeen-\\AppData\\Local\\T
+emp"), Io(Env("CARGO_TARGET
+_I686_LINUX_ANDROID_RUSTFLA
+GS", "-Clink-arg=-landroid 
+-Clink-arg=-llog 
+-Clink-arg=-lOpenSLES"), Io
+(Env("CARGO_TARGET_X86_64_L
+INUX_ANDROID_RUSTFLAGS", 
+"-Clink-arg=-landroid 
+-Clink-arg=-llog 
+-Clink-arg=-lOpenSLES"), 
+Io(Env("ANDROID_HOME", "C:\
+\Users\\-Mobeen-\\AppData\\
+Local\\Android\\Sdk"), Io(E
+nv("WRY_ANDROID_PACKAGE", 
+"com.mdownloader.mobile"), 
+Io(Env("CARGO_TARGET_I686_L
+INUX_ANDROID_LINKER", "C:\\
+Users\\-Mobeen-\\AppData\\L
+ocal\\Android\\Sdk\\ndk\\30
+.0.14904198\\toolchains/llv
+m/prebuilt/windows-x86_64\\
+bin\\i686-linux-android24-c
+lang.cmd"), Io(Env("WRY_AND
+ROID_KOTLIN_FILES_OUT_DIR",
+ "D:\\WorkStation\\IDM\\src
+-tauri\\gen/android\\app/sr
+c/main\\java/com/mdownloade
+r/mobile\\generated"), Io(E
+nv("CARGO_TARGET_X86_64_LIN
+UX_ANDROID_LINKER", "C:\\Us
+ers\\-Mobeen-\\AppData\\Loc
+al\\Android\\Sdk\\ndk\\30.0
+.14904198\\toolchains/llvm/
+prebuilt/windows-x86_64\\bi
+n\\x86_64-linux-android24-c
+lang.cmd"), Io(Env("CARGO_T
+ARGET_ARMV7_LINUX_ANDROIDEA
+BI_LINKER", "C:\\Users\\-Mo
+been-\\AppData\\Local\\Andr
+oid\\Sdk\\ndk\\30.0.1490419
+8\\toolchains/llvm/prebuilt
+/windows-x86_64\\bin\\armv7
+a-linux-androideabi24-clang
+.cmd"), Io(Env("CARGO_TARGE
+T_ARMV7_LINUX_ANDROIDEABI_R
+USTFLAGS", 
+"-Clink-arg=-landroid 
+-Clink-arg=-llog 
+-Clink-arg=-lOpenSLES"), 
+Io(Env("PROGRAMDATA", 
+"C:\\ProgramData"), 
+Io(Env("RUST_LOG_STYLE", 
+"always"), Io(Env("TAURI_AN
+DROID_PROJECT_PATH", "D:\\W
+orkStation\\IDM\\src-tauri\
+\gen/android"), Io(Env("TAU
+RI_ANDROID_PACKAGE_UNESCAPE
+D", 
+"com.mdownloader.mobile"), 
+Io(Env("USERPROFILE", 
+"C:\\Users\\-Mobeen-"), Io(
+Env("CARGO_TARGET_AARCH64_L
+INUX_ANDROID_RUSTFLAGS", 
+"-Clink-arg=-landroid 
+-Clink-arg=-llog 
+-Clink-arg=-lOpenSLES"), Io
+(Env("TAURI_CLI_VERBOSITY",
+ "0"), Io(Env("TMP", "C:\\U
+sers\\-Mobeen-\\AppData\\Lo
+cal\\Temp"), 
+Io(Env("PATHEXT", ".COM;.EX
+E;.BAT;.CMD;.VBS;.VBE;.JS;.
+JSE;.WSF;.WSH;.MSC;.CPL"), 
+Cmd(["D:\\WorkStation\\IDM\
+\src-tauri\\gen/android\\gr
+adlew.bat", 
+"--project-dir", "D:\\WorkS
+tation\\IDM\\src-tauri\\gen
+/android"])))))))))))))))))
+)))))))))))): command ["D:\
+\WorkStation\\IDM\\src-taur
+i\\gen/android\\gradlew.bat
+", "--project-dir", "D:\\Wo
+rkStation\\IDM\\src-tauri\\
+gen/android"] exited with 
+code 1

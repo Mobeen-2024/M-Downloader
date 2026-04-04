@@ -13,12 +13,12 @@ pub struct SiteCredential {
     pub cookies: Option<String>,
 }
 
-pub struct AuthManager {
+pub struct SiteAuthManager {
     sites: Mutex<HashMap<String, SiteCredential>>,
     auth_path: PathBuf,
 }
 
-impl AuthManager {
+impl SiteAuthManager {
     pub fn new(app_data_dir: PathBuf) -> Self {
         let auth_path = app_data_dir.join("auth.json");
         let mut sites = HashMap::new();

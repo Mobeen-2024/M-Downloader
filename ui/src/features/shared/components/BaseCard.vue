@@ -13,93 +13,41 @@ const props = withDefaults(defineProps<Props>(), {
   hoverable: false,
 });
 
+const variants = {
+  glass: 'bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]',
+  outline: 'bg-transparent border border-white/10',
+  flat: 'bg-black/20 border border-white/5'
+};
+
+const paddings = {
+  none: 'p-0',
+  sm: 'p-4',
+  md: 'p-8',
+  lg: 'p-12'
+};
+
 const classes = computed(() => {
   return [
-    'base-card',
-    `variant-${props.variant}`,
-    `padding-${props.padding}`,
-    { 'is-hoverable': props.hoverable },
+    'relative rounded-[2rem] overflow-hidden transition-all duration-500',
+    variants[props.variant],
+    paddings[props.padding],
+    { 'hover:bg-white/[0.08] hover:border-white/20 hover:-translate-y-1': props.hoverable },
   ];
 });
 </script>
 
 <template>
   <div :class="classes">
-    <div v-if="$slots.header" class="card-header">
+    <header v-if="$slots.header" class="mb-6">
       <slot name="header"></slot>
-    </div>
-    <div class="card-content">
+    </header>
+    
+    <main>
       <slot></slot>
-    </div>
-    <div v-if="$slots.footer" class="card-footer">
+    </main>
+    
+    <footer v-if="$slots.footer" class="mt-8 pt-6 border-t border-white/5">
       <slot name="footer"></slot>
-    </div>
+    </footer>
   </div>
 </template>
-
-<style scoped>
-.base-card {
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  position: relative;
-  transition: var(--transition-smooth);
-  width: 100%;
-}
-
-/* Variants */
-.variant-glass {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-glass);
-}
-.variant-glass:hover:not(.is-hoverable) {
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-.variant-outline {
-  background: transparent;
-  border: 1px solid var(--border-color);
-}
-
-.variant-flat {
-  background: rgba(255, 255, 255, 0.02);
-  border: none;
-}
-
-/* Padding */
-.padding-none { padding: 0; }
-.padding-sm { padding: 12px; }
-.padding-md { padding: 20px; }
-.padding-lg { padding: 32px; }
-
-/* Hoverable */
-.is-hoverable:hover {
-  transform: translateY(-4px) scale(1.01);
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(59, 130, 246, 0.3);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.1);
-}
-
-.variant-glass:hover:not(.is-hoverable) {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.card-header {
-  border-bottom: 1px solid var(--border-color);
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.card-footer {
-  border-top: 1px solid var(--border-color);
-  padding: 16px 20px;
-}
-
-.card-content {
-  position: relative;
-}
-</style>
